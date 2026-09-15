@@ -33,4 +33,4 @@ This is intentionally a **preview/review build**. It is noindexed and does not t
 Do not remove the preview safeguards merely to make buttons look live.
 
 ## Knowledge Centre update
-See docs/knowledge-centre/README.md. The saved website now includes the searchable Knowledge Centre and 50 draft article templates. No live deployment has been changed.
+See docs/knowledge-centre/README.md. The searchable Knowledge Centre includes 50 complete, sourced buyer guides, with cost and problems accounting for 35 articles. The staff follow-up playbook in docs/knowledge-centre/SALES-FOLLOW-UP-PLAYBOOK.md provides a tailored email, chat reply and discovery question for each guide. This repository deploys to the existing nutrition-fitness-website-2 Vercel project through GitHub.
