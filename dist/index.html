@@ -1,226 +1,76 @@
-<!doctype html>
-<html lang="en-GB">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <meta name="robots" content="noindex,nofollow" />
-  <meta name="theme-color" content="#fffdf9" />
-  <title>Nutrition.Fitness — Real food. Real progress.</title>
-  <meta name="description" content="Nutrition, training, meal planning, shopping lists and human support in one simpler system." />
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Kalam:wght@400;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="/site.css" />
-</head>
-<body>
-  <a class="skip" href="#main">Skip to content</a>
-
-  <header class="site-header" data-header>
-    <div class="shell nav-wrap">
-      <a class="brand" href="/" aria-label="Nutrition.Fitness home">
-        <span class="brand-word">nutrition<span>.</span>fitness</span><sup>®</sup>
-        <span class="brand-sub">Real food. Real progress.</span>
-      </a>
-      <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav" data-menu-toggle>
-        <span></span><span></span><span></span><span class="sr-only">Menu</span>
-      </button>
-      <nav id="primary-nav" class="primary-nav" aria-label="Primary navigation" data-nav>
-        <a class="active" href="/">Home</a>
-        <a href="/nufi/">NUFI+</a>
-        <a href="/programmes/">Programmes</a>
-        <a href="/recipes/">Recipes</a>
-        <a href="/shop/">Shop</a>
-        <a href="/about/">About</a>
-      </nav>
-      <div class="nav-actions">
-        <button class="icon-btn" type="button" aria-label="Search">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.4"/><path d="m16 16 4.2 4.2"/></svg>
-        </button>
-        <a class="icon-btn" href="/account/login/" aria-label="Account">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.4"/><path d="M5.5 20c.7-4 3-6 6.5-6s5.8 2 6.5 6"/></svg>
-        </a>
-        <a class="icon-btn bag" href="/shop/cart/" aria-label="Basket">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 8.5h14l-1 11H6z"/><path d="M9 8.5a3 3 0 0 1 6 0"/></svg>
-          <span class="bag-count" data-bag-count>0</span>
-        </a>
-        <a class="button button-small" href="/nufi/pricing/">Get started</a>
-      </div>
-    </div>
-  </header>
-
-  <main id="main">
-    <!-- 1. HERO — exact approved design -->
-    <section class="hero" id="top">
-      <div class="shell hero-grid">
-        <div class="hero-copy">
-          <p class="eyebrow">NUTRITION. TRAINING. NUFI. RESULTS.</p>
-          <h1>Getting fit is complicated.<br><span>So we made it less complicated.</span></h1>
-          <p class="hero-lede">Your meals, workouts, shopping, supplements and support in one place. Less figuring it out. More actually doing it.</p>
-          <ul class="hero-list" aria-label="What is included">
-            <li><span>✓</span> Personalised nutrition &amp; meal planning</li>
-            <li><span>✓</span> Structured training programmes that fit real life</li>
-            <li><span>✓</span> Shopping lists, recipes and sensible supplements</li>
-            <li><span>✓</span> Courses, challenges and human support</li>
-            <li><span>✓</span> Progress tracking across one connected system</li>
-          </ul>
-          <div class="hero-actions">
-            <a class="button" href="/nufi/">Meet NUFI+ <span aria-hidden="true">→</span></a>
-            <a class="text-link" href="#programmes">See how it works <span aria-hidden="true">↓</span></a>
-          </div>
-          <p class="scribble hero-note">Less admin.<br>More living.</p>
-        </div>
-        <div class="hero-visual" aria-label="NUFI dashboard preview">
-          <div class="photo-plane" aria-hidden="true"></div>
-          <div class="phone-wrap">
-            <div class="phone" role="img" aria-label="NUFI Today screen showing macros remaining and next workout">
-              <div class="phone-notch"></div>
-              <div class="phone-screen">
-                <div class="phone-topline"><span>9:41</span><span>● ● ▮</span></div>
-                <div class="app-head"><div><span class="app-brand">NUFI<span>+</span></span><p>Good morning, Alex.</p></div><div class="avatar">A</div></div>
-                <div class="week-row" aria-hidden="true"><span>M</span><span>T</span><span class="today">W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
-                <div class="today-card"><div class="card-title"><b>Today</b><span>›</span></div><div class="macro-grid">
-                  <div class="macro primary"><strong>38g</strong><span>protein left</span></div>
-                  <div class="macro"><strong>610</strong><span>kcal left</span></div>
-                  <div class="macro"><strong>72g</strong><span>carbs left</span></div>
-                  <div class="macro"><strong>18g</strong><span>fat left</span></div>
-                </div></div>
-                <div class="up-next"><div class="up-label">UP NEXT</div><div class="workout-thumb">45</div><div><b>Upper Body Strength</b><span>45 min · at home</span></div><span class="chev">›</span></div>
-                <div class="phone-tabs" aria-hidden="true"><span class="sel">Today</span><span>Plan</span><span>Track</span><span>Progress</span><span>More</span></div>
-              </div>
-            </div>
-          </div>
-          <p class="scribble visual-note">Your plan.<br>In your pocket. ↘</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- 2. VALUE STRIP — same original styling -->
-    <section class="feature-strip" aria-label="Nutrition Fitness features">
-      <div class="shell feature-grid">
-        <a href="/programmes/" class="feature-item"><span class="line-icon">⌁</span><b>Workouts</b><small>that fit real life</small></a>
-        <a href="/recipes/meal-planner/" class="feature-item"><span class="line-icon">♜</span><b>Meal plans</b><small>you’ll actually eat</small></a>
-        <a href="/recipes/shopping-list/" class="feature-item"><span class="line-icon">⌑</span><b>Shopping lists</b><small>ready to go</small></a>
-        <a href="/shop/" class="feature-item"><span class="line-icon">▱</span><b>Supplements</b><small>that make sense</small></a>
-        <a href="/contact/" class="feature-item"><span class="line-icon">♧</span><b>Real support</b><small>when you need it</small></a>
-      </div>
-    </section>
-
-    <!-- 3. PROGRAMMES — exact original programme-band component -->
-    <section class="section programme-band" id="programmes">
-      <div class="shell">
-        <div class="section-intro split-heading">
-          <div><p class="eyebrow">PROGRAMMES &amp; CHALLENGES</p><h2>A plan for where you are.<br>Not where Instagram thinks you are.</h2></div>
-          <p>Build strength, lose fat, move more, get back into training or just stop starting again every Monday.</p>
-        </div>
-        <div class="programme-grid">
-          <article class="programme-card sage"><span>01</span><h3>Start Strong</h3><p>8 weeks · beginner friendly</p><b>Build the habit first.</b></article>
-          <article class="programme-card aqua"><span>02</span><h3>Stronger at Home</h3><p>10 weeks · dumbbells</p><b>Real training. No commute.</b></article>
-          <article class="programme-card blush"><span>03</span><h3>Dad Fit</h3><p>12 weeks · flexible schedule</p><b>More energy for real life.</b></article>
-          <article class="programme-card peach"><span>04</span><h3>Back to It</h3><p>6 weeks · returning to exercise</p><b>Start sensibly. Keep going.</b></article>
-        </div>
-        <div class="center-action"><a href="/programmes/" class="button">View all programmes <span>→</span></a></div>
-      </div>
-    </section>
-
-    <!-- 4. NUFI — original Jeff & Steff row. No second NUFI feature row. -->
-    <section class="section coaches" id="nufi">
-      <div class="shell">
-        <div class="section-intro split-heading">
-          <div><p class="eyebrow">MEET NUFI+</p><h2>Your AI coaches.<br>Same plans. Different personalities.</h2></div>
-          <p>Choose the voice that works for you. The plan stays grounded in your onboarding, your preferences and what you actually log.</p>
-        </div>
-        <div class="coach-grid">
-          <article class="coach-card jeff-card">
-            <img src="/assets/jeff-original.jpg" alt="Jeff, a friendly illustrated NUFI AI coach" />
-            <div class="coach-copy"><p class="scribble">Here to keep<br>you on track. ↘</p><h3>JEFF</h3><p>Straight-talking AI coach. Helpful. Occasionally a bit too pleased with himself.</p><a href="/nufi/coaches/" class="round-link" aria-label="Meet Jeff">→</a></div>
-          </article>
-          <article class="coach-card steff-card">
-            <img src="/assets/steff-original.jpg" alt="Steff, a warm illustrated NUFI AI coach" />
-            <div class="coach-copy"><p class="scribble right-note">You’ve<br>got this. ♡</p><h3>STEFF</h3><p>Warm, sharp AI coach. Supportive. Very difficult to bluff.</p><a href="/nufi/coaches/" class="round-link" aria-label="Meet Steff">→</a></div>
-          </article>
-        </div>
-      </div>
-    </section>
-
-    <!-- 5. SHOP / MEALS — exact approved paired cards -->
-    <section class="section" id="shop">
-      <div class="shell paired-grid">
-        <article class="feature-panel meal-panel" id="recipes">
-          <div class="panel-copy"><p class="eyebrow">MEAL PLANNING</p><h2>Tonight’s big decision:<br>chicken or chicken?</h2><p>Don’t worry. NUFI has considerably more imagination than you at 6pm.</p><a class="button" href="/recipes/meal-planner/">See your meal plan <span>→</span></a></div>
-          <div class="panel-image image-meal" role="img" aria-label="Fresh chicken, avocado, rice and edamame bowl"></div>
-          <p class="scribble panel-note">Proper food.<br>Real life.</p>
-        </article>
-        <article class="feature-panel protein-panel">
-          <div class="panel-copy"><p class="eyebrow">SUPPLEMENTS</p><h2>Protein.<br><span>It’s protein.</span></h2><p>We could write another 300 words about optimised performance nutrition. But you probably know why you’re here.</p><a class="button" href="/shop/">Shop supplements <span>→</span></a></div>
-          <div class="panel-image image-protein" role="img" aria-label="Nutrition.Fitness whey protein product"></div>
-          <p class="scribble panel-note product-note">Small habits.<br>Big difference. ↙</p>
-        </article>
-      </div>
-    </section>
-
-    <!-- 6. HOW IT WORKS — exact original connected-system row -->
-    <section class="section system-section" id="how">
-      <div class="shell">
-        <div class="section-intro split-heading">
-          <div><p class="eyebrow">ONE CONNECTED SYSTEM</p><h2>Plan it. Do it. Track it.<br>Then let NUFI help with what’s next.</h2></div>
-          <p>Everything talks to everything else, so your plan stays useful instead of becoming another abandoned spreadsheet.</p>
-        </div>
-        <div class="steps-grid">
-          <article><span>1</span><h3>Tell us about you</h3><p>Your goals, preferences, available time and starting point set the targets. No hidden assumptions.</p></article>
-          <article><span>2</span><h3>Follow today’s plan</h3><p>Meals, workouts and your next useful action stay visible. Protein remaining comes first.</p></article>
-          <article><span>3</span><h3>Log what actually happened</h3><p>Planned versus eaten and planned versus completed reconcile clearly. Your edits remain your truth.</p></article>
-          <article><span>4</span><h3>Adjust without drama</h3><p>NUFI shows what changed, why it changed and what to do next. No mystery maths.</p></article>
-        </div>
-      </div>
-    </section>
-
-    <!-- 7. TRUST / OUTCOME — exact original family row -->
-    <section class="section app-deep-dive" id="trust">
-      <div class="shell app-grid">
-        <div class="lifestyle-photo"><div class="image-family" role="img" aria-label="Parent and child looking over green countryside"></div><p class="scribble">Healthier tomorrows.<br>Together. ♡</p></div>
-        <div class="real-life-copy">
-          <p class="eyebrow">WHY NUTRITION.FITNESS</p>
-          <h2>Fitness for real life.</h2>
-          <p class="lede">More energy. Better food. A stronger you. We’re here to make healthy habits easier to follow, not harder to understand.</p>
-          <div class="tick-list"><span>✓ <b>Feel better</b></span><span>✓ <b>Look better</b></span><span>✓ <b>More energy</b></span><span>✓ <b>Build healthy habits</b></span><span>✓ <b>A happier you</b></span></div>
-          <p class="scribble progress-note">Progress looks<br>good on you. :)</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- 8. NEWS — original three-card visual language, repurposed only for existing news content -->
-    <section class="section cards-section" id="news">
-      <div class="shell">
-        <div class="section-intro split-heading">
-          <div><p class="eyebrow">NEWS &amp; GUIDES</p><h2>Useful things.<br>Minus the fog.</h2></div>
-          <p>Nutrition, training and habits explained like a normal person might actually want to read them.</p>
-        </div>
-        <div class="three-cards">
-          <article class="editorial-card"><div class="editorial-image image-pancakes"></div><div class="editorial-copy"><p class="eyebrow">FUEL</p><h3>Protein without the drama.</h3><p>A practical way to hit your target without turning every meal into a maths lesson.</p><a class="button button-small" href="/blog/protein-without-drama/">Read it <span>→</span></a></div></article>
-          <article class="editorial-card"><div class="editorial-image image-workout"></div><div class="editorial-copy"><p class="eyebrow">TRAIN</p><h3>Strength for real life.</h3><p>What useful strength training looks like when you also have a job, family and a Tuesday.</p><a class="button button-small" href="/blog/strength-for-real-life/">Read it <span>→</span></a></div></article>
-          <article class="editorial-card"><div class="editorial-image image-shopping"></div><div class="editorial-copy"><p class="eyebrow">PLAN</p><h3>Meal prep without losing Sunday.</h3><p>A bit of preparation. Not seven identical tubs staring back at you from the fridge.</p><a class="button button-small" href="/blog/meal-prep-less-sunday/">Read it <span>→</span></a></div></article>
-        </div>
-      </div>
-    </section>
-
-    <!-- 9. FINAL CTA — exact original -->
-    <section class="section final-cta" id="start">
-      <div class="shell cta-card">
-        <p class="eyebrow">READY WHEN YOU ARE</p><h2>Ready to feel better?</h2><p>Start with a plan built around your life, then let NUFI help you stick to it.</p><a href="/nufi/pricing/" class="button">Get started today <span>→</span></a><p class="scribble">No perfect Monday required.</p>
-      </div>
-    </section>
-  </main>
-
-  <footer class="site-footer">
-    <div class="shell footer-top">
-      <div class="brand footer-brand"><span class="brand-word">nutrition<span>.</span>fitness</span><sup>®</sup><span class="brand-sub">Real food. Real progress. A fitter, happier you.</span></div>
-      <div class="footer-links"><a href="/nufi/">NUFI+</a><a href="/programmes/">Programmes</a><a href="/recipes/">Recipes</a><a href="/shop/">Shop</a><a href="/about/">About</a></div>
-      <div class="footer-links"><a href="/help/">Help</a><a href="/legal/privacy/">Privacy</a><a href="/legal/terms/">Terms</a><a href="/contact/">Contact</a></div>
-    </div>
-    <div class="shell footer-bottom"><span>© 2026 Nutrition.Fitness UK Ltd.</span><span>Preview build · commerce and member actions are not connected.</span></div>
-  </footer>
-
-  <script src="/site.js"></script>
-  <script src="/cart.js"></script>
-</body>
-</html>
+<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#faf6ef"><meta name="robots" content="noindex,nofollow"><meta name="description" content="Fitness and nutrition for real life. Programmes, meals, shopping and support, brought together by Nutrition.Fitness."><title>Getting fit. Less complicated. | Nutrition.Fitness</title><link rel="icon" href="/assets/favicon.svg" type="image/svg+xml"><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;650;700;750;800;850;900&family=Kalam:wght@400&display=swap" rel="stylesheet"><link rel="stylesheet" href="/base.css"><link rel="stylesheet" href="/site.css"><link rel="stylesheet" href="/knowledge-navigation.css"><script type="module" src="/site.mjs"></script></head><body data-page="home"><a href="#main" class="skip-link">Skip to content</a><svg aria-hidden="true" class="svg-sprite" xmlns="http://www.w3.org/2000/svg"><defs>
+<symbol id="i-arrow" viewbox="0 0 24 24"><path d="M4 12h15m-6-7 7 7-7 7"></path></symbol>
+<symbol id="i-chevron" viewbox="0 0 24 24"><path d="m9 5 7 7-7 7"></path></symbol>
+<symbol id="i-search" viewbox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.7"></circle><path d="m16 16 5 5"></path></symbol>
+<symbol id="i-user" viewbox="0 0 24 24"><circle cx="12" cy="7" r="3.5"></circle><path d="M4.5 21v-1.5c0-4 3-6.5 7.5-6.5s7.5 2.5 7.5 6.5V21z"></path></symbol>
+<symbol id="i-bag" viewbox="0 0 24 24"><path d="M5 7h14l1.5 14h-17L5 7Z"></path><path d="M8.5 9V6a3.5 3.5 0 0 1 7 0v3"></path></symbol>
+<symbol id="i-menu" viewbox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"></path></symbol>
+<symbol id="i-close" viewbox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"></path></symbol>
+<symbol id="i-dumbbell" viewbox="0 0 48 48"><rect height="24" rx="2" width="6" x="9" y="12"></rect><rect height="24" rx="2" width="6" x="33" y="12"></rect><path d="M15 21h18v6H15zM9 17H4v14h5m30-14h5v14h-5"></path></symbol>
+<symbol id="i-cutlery" viewbox="0 0 48 48"><path d="M9 5v12c0 6 12 6 12 0V5M15 5v38M34 5c-7 6-8 17-3 20h6V5h-3Zm3 20v18"></path></symbol>
+<symbol id="i-cart" viewbox="0 0 48 48"><path d="M4 7h6l6 25h23M12 13h31l-5 15H15"></path><circle cx="19" cy="40" r="3"></circle><circle cx="36" cy="40" r="3"></circle></symbol>
+<symbol id="i-jar" viewbox="0 0 48 48"><rect height="6" rx="2" width="22" x="13" y="5"></rect><path d="M14 11v5c-4 2-5 4-5 8v16q0 3 3 3h24q3 0 3-3V24c0-4-1-6-5-8v-5"></path><path d="M10 24h28"></path></symbol>
+<symbol id="i-people" viewbox="0 0 48 48"><circle cx="24" cy="12" r="6"></circle><circle cx="10" cy="17" r="5"></circle><circle cx="38" cy="17" r="5"></circle><path d="M12 43V34c0-7 5-12 12-12s12 5 12 12v9M3 40v-8c0-5 3-8 8-8M45 40v-8c0-5-3-8-8-8"></path></symbol>
+<symbol id="i-check" viewbox="0 0 24 24"><path d="m5 12 4.5 5L19 7"></path></symbol>
+<symbol id="i-clock" viewbox="0 0 24 24"><circle cx="12" cy="12" r="9"></circle><path d="M12 6v6l4 2"></path></symbol>
+<symbol id="i-heart" viewbox="0 0 24 24"><path d="M12 21S3 15 3 8a5 5 0 0 1 9-3 5 5 0 0 1 9 3c0 7-9 13-9 13Z"></path></symbol>
+<symbol id="i-instagram" viewbox="0 0 24 24"><rect height="18" rx="5" width="18" x="3" y="3"></rect><circle cx="12" cy="12" r="4"></circle><path d="M17.5 6.5h.01"></path></symbol>
+<symbol id="i-facebook" viewbox="0 0 24 24"><path d="M14 22V12h3l.5-4H14V6c0-1.2.5-2 2-2h2V.5L15 .3c-3.3 0-5 2-5 5.3V8H7v4h3v10Z" fill="currentColor" stroke="none"></path></symbol>
+<symbol id="i-youtube" viewbox="0 0 24 24"><rect fill="currentColor" height="14" rx="4" stroke="none" width="20" x="2" y="5"></rect><path d="m10 9 5 3-5 3Z" fill="var(--paper)" stroke="none"></path></symbol>
+<symbol id="i-tiktok" viewbox="0 0 24 24"><path d="M15 3v12.5a4.5 4.5 0 1 1-4.5-4.5M15 3c1 4 3 5 6 5" stroke-width="3"></path></symbol>
+<symbol id="i-book" viewBox="0 0 24 24"><path d="M12 6c-3-3-7-3-10-2v15c4-1 7 0 10 2 3-2 6-3 10-2V4c-3-1-7-1-10 2Zm0 0v15"/></symbol><symbol id="i-repeat" viewBox="0 0 24 24"><path d="M4 8h13l-3-3M20 16H7l3 3M20 8v3M4 16v-3"/></symbol><symbol id="i-truck" viewBox="0 0 24 24"><path d="M3 5h12v12H3zM15 10h4l3 4v3h-7"/><circle cx="7" cy="19" r="2"/><circle cx="18" cy="19" r="2"/></symbol><symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 2 3 6v6c0 6 9 10 9 10s9-4 9-10V6Z"/><path d="m8 12 3 3 5-6"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 4v16M4 12h16"/></symbol><symbol id="i-minus" viewBox="0 0 24 24"><path d="M4 12h16"/></symbol><symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 2S5 10 5 15a7 7 0 0 0 14 0c0-5-7-13-7-13Z"/></symbol><symbol id="i-house" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v11H3ZM9 21v-8h6v8"/></symbol><symbol id="i-run" viewBox="0 0 24 24"><circle cx="15" cy="4" r="2"/><path d="m6 11 5-3 4 4 5 1M11 8l-2 8 6 3 1 4M9 16l-5 6"/></symbol><symbol id="i-bolt" viewBox="0 0 24 24"><path d="m13 2-9 12h7l-1 8 10-13h-8Z"/></symbol><symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 15A9 9 0 0 1 9 3a9 9 0 1 0 11 12Z"/></symbol><symbol id="i-play" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m10 8 6 4-6 4Z"/></symbol><symbol id="i-mail" viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="15" rx="2"/><path d="m2 6 10 7L22 6"/></symbol><symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 11v6M12 7h.01"/></symbol></defs></svg><div class="site-shell"><div class="preview-bar"><span>Design preview</span> Example catalogue & prices. No live orders. <a href="/site-map/">Explore the pages <svg aria-hidden="true"><use href="#i-arrow"/></svg></a></div><header class="site-header"><a class="brand" href="/" aria-label="Nutrition.Fitness home"><span class="wordmark"><strong>nutrition.</strong><span>fitness</span><sup>®</sup></span><span class="brand-tagline">Real food. Real progress. A fitter, happier you.</span></a><nav class="desktop-nav" aria-label="Main navigation"><a href="/" class="is-active" aria-current="page">Home</a><a href="/nufi/" >NUFI+</a><a href="/programmes/" >Programmes</a><a href="/recipes/" >Recipes</a><a href="/courses/" >Courses</a><a href="/shop/" >Shop</a><a href="/about/" >About</a><a href="/knowledge-centre/" >Knowledge Centre</a></nav><div class="header-actions"><a class="icon-button" href="/search/" aria-label="Search the website"><svg aria-hidden="true"><use href="#i-search"/></svg></a><a class="icon-button account-button" href="/account/" aria-label="Your account"><svg aria-hidden="true"><use href="#i-user"/></svg></a><a class="icon-button bag-button" href="/basket/" aria-label="Your basket"><svg aria-hidden="true"><use href="#i-bag"/></svg><span class="bag-count" hidden>0</span></a><a class="button button-small header-cta" href="/get-started/">Get started <svg aria-hidden="true"><use href="#i-arrow"/></svg></a><button type="button" class="icon-button menu-toggle" aria-label="Open navigation" aria-expanded="false" aria-controls="mobile-nav"><svg aria-hidden="true"><use href="#i-menu"/></svg></button></div></header><nav class="mobile-nav" id="mobile-nav" hidden aria-label="Mobile navigation"><a href="/">Home</a><a href="/nufi/">NUFI+</a><a href="/programmes/">Programmes</a><a href="/recipes/">Recipes</a><a href="/courses/">Courses</a><a href="/shop/">Shop</a><a href="/about/">About</a><a href="/knowledge-centre/">Knowledge Centre</a><a href="/search/">Search the website</a><a href="/subscriptions/">Build your subscription</a><a href="/help/">A little help</a><a href="/get-started/" class="button ">Get started <svg aria-hidden="true"><use href="#i-arrow"/></svg></a></nav><main id="main">
+<section aria-labelledby="hero-heading" class="hero" id="nufi">
+<div class="hero-copy">
+<img alt="Good food. Brighter days." class="hero-note" height="130" src="/assets/note-good-food.webp" width="133"/>
+<h1 id="hero-heading"><span>Getting fit is</span><span>complicated.</span><span class="plum">So we made it</span><span class="plum">less complicated.</span></h1>
+<p class="hero-description">NUFI sorts your workouts, meals, shopping lists<br class="desktop-break"/> and progress.<br/><strong>You do them.</strong><br/>Seems fair.</p>
+<a class="button hero-button" href="/nufi/">Meet NUFI+ <svg><use href="#i-arrow"></use></svg></a>
+</div>
+<div class="hero-visual">
+<img alt="A hand holding a phone with an example NUFI+ dashboard showing a workout, meal plan and shopping list. Real progress fits in your hand." class="hero-phone" fetchpriority="high" height="487" src="/assets/phone-in-hand.webp" width="466"/>
+</div>
+</section>
+<section aria-labelledby="coach-heading" class="coaches" id="coaches">
+<div class="section-intro"><h2 id="coach-heading">Meet <span class="plum">Jeff &amp; Steff</span></h2><p>Your AI coaches. Same brains. Different personalities.</p></div>
+<div class="coach-grid">
+<a aria-label="Meet Jeff, your straight-talking AI coach" class="coach-card jeff-card" href="/coaches/">
+<img alt="Here to keep you on track." class="coach-note jeff-note" height="122" loading="lazy" src="/assets/note-jeff.webp" width="113"/>
+<img alt="Illustrated portrait of Jeff, an AI coach" class="coach-portrait jeff-portrait" height="152" loading="lazy" src="/assets/jeff.webp" width="195"/>
+<span class="coach-copy"><strong class="coach-name">JEFF</strong><span>Straight-talking AI coach.<br/>Helpful. Occasionally a bit<br class="wide-only"/> too pleased with himself.</span></span>
+<svg class="coach-arrow"><use href="#i-chevron"></use></svg>
+<span class="chosen-label" hidden="">In your corner <svg><use href="#i-check"></use></svg></span>
+</a>
+<a aria-label="Meet Steff, your warm and sharp AI coach" class="coach-card steff-card" href="/coaches/">
+<img alt="Illustrated portrait of Steff, an AI coach" class="coach-portrait steff-portrait" height="170" loading="lazy" src="/assets/steff.webp" width="175"/>
+<span class="coach-copy"><strong class="coach-name">STEFF</strong><span>Warm, sharp AI coach.<br/>Supportive. Very difficult<br class="wide-only"/> to bluff.</span></span>
+<img alt="You've got this." class="coach-note steff-note" height="123" loading="lazy" src="/assets/note-steff.webp" width="92"/>
+<svg class="coach-arrow"><use href="#i-chevron"></use></svg>
+<span class="chosen-label" hidden="">In your corner <svg><use href="#i-check"></use></svg></span>
+</a>
+</div>
+</section>
+<nav aria-label="Everything in your corner" class="feature-strip">
+<a href="/programmes/"><svg><use href="#i-dumbbell"></use></svg><span>Workouts<br/>that fit real life</span></a>
+<a href="/recipes/"><svg><use href="#i-cutlery"></use></svg><span>Meal plans<br/>you’ll actually eat</span></a>
+<a href="/nufi/#meal-planning"><svg><use href="#i-cart"></use></svg><span>Shopping lists<br/>ready to go</span></a>
+<a href="/shop/"><svg><use href="#i-jar"></use></svg><span>Supplements<br/>that make sense</span></a>
+<a href="#coaches"><svg><use href="#i-people"></use></svg><span>Real support<br/>when you need it</span></a>
+</nav>
+<div class="product-grid">
+<section aria-labelledby="meal-heading" class="product-card meal-card" id="recipes">
+<img alt="A bowl of chicken, avocado, greens and edamame" class="meal-image" height="276" loading="lazy" src="/assets/chicken-bowl.webp" width="210"/>
+<div class="product-copy"><h2 id="meal-heading">Tonight’s<br/>big decision:<br/><span class="chicken-line">chicken or chicken?</span></h2><p>Don’t worry. NUFI has considerably<br class="wide-only"/> more imagination than you do at 6pm.</p><a class="button" href="/recipes/">See your meal plan <svg><use href="#i-arrow"></use></svg></a></div>
+<img alt="Proper food. Real life." class="meal-note" height="78" loading="lazy" src="/assets/note-proper-food.webp" width="72"/>
+</section>
+<section aria-labelledby="protein-heading" class="product-card protein-card" id="shop">
+<div aria-label="Concept packaging: unflavoured whey protein" class="home-powder-pack"><span class="pack-brand">nutrition.fitness</span><strong>whey<br/>protein.</strong><small>plain, on purpose.</small><em>Flavour sold separately.<br/>Personality included.</em><b>1 kg · packaging concept</b></div>
+<img alt="Small habits. Big difference." class="protein-note" height="89" loading="lazy" src="/assets/note-small-habits.webp" width="139"/>
+<div class="product-copy"><h2 id="protein-heading">Protein.<span>It’s protein.</span></h2><p>We could write another<br/>300 words about optimised<br/>performance nutrition.<br/>But you probably know<br/>why you’re here.</p><a class="button" href="/shop/">Shop supplements <svg><use href="#i-arrow"></use></svg></a></div>
+</section>
+</div>
+<section aria-labelledby="life-heading" class="real-life" id="about">
+<div class="life-photo"><img alt="A parent and child looking out over the countryside. Healthier tomorrows, together." height="188" loading="lazy" src="/assets/more-good-days.webp" width="503"/></div>
+<div class="life-copy"><h2 id="life-heading">FITNESS FOR<br/>REAL LIFE.</h2><p>More energy. Better food. A stronger you.<br/>So you can be there for the things that actually matter.</p><a class="button button-plum" href="/get-started/">Start your journey <svg><use href="#i-arrow"></use></svg></a></div>
+<div class="life-outcomes"><ul><li><svg><use href="#i-check"></use></svg>Feel better</li><li><svg><use href="#i-check"></use></svg>Look better</li><li><svg><use href="#i-check"></use></svg>More energy</li><li><svg><use href="#i-check"></use></svg>Build good habits</li><li><svg><use href="#i-check"></use></svg>Be there for what matters</li></ul><img alt="Progress looks good on you." class="life-note" height="94" loading="lazy" src="/assets/note-progress.webp" width="88"/></div>
+</section>
+</main><footer class="new-footer"><div class="footer-main"><a class="brand" href="/" aria-label="Nutrition.Fitness home"><span class="wordmark"><strong>nutrition.</strong><span>fitness</span><sup>®</sup></span><span class="brand-tagline">Real food. Real progress. A fitter, happier you.</span></a><p>Made for people who want to be fitter.<br>Including people who don’t particularly like fitness.</p><img src="/assets/note-see-you.webp" width="86" height="70" loading="lazy" alt="See you there."></div><div class="footer-links"><div><strong>Less complicated</strong><a href="/nufi/">Meet NUFI+</a><a href="/coaches/">Jeff & Steff</a><a href="/programmes/">Programmes</a><a href="/courses/">Courses</a><a href="/community/">Community</a></div><div><strong>Good things</strong><a href="/shop/">Shop everything</a><a href="/shop/?category=powders">Plain powders</a><a href="/shop/?category=shots">Flavour shots</a><a href="/subscriptions/">Build a subscription</a><a href="/recipe-books/">Recipe books</a></div><div><strong>Real people</strong><a href="/about/">Our story</a><a href="/knowledge-centre/">Knowledge Centre</a><a href="/journal/">A useful read</a><a href="/trust/">What we stand for</a><a href="/help/">Help & FAQs</a><a href="/contact/">Get in touch</a></div></div><div class="footer-bottom"><span>© 2026 Nutrition.Fitness · Website preview</span><div><a href="/privacy/">Privacy</a><a href="/terms/">Terms</a><a href="/delivery/">Delivery & returns</a><a href="/site-map/">Site map</a><button type="button" class="text-button" data-clear-preview>Reset preview data</button></div></div></footer></div><div role="status" aria-live="polite" class="notification" hidden></div><noscript><div class="noscript-note">The pages work without JavaScript. The basket, filters and preview account need JavaScript to be enabled.</div></noscript></body></html>

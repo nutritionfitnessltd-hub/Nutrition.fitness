@@ -1,0 +1,14 @@
+{
+  "version": "2.0.0",
+  "public_deployment": null,
+  "generated_pages": 62,
+  "custom_404": true,
+  "shop_product_pages": 13,
+  "programme_landing_pages": 8,
+  "course_landing_pages": 5,
+  "node_unit_tests": 35,
+  "browser_interaction_checks": 36,
+  "responsive_checks": 75,
+  "checkout_mode": "local demo; optional server test adapter disabled by default",
+  "live_payments": false
+}

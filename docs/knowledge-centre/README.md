@@ -5,7 +5,7 @@
 - 50 complete buyer guides: 15 Cost & prices, 20 Problems & solutions, 5 Confidence & concerns, 5 Comparisons, 5 Reviews. The agreed first ten retain priority.
 - Readable article pages with a direct answer, section navigation, practical examples and comparison tables, source links, publication date, corporate byline, calculated reading time and related questions.
 - Existing navy/plum styling and responsive layouts. The filter legend layout repair is retained.
-- `/blog/` opens the hub; earlier blog article URLs remain available.
+- `/blog/` opens the hub when that route is not already owned by the base website. Original journal pages remain available.
 - `SALES-FOLLOW-UP-PLAYBOOK.md` is an internal staff reference with 50 article-specific email drafts, 50 chat replies, discovery questions, suitability checks and measurement guidance. It is excluded from the public build. Nothing sends email or messages automatically.
 
 ## Editorial standard
@@ -22,9 +22,9 @@ Edit `src/knowledge-centre/articles.json`. Preserve IDs and slugs. Core fields i
 
 Each source has a title, direct URL and checkedAt date. Each salesUse record has buyerConcern, whenToSend, discoveryQuestion, emailSubject, emailBody, chatReply and nextStep. Internal salesUse content is not written to the public JSON index. Review dates and changing prices when revising the copy.
 
-Taxonomy: `src/knowledge-centre/taxonomy.json`. Shell: `src/knowledge-centre/shell.html`. Styles and browser logic: `public/knowledge-centre/`. Builder: `scripts/build-knowledge-centre.mjs`.
+Taxonomy: `src/knowledge-centre/taxonomy.json`. Shell: derived from the restored website’s freshly built `dist/index.html`, preserving its header, footer, SVG sprite, fonts and shared scripts. No earlier global styles or shell are imported. Styles and browser logic: `public/knowledge-centre/`. Builder: `scripts/build-knowledge-centre.mjs`.
 
-Run `npm run build` then `npm test`. Vercel uses Framework Other, output `dist` and the existing configuration. `KC_PUBLISHED_ONLY=1 npm run build` includes published articles only; all current 50 entries qualify. Published entries require a body, date, direct answer and sources. Optional images require alt text and credit.
+Run `npm run build` then `npm test`. The base website builder runs first, followed by `scripts/build-knowledge-centre.mjs`. The latter only writes Knowledge Centre pages, its optional `/blog/` alias, and additions to the existing route and search indexes. Pricing links point to the restored `/nufi/#pricing` section. Vercel uses Framework Other, output `dist` and the existing configuration. `KC_PUBLISHED_ONLY=1 npm run build` includes published articles only; all current 50 entries qualify. Published entries require a body, date, direct answer and sources. Optional images require alt text and credit.
 
 ## Verification and deployment
 Automated checks cover the category distribution, editorial priorities, search, combined filters, article routes, complete bodies, sources, sales handoffs, public-index separation and existing commerce behaviour. A local-link and section-anchor audit is also run on the generated articles. A browser executable was unavailable in this workspace, so this update does not claim real-browser visual verification.

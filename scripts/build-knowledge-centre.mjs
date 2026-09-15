@@ -1,9 +1,24 @@
 import fs from 'node:fs';
 import path from 'node:path';
+const root=path.resolve(import.meta.dirname,'..');
+process.chdir(root);
 const source='src/knowledge-centre';
 const articles=JSON.parse(fs.readFileSync(`${source}/articles.json`,'utf8'));
 const taxonomy=JSON.parse(fs.readFileSync(`${source}/taxonomy.json`,'utf8'));
-const shell=fs.readFileSync(`${source}/shell.html`,'utf8');
+// Use the freshly built restored site as the shell source. This keeps its exact
+// header, footer, sprite, fonts and shared interactions when the base site evolves.
+const homepage=fs.readFileSync('dist/index.html','utf8');
+if(!/<main id="main"[^>]*>/.test(homepage)||!homepage.includes('/base.css')||!homepage.includes('/site.css'))throw new Error('Build the restored website before the Knowledge Centre.');
+const shell=homepage
+ .replace(/<title>[\s\S]*?<\/title>/,'<title>{{TITLE}} | Nutrition.Fitness</title>')
+ .replace(/<meta name="description" content="[^"]*">/,'<meta name="description" content="{{DESCRIPTION}}">')
+ .replace(/<body[^>]*>/,'<body data-page="knowledge-centre" class="kc-page">')
+ .replace(/<main id="main"[^>]*>[\s\S]*?<\/main>/,'{{MAIN}}')
+ .replace(/<nav class="(?:desktop-nav|mobile-nav)"[^>]*>[\s\S]*?<\/nav>/g,nav=>nav
+  .replace(/class="is-active" aria-current="page"/g,'')
+  .replace(/(<a href="\/knowledge-centre\/")(?=[ >])/g,'$1 class="is-active" aria-current="page"'))
+ .replace('</head>','<link rel="stylesheet" href="/knowledge-centre/knowledge-centre.css"></head>');
+const builtRoutes=[];
 const includeDrafts=process.env.KC_PUBLISHED_ONLY!=='1';
 const siteOrigin='https://nutrition-fitness-website-2.vercel.app';
 const readingTime=a=>Math.max(1,Math.ceil(a.bodyHtml.replace(/<[^>]+>/g,' ').trim().split(/\s+/).length/200));
@@ -23,7 +38,8 @@ for(const a of articles){
 const card=a=>`<article class="kc-card" data-article-id="${a.id}">${a.image?`<a tabindex="-1" aria-hidden="true" class="kc-card-image" href="/knowledge-centre/${a.slug}/"><img src="${esc(a.image)}" alt="" loading="lazy" width="640" height="400"></a>`:''}<div class="kc-card-copy"><div class="kc-card-meta"><span>${esc(label('categories',a.category))}</span><span>${a.status==='draft'?'In preparation':`${Math.max(1,Math.ceil(a.bodyHtml.replace(/<[^>]+>/g,' ').split(/\s+/).length/200))} min read`}</span></div><h2><a href="/knowledge-centre/${a.slug}/">${esc(a.title)}</a></h2><p>${esc(a.summary)}</p><div class="kc-card-foot"><span>${esc(label('topics',a.topics[0]))}</span><a href="/knowledge-centre/${a.slug}/" aria-label="${a.status==='draft'?'View planned guide':'Read guide'}: ${esc(a.title)}">${a.status==='draft'?'View planned guide':'Read guide'} <span aria-hidden="true">↗</span></a></div></div></article>`;
 function write(route,main,title,description,extra=''){
  const file=path.join('dist',route,'index.html');fs.mkdirSync(path.dirname(file),{recursive:true});
- fs.writeFileSync(file,shell.replace('{{MAIN}}',main).replaceAll('{{TITLE}}',esc(title)).replaceAll('{{DESCRIPTION}}',esc(description)).replace('</body>',extra+'</body>'));
+ fs.writeFileSync(file,shell.replace('{{MAIN}}',()=>main).replaceAll('{{TITLE}}',()=>esc(title)).replaceAll('{{DESCRIPTION}}',()=>esc(description)).replace('</body>',()=>extra+'</body>'));
+ builtRoutes.push({url:`/${route}/`,title,file:path.relative('dist',file)});
 }
 const filters=Object.entries({categories:'Your question',topics:'Your topic',situations:'Your situation'}).map(([group,title])=>`<fieldset><legend>${title}</legend>${taxonomy[group].map(([id,name])=>`<label class="kc-checkbox"><input type="checkbox" name="${group}" value="${id}"><span>${name}</span><span class="kc-count" data-count="${group}:${id}">${visible.filter(a=>group==='categories'?a.category===id:a[group].includes(id)).length}</span></label>`).join('')}</fieldset>`).join('');
 const listing=`<main id="main"><section class="kc-hero"><div class="shell"><p class="kc-eyebrow">THE KNOWLEDGE CENTRE</p><h1>Good questions.<br><span>Useful answers.</span></h1><p class="kc-intro">Food, fitness and the cost of getting started.<br>Find your way through the things you’re wondering about.</p><form class="kc-search" role="search" action="/knowledge-centre/"><label for="kc-query" class="sr-only">Search the Knowledge Centre</label><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="10" cy="10" r="6.5"/><path d="m15 15 6 6"/></svg><input id="kc-query" name="q" type="search" placeholder="What would you like help with?" autocomplete="off"><button type="submit">Search</button></form><div class="kc-suggestions"><span>Start with:</span><a href="?categories=cost">What will it cost?</a><a href="?q=not+losing+weight">Not losing weight</a><a href="?q=protein&amp;categories=cost">Protein on a budget</a><a href="?situations=starting">Getting started</a></div></div></section><section class="shell kc-browser" aria-label="Browse guides">${visible.some(a=>a.status==='draft')?`<div class="kc-preview-note"><strong>Content preview</strong><span>Guides marked in preparation are still being written.</span></div>`:''}<div class="kc-browser-top"><h2>Find your next answer</h2><button type="button" class="kc-filter-toggle" aria-expanded="false" aria-controls="kc-filters">Filters <span id="kc-filter-total"></span></button></div><div class="kc-layout"><aside id="kc-filters" class="kc-filters"><div class="kc-filter-heading"><strong>Filter guides</strong><button type="button" data-clear>Clear all</button></div><form id="kc-filter-form">${filters}</form></aside><div class="kc-results"><div class="kc-results-top"><p id="kc-result-count" role="status" aria-live="polite">${visible.length} ${visible.every(a=>a.status==='draft')?'planned guides':'guides'}</p><label for="kc-sort">Sort by <select id="kc-sort"><option value="recommended">Recommended</option><option value="az">Title A–Z</option><option value="za">Title Z–A</option>${visible.some(a=>a.publishedAt)?'<option value="newest">Newest</option>':''}</select></label></div><div class="kc-active-filters" id="kc-active-filters" aria-label="Active filters"></div><div class="kc-grid" id="kc-grid">${visible.map(card).join('')}</div><div id="kc-empty" class="kc-empty" hidden><h3>No guides match that combination.</h3><p>Try a shorter search or remove a filter.</p><button type="button" class="button" data-clear>Show all guides</button></div><nav class="kc-pagination" aria-label="Guide result pages" hidden><button type="button" id="kc-previous">← Previous</button><span id="kc-page-count"></span><button type="button" id="kc-next">Next →</button></nav><noscript><p>All guides are available below. Enable JavaScript to search, filter and sort.</p></noscript></div></div></section></main>`;
@@ -43,8 +59,23 @@ for(const a of visible){
 fs.mkdirSync('dist/knowledge-centre',{recursive:true});
 for(const name of ['knowledge-centre.css','knowledge-centre.mjs','search-core.mjs'])fs.copyFileSync(`public/knowledge-centre/${name}`,`dist/knowledge-centre/${name}`);
 fs.writeFileSync('dist/knowledge-centre/articles.json',JSON.stringify(visible.map(a=>({id:a.id,slug:a.slug,title:a.title,category:a.category,topics:a.topics,situations:a.situations,summary:a.summary,status:a.status,priority:a.priority,publishedAt:a.publishedAt}))));
-// Existing pages remain intact; update only the shared Blog navigation entry.
-for(const file of fs.readdirSync('dist',{recursive:true}).filter(x=>x.endsWith('.html'))){const dest=path.join('dist',file);let html=fs.readFileSync(dest,'utf8');html=html.replace(/href="\/blog\/">Blog/g,'href="/knowledge-centre/">Knowledge Centre');fs.writeFileSync(dest,html);}
-// Preserve the old blog URL as a functional alias; old article URLs remain untouched.
-fs.copyFileSync('dist/knowledge-centre/index.html','dist/blog/index.html');
-console.log(`Knowledge Centre built: ${visible.length} guides (${visible.filter(a=>a.status==='draft').length} drafts).`);
+// Keep all original pages (including the journal) intact. Only add the old hub
+// address when the restored build has no page at that address already.
+const blogFile='dist/blog/index.html';
+if(!fs.existsSync(blogFile)){
+ fs.mkdirSync(path.dirname(blogFile),{recursive:true});
+ fs.copyFileSync('dist/knowledge-centre/index.html',blogFile);
+ builtRoutes.push({url:'/blog/',title:'Knowledge Centre',file:'blog/index.html'});
+}
+const routesFile='dist/routes.json';
+const originalRoutes=JSON.parse(fs.readFileSync(routesFile,'utf8')).filter(r=>!r.url.startsWith('/knowledge-centre/'));
+const allRoutes=[...originalRoutes,...builtRoutes.filter(r=>!originalRoutes.some(existing=>existing.url===r.url))];
+fs.writeFileSync(routesFile,JSON.stringify(allRoutes,null,2));
+const indexFile='dist/search-index.json';
+const originalIndex=JSON.parse(fs.readFileSync(indexFile,'utf8')).filter(r=>!r.url.startsWith('/knowledge-centre/'));
+const entries=builtRoutes.filter(r=>r.url!=='/blog/').map(r=>{
+ const article=visible.find(a=>r.url===`/knowledge-centre/${a.slug}/`);
+ return {title:r.title,url:r.url,keywords:article?[article.summary,label('categories',article.category),...article.topics.map(t=>label('topics',t)),...article.situations.map(t=>label('situations',t))].join(' '):'Questions answers knowledge centre costs prices problems nutrition training supplements reviews comparisons'};
+});
+fs.writeFileSync(indexFile,JSON.stringify([...originalIndex,...entries]));
+console.log(`Knowledge Centre built: ${visible.length} guides (${visible.filter(a=>a.status==='draft').length} drafts). Original website pages retained.`);
