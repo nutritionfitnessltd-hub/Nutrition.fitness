@@ -30,3 +30,10 @@ Run `npm run build` then `npm test`. The base website builder runs first, follow
 Automated checks cover the category distribution, editorial priorities, search, combined filters, article routes, complete bodies, sources, sales handoffs, public-index separation and existing commerce behaviour. A local-link and section-anchor audit is also run on the generated articles. A browser executable was unavailable in this workspace, so this update does not claim real-browser visual verification.
 
 The GitHub repository is `nutritionfitnessltd-hub/Nutrition.fitness`. Its `main` branch deploys to the existing `nutrition-fitness-website-2.vercel.app` Vercel project. Keep the preview safeguards until the production services and content approval process are ready.
+
+
+## Photography and handwritten notes — 15 September 2026
+
+The Knowledge Centre now uses 50 distinct image selections: 49 free Unsplash photographs and the existing NUFI phone artwork for NUFI pricing. Image URLs, source-page credits, alt text and any custom crop position live with each article in `src/knowledge-centre/articles.json`. The photo sources are covered by the [Unsplash license](https://unsplash.com/license); photography is illustrative and does not imply product testing or endorsement. Images are served directly from the Unsplash image CDN with responsive sizes and lazy loading on cards.
+
+Short, article-specific `marginNote` copy adds the original site's Kalam handwriting to selected cards and article photographs. The hub combines two linked photographs and small editorial asides. All presentation rules are scoped to Knowledge Centre classes; the existing homepage, shared CSS and site behaviour are unchanged.
