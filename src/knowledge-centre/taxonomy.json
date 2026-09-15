@@ -1,0 +1,68 @@
+{
+  "categories": [
+    [
+      "cost",
+      "Cost & prices"
+    ],
+    [
+      "problems",
+      "Problems & solutions"
+    ],
+    [
+      "confidence",
+      "Confidence & concerns"
+    ],
+    [
+      "comparisons",
+      "Comparisons"
+    ],
+    [
+      "reviews",
+      "Reviews"
+    ]
+  ],
+  "topics": [
+    [
+      "food",
+      "Food & meal planning"
+    ],
+    [
+      "workouts",
+      "Workouts"
+    ],
+    [
+      "supplements",
+      "Supplements"
+    ],
+    [
+      "habits",
+      "Motivation & habits"
+    ],
+    [
+      "nufi",
+      "NUFI"
+    ]
+  ],
+  "situations": [
+    [
+      "starting",
+      "Starting out"
+    ],
+    [
+      "returning",
+      "Returning to exercise"
+    ],
+    [
+      "family",
+      "Busy family life"
+    ],
+    [
+      "home",
+      "Training at home"
+    ],
+    [
+      "gym",
+      "Training at a gym"
+    ]
+  ]
+}

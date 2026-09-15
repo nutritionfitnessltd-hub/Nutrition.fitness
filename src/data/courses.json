@@ -1,0 +1,32 @@
+[
+  {
+    "id": "habit-builder",
+    "name": "Habit Builder",
+    "duration": "14 days",
+    "promise": "Build the tiny behaviours that make the bigger plan easier to follow."
+  },
+  {
+    "id": "nutrition-made-simple",
+    "name": "Nutrition Made Simple",
+    "duration": "4 weeks",
+    "promise": "Calories, protein, portions and planning without turning dinner into a spreadsheet."
+  },
+  {
+    "id": "meal-planning-real-life",
+    "name": "Meal Planning for Real Life",
+    "duration": "90 minutes",
+    "promise": "Plan a week that can survive Tuesday."
+  },
+  {
+    "id": "sleep-recovery",
+    "name": "Sleep & Recovery",
+    "duration": "2 weeks",
+    "promise": "Improve the basics that make training and appetite easier to manage."
+  },
+  {
+    "id": "getting-started-nufi",
+    "name": "Getting Started with NUFI",
+    "duration": "45 minutes",
+    "promise": "Know where everything lives and what to do first."
+  }
+]

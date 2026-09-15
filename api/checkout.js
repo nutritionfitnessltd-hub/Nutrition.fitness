@@ -1,0 +1,1 @@
+export default async function handler(req,res){res.status(503).json({ok:false,message:'Checkout adapter is intentionally disabled in the preview build. Connect the production payment provider with server-authoritative SKU pricing and verified webhooks.'});}

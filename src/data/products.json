@@ -1,0 +1,153 @@
+[
+  {
+    "id": "whey-protein",
+    "name": "Whey Protein",
+    "subtitle": "Plain, on purpose.",
+    "type": "powder",
+    "price": 3499,
+    "cadences": [
+      "one_off",
+      "4_weeks",
+      "8_weeks"
+    ],
+    "pack": "1kg",
+    "note": "Unflavoured powder. Add a flavour shot separately if you want one."
+  },
+  {
+    "id": "plant-protein",
+    "name": "Plant Protein",
+    "subtitle": "Simple plant protein.",
+    "type": "powder",
+    "price": 3699,
+    "cadences": [
+      "one_off",
+      "4_weeks",
+      "8_weeks"
+    ],
+    "pack": "1kg",
+    "note": "Unflavoured powder. Designed to work with separate flavour shots."
+  },
+  {
+    "id": "creatine-monohydrate",
+    "name": "Creatine Monohydrate",
+    "subtitle": "No dramatic name required.",
+    "type": "powder",
+    "price": 2499,
+    "cadences": [
+      "one_off",
+      "8_weeks"
+    ],
+    "pack": "500g",
+    "note": "Unflavoured creatine monohydrate."
+  },
+  {
+    "id": "daily-essentials",
+    "name": "Daily Essentials",
+    "subtitle": "The boring basics, handled.",
+    "type": "capsules",
+    "price": 1899,
+    "cadences": [
+      "one_off",
+      "4_weeks"
+    ],
+    "pack": "60 capsules",
+    "note": "Concept product. Final formula and claims require product sign-off."
+  },
+  {
+    "id": "omega-3",
+    "name": "Omega 3",
+    "subtitle": "A simple daily staple.",
+    "type": "capsules",
+    "price": 1799,
+    "cadences": [
+      "one_off",
+      "4_weeks"
+    ],
+    "pack": "90 capsules",
+    "note": "Concept product. Final EPA/DHA specification requires product sign-off."
+  },
+  {
+    "id": "flavour-chocolate",
+    "name": "Chocolate Flavour Shot",
+    "subtitle": "A few drops. Different day.",
+    "type": "flavour",
+    "price": 499,
+    "cadences": [
+      "one_off",
+      "4_weeks",
+      "8_weeks"
+    ],
+    "pack": "30ml",
+    "note": "Separate pipette-bottle SKU. Never silently bundled into a powder subscription."
+  },
+  {
+    "id": "flavour-vanilla",
+    "name": "Vanilla Flavour Shot",
+    "subtitle": "A few drops. Different day.",
+    "type": "flavour",
+    "price": 499,
+    "cadences": [
+      "one_off",
+      "4_weeks",
+      "8_weeks"
+    ],
+    "pack": "30ml",
+    "note": "Separate pipette-bottle SKU. Never silently bundled into a powder subscription."
+  },
+  {
+    "id": "flavour-strawberry",
+    "name": "Strawberry Flavour Shot",
+    "subtitle": "A few drops. Different day.",
+    "type": "flavour",
+    "price": 499,
+    "cadences": [
+      "one_off",
+      "4_weeks",
+      "8_weeks"
+    ],
+    "pack": "30ml",
+    "note": "Separate pipette-bottle SKU. Never silently bundled into a powder subscription."
+  },
+  {
+    "id": "flavour-salted-caramel",
+    "name": "Salted Caramel Flavour Shot",
+    "subtitle": "A few drops. Different day.",
+    "type": "flavour",
+    "price": 499,
+    "cadences": [
+      "one_off",
+      "4_weeks",
+      "8_weeks"
+    ],
+    "pack": "30ml",
+    "note": "Separate pipette-bottle SKU. Never silently bundled into a powder subscription."
+  },
+  {
+    "id": "flavour-banana",
+    "name": "Banana Flavour Shot",
+    "subtitle": "A few drops. Different day.",
+    "type": "flavour",
+    "price": 499,
+    "cadences": [
+      "one_off",
+      "4_weeks",
+      "8_weeks"
+    ],
+    "pack": "30ml",
+    "note": "Separate pipette-bottle SKU. Never silently bundled into a powder subscription."
+  },
+  {
+    "id": "flavour-raspberry",
+    "name": "Raspberry Flavour Shot",
+    "subtitle": "A few drops. Different day.",
+    "type": "flavour",
+    "price": 499,
+    "cadences": [
+      "one_off",
+      "4_weeks",
+      "8_weeks"
+    ],
+    "pack": "30ml",
+    "note": "Separate pipette-bottle SKU. Never silently bundled into a powder subscription."
+  }
+]

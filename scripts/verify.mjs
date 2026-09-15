@@ -1,0 +1,1 @@
+import fs from 'node:fs';import path from 'node:path';const root='dist';if(!fs.existsSync(path.join(root,'index.html')))throw new Error('dist/index.html missing');let count=0;for(const d of fs.readdirSync(root,{withFileTypes:true})){count++}console.log('Nutrition.Fitness static build verified. dist root entries:',count);

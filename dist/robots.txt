@@ -1,0 +1,3 @@
+User-agent: *
+Disallow: /
+# Preview build: intentionally noindexed. Replace deliberately at production launch.
