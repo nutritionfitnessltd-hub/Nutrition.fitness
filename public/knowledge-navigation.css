@@ -1,2 +1,19 @@
-/* Use the original compact navigation when the extra Knowledge Centre link needs room. */
-@media(min-width:981px) and (max-width:1280px){.desktop-nav{display:none}.menu-toggle{display:inline-flex}.mobile-nav:not([hidden]){display:grid;grid-template-columns:repeat(3,1fr);padding:12px 28px 24px;gap:8px;border-bottom:1px solid var(--line)}.mobile-nav a{padding:12px;border-radius:8px;font-size:14px}.mobile-nav a:hover{background:var(--cream)}.mobile-nav .button{grid-column:1/-1}.site-header{justify-content:space-between}.site-header .header-cta{display:inline-flex}.header-actions{gap:6px}}
+/* Keep the complete menu visible on laptops, including at browser zoom.
+   The existing hamburger navigation is reserved for screens up to 760px. */
+@media(min-width:761px){
+  .site-header .desktop-nav{display:flex}
+  .site-header .menu-toggle{display:none}
+  .mobile-nav,.mobile-nav:not([hidden]){display:none}
+}
+
+/* A second row gives every link room without shrinking the menu text. */
+@media(min-width:761px) and (max-width:1280px){
+  .site-header{display:grid;grid-template-columns:minmax(0,1fr) auto;column-gap:24px;row-gap:14px;padding-bottom:14px}
+  .site-header>.brand{grid-column:1;grid-row:1;justify-self:start}
+  .site-header .header-actions{grid-column:2;grid-row:1;justify-self:end;gap:6px}
+  .site-header .header-cta{display:inline-flex}
+  .site-header .desktop-nav{grid-column:1/-1;grid-row:2;justify-content:center;gap:clamp(16px,2vw,26px);margin:0;min-width:0;width:100%;padding-top:10px;border-top:1px solid var(--line)}
+  .site-header .desktop-nav a{font-size:14px;line-height:1.4;padding:10px 0}
+}
+
+@media print{.site-header,.mobile-nav{display:none!important}}
