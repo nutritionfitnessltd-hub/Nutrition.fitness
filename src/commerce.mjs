@@ -1,10 +1,11 @@
 import { products, site } from './data.mjs';
 export const productById = id => products.find(p => p.id === id);
-export const money = pennies => new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(pennies/100);
+export const money = pennies => pennies===null?'Price to be announced':new Intl.NumberFormat('en-GB',{style:'currency',currency:'GBP'}).format(pennies/100);
 export function validateLine(raw) {
   if (!raw || typeof raw !== 'object') throw new Error('Invalid basket item.');
   const p=productById(raw.id);
   if (!p) throw new Error('That product is not in the catalogue.');
+  if(!Number.isSafeInteger(p.price)||p.price<0) throw new Error('This product is not yet priced or available to order.');
   if (!Number.isSafeInteger(raw.qty)||raw.qty<1||raw.qty>20) throw new Error('Choose a quantity between 1 and 20.');
   const mode=raw.mode, cadence=raw.cadence || null;
   if (p.id==='nufi-membership') {

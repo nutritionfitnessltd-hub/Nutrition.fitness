@@ -1,0 +1,114 @@
+{
+  "bookId": "high-protein-kitchen",
+  "source": {
+    "filename": "High-Protein-Kitchen-Designed(2).pdf",
+    "sha256": "0d37a347d76583ab9cf99ea56ee38cabb98021b5f7f7019f0e1eb070f01f88a3",
+    "pages": 143,
+    "recipeCount": 100,
+    "title": "The High Protein Kitchen"
+  },
+  "datasetSha256": "328c5350088b56eea76aae77570af6b55917b7ee8f074febdf99fa54791dce8c",
+  "recipes": 100,
+  "categories": {
+    "Breakfast": 22,
+    "Lunch": 24,
+    "Dinner": 25,
+    "Snacks": 14,
+    "Drinks": 15
+  },
+  "ingredients": 1038,
+  "methodSteps": 575,
+  "photos": 99,
+  "missingPhotos": [
+    {
+      "id": "chocolate-fudge-bars",
+      "page": 121
+    }
+  ],
+  "preservedSourceNotes": [
+    {
+      "id": "omelette-muffins",
+      "page": 19,
+      "notes": [
+        "Source method review: the printed method does not state when to add the listed cheese or fill the muffin tin. The method is reproduced as supplied; please confirm before cooking."
+      ]
+    },
+    {
+      "id": "apple-pie-overnight-oats",
+      "page": 27,
+      "notes": [
+        "The nut brittle is a batch: the method uses one third and keeps the remainder. Shopping quantities below reproduce the complete batch as printed."
+      ]
+    },
+    {
+      "id": "crunchy-passion-fruit-protein-yogurt",
+      "page": 31,
+      "notes": [
+        "The oat topping is a batch: the method uses one third. Shopping quantities reproduce the complete batch as printed."
+      ]
+    },
+    {
+      "id": "fragrant-spiced-chickpea-hash",
+      "page": 32,
+      "notes": [
+        "Source serving conflict: the heading says “Serves 1”, but step 6 divides the hash between two plates. The published yield and nutrition are retained, not recalculated. Confirm the intended yield before relying on the per-serving figures."
+      ]
+    },
+    {
+      "id": "smashed-avocado-and-chickpeas-on-toast",
+      "page": 40,
+      "notes": [
+        "The method uses half of the chickpea mixture. Listed quantities reproduce the full prepared mixture, not just the amount served."
+      ]
+    },
+    {
+      "id": "chicken-vegetable-and-noodle-soup",
+      "page": 49,
+      "notes": [
+        "Source measure conflict: the chicken is printed as “200g (14 oz)”. Both values are preserved. Portion scaling uses the leading 200g value; the equivalent measure needs review."
+      ]
+    },
+    {
+      "id": "chickpea-salad-with-creamy-tahini-dressing",
+      "page": 63,
+      "notes": [
+        "The dressing lists fresh lemon juice, but the printed dressing step does not mention adding it. The source has not been silently amended."
+      ]
+    },
+    {
+      "id": "feel-good-fish-dhal",
+      "page": 78,
+      "notes": [
+        "Source method review: coconut milk is added in both steps 4 and 5, although only one quantity is listed. The printed method is preserved; confirm how to divide it."
+      ]
+    },
+    {
+      "id": "salmon-lime-rice-bowl",
+      "page": 99,
+      "notes": [
+        "Source ingredient review: the method stirs coriander into the rice, but the ingredient list only specifies coriander under the dressing. No extra quantity has been invented."
+      ]
+    },
+    {
+      "id": "mandarin-protein-yogurt",
+      "page": 107,
+      "notes": [
+        "The pecan topping is a batch: the method uses half. Shopping quantities reproduce the complete batch as printed."
+      ]
+    },
+    {
+      "id": "avocado-cocoa-bites",
+      "page": 111,
+      "notes": [
+        "Source method review: step 1 refers to dark chocolate, which is not in the printed ingredient list. No missing ingredient or quantity has been invented."
+      ]
+    },
+    {
+      "id": "tropical-yogurt-parfaits",
+      "page": 120,
+      "notes": [
+        "The serving basis says “with 1/6 granola”. The ingredients make a batch of granola; shopping quantities reproduce the complete batch as printed."
+      ]
+    }
+  ]
+}
