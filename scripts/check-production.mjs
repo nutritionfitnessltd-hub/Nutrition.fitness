@@ -2,7 +2,8 @@
  * No protection bypass, account requests, credentials or customer data are used. */
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
-const origin='https://nutrition.fitness';
+// The published www hostname is verified; the separate apex certificate issue is unchanged.
+const origin='https://www.nutrition.fitness';
 const digest=value=>createHash('sha256').update(value).digest('hex');
 const files=['launch.css','launch.mjs','launch-config.mjs'];
 const expected=Object.fromEntries(await Promise.all(files.map(async file=>[file,digest(await readFile(new URL('../public/'+file,import.meta.url)))])));
