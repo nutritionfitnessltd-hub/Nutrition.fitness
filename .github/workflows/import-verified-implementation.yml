@@ -1,0 +1,53 @@
+name: Import verified implementation
+on:
+  push:
+    branches: [launch/december-2026]
+    paths: [.github/workflows/import-verified-implementation.yml]
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 2
+      - name: Verify base and source archive
+        env:
+          BUNDLE_URL: 'https://sdmntpritalynorth.oaiusercontent.com/files/00000000-3614-8246-8f27-debc07ba8c3e/raw?se=2026-09-16T18%3A13%3A48Z&sp=r&sv=2026-02-06&sr=b&scid=88534499-0743-5c7f-b09d-db5be422a579&skoid=b32d65cd-c8f1-46fb-90df-c208671889d4&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-09-16T09%3A13%3A21Z&ske=2026-09-17T09%3A13%3A21Z&sks=b&skv=2026-02-06&sig=y81cLEhNwU/Hm5hZ%2BGHyKi1eIAZ46ryevalDtG5pnZo%3D'
+        run: |
+          test "$(git rev-parse HEAD^)" = '5d8c82e24a380882f5ade7e2eeaea555f6f07234'
+          curl --fail --silent --show-error --location "$BUNDLE_URL" -o /tmp/implementation.zip
+          echo '7d1341cf6ff13d9b55dc90281bbec65dedd1d66af32f5dcf6a4229a3a4d038a8  /tmp/implementation.zip' | sha256sum --check
+          python - <<'PY'
+          import zipfile,json,hashlib,pathlib,subprocess
+          root=pathlib.Path.cwd()
+          with zipfile.ZipFile('/tmp/implementation.zip') as z:
+              manifest=json.loads(z.read('implementation-manifest.json'))
+              assert len(manifest)==42 and set(z.namelist())==set(manifest)|{'implementation-manifest.json'}
+              for name,digest in manifest.items():
+                  p=pathlib.PurePosixPath(name)
+                  assert not p.is_absolute() and '..' not in p.parts
+                  assert p.parts[0] in {'api','docs','public','scripts','server','src','supabase','tests'} or name in {'.env.example','.gitignore','README.md','package.json','package-lock.json'}
+                  assert not name.startswith('.github/')
+                  data=z.read(name)
+                  assert len(data)<4000000 and hashlib.sha256(data).hexdigest()==digest
+                  dest=root/name;dest.parent.mkdir(parents=True,exist_ok=True);dest.write_bytes(data)
+              pathlib.Path('/tmp/implementation-files.json').write_text(json.dumps(list(manifest)))
+          PY
+      - name: Build and test complete source
+        run: |
+          node scripts/fetch-photo-assets.mjs
+          npm run check
+      - name: Commit implementation without touching main
+        run: |
+          python - <<'PY'
+          import json,subprocess
+          files=json.load(open('/tmp/implementation-files.json'))
+          subprocess.run(['git','add','--',*files],check=True)
+          PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'Implement source-backed recipes, meal planning, programme courses and private account/CRM adapters' -m 'Includes nine packaging previews, six cookbook recipes, planned-versus-eaten reconciliation, immutable food logs, explicit nutrition overrides, shopping lists, guest backups, guarded account sync, database migration and tests. 117 Node tests pass; live services remain unconfigured. Main is unchanged.'
+          git push origin HEAD:launch/december-2026
