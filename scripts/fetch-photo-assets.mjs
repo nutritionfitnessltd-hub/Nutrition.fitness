@@ -2,9 +2,9 @@ import fs from 'node:fs/promises';
 const articles=JSON.parse(await fs.readFile('src/knowledge-centre/articles.json','utf8'));
 const images=articles.filter(a=>a.image?.startsWith('https://images.unsplash.com/')).map(a=>({id:`knowledge-${a.id}`,url:a.image,alt:a.imageAlt,credit:a.imageCredit,creditUrl:a.imageCreditUrl}));
 images.push({id:'programme-build',url:'https://images.unsplash.com/photo-1641337221253-fdc7237f6b61',alt:'A man holding a dumbbell in a gym',credit:'Luke Witter / Unsplash',creditUrl:'https://unsplash.com/photos/k47w6BeapCs'});
+images.push({id:'programme-bike',url:'https://images.unsplash.com/photo-1681295692824-b2e2ec762c52',alt:'Two people cycling on a road',credit:'Tuvalum / Unsplash',creditUrl:'https://unsplash.com/photos/RGHlH2p08zg'});
 for(const [id,photo,alt] of [
  ['programme-swim','1530549387789-4c1017266635','Swimming in a pool'],
- ['programme-bike','1541625602330-2277b4c46182','People cycling outdoors'],
  ['recipe-oats','1517673400267-0251440c45dc','An illustrative breakfast bowl'],
  ['recipe-yogurt','1488477181946-6428a0291777','An illustrative fruit and yogurt dish'],
  ['recipe-cookies','1499636136210-6f4ee915583e','Illustrative homemade cookies'],
