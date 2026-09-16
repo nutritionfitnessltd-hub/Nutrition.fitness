@@ -11,11 +11,10 @@ export function compileLaunchLayout(html,route){
  html=html.replace('</head>','<link rel="stylesheet" href="/launch.css"><link rel="stylesheet" href="/product-layout.css"><script type="module" src="/launch.mjs"></script></head>');
  html=html.replace(/<body([^>]*)>/,`<body$1 data-accent="${accentFor(route)}">`);
  html=html.replace('href="/get-started/">Get started','href="/get-started/">Find my programme');
- if(route==='/'){
-  const main='<main id="main">';
-  if(!html.includes(main))throw new Error('Homepage main landmark changed.');
-  html=html.replace(main,`${launchWidget()}${main}`);
- }
+ // Shared across every page; Knowledge Centre pages inherit this same shell.
+ const main='<main id="main">';
+ if(!html.includes(main))throw new Error(`Page main landmark changed: ${route}`);
+ html=html.replace(main,`${launchWidget()}${main}`);
  return html;
 }
 /** A single horizontal announcement below navigation, outside the hero. */

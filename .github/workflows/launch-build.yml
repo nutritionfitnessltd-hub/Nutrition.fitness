@@ -52,11 +52,13 @@ jobs:
           python tests/food-browser.py
           python tests/packshot-browser.py
           python tests/timer-browser.py
+          python tests/sitewide-banner-browser.py
       - name: Confirm public production after authorised main deployment
         if: github.ref == 'refs/heads/main'
         run: |
           node scripts/check-production.mjs
-          NUFI_TEST_BASE_URL=https://nutrition.fitness python tests/timer-browser.py
+          NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/timer-browser.py
+          NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/sitewide-banner-browser.py
       - name: Package source, generated site and test evidence
         run: zip -qr nutrition-fitness-source.zip . -x '.git/*' '*.zip' 'node_modules/*'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

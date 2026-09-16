@@ -26,14 +26,23 @@ test('timer exposes full unit names without repeated screen reader announcements
  }
  assert.doesNotMatch(markup,/data-seconds/);
 });
-test('homepage compiler places exactly one banner after navigation before main, not inside hero',()=>{
- const base='<head></head><body><div class="preview-bar">preview</div><header class="site-header">links</header><nav class="mobile-nav">mobile</nav><main id="main"><section class="hero">approved hero</section></main></body>';
- const result=compileLaunchLayout(base,'/');
- assert.equal((result.match(/class="launch-widget launch-banner"/g)||[]).length,1);
- assert.ok(result.indexOf('launch-banner')>result.indexOf('</nav>'));
- assert.ok(result.indexOf('launch-banner')<result.indexOf('<main'));
- assert.ok(result.includes('<section class="hero">approved hero</section>'));
- assert.doesNotMatch(compileLaunchLayout(base,'/recipes/'),/class="launch-widget launch-banner"/);
+const base='<head></head><body><div class="preview-bar">preview</div><header class="site-header">links</header><nav class="mobile-nav">mobile</nav><main id="main"><section class="hero">approved content</section></main></body>';
+for(const route of ['/', '/nufi/', '/recipes/', '/recipes/blueberry-lemon-oats/', '/meal-planner/', '/shopping-list/', '/programmes/core/', '/courses/core/lesson-1/', '/shop/plain-whey/', '/subscriptions/', '/basket/', '/checkout/', '/get-started/', '/account/', '/knowledge-centre/', '/privacy/', '/404/']){
+ test(`shared layout adds exactly one banner below navigation on ${route}`,()=>{
+  const result=compileLaunchLayout(base,route);
+  assert.equal((result.match(/class="launch-widget launch-banner"/g)||[]).length,1);
+  assert.ok(result.indexOf('launch-banner')>result.indexOf('</nav>'));
+  assert.ok(result.indexOf('launch-banner')<result.indexOf('<main'));
+  assert.ok(result.includes('<section class="hero">approved content</section>'));
+  assert.equal((result.match(/src="\/launch.mjs"/g)||[]).length,1);
+  assert.equal((result.match(/id="launch-heading"/g)||[]).length,1);
+  assert.ok(result.includes(LAUNCH.at));
+ });
+}
+test('a missing main landmark fails loudly on an inner page',()=>{
+ assert.throws(()=>compileLaunchLayout(base.replace('<main id="main">','<main>'),'/recipes/'),/Page main landmark changed: \/recipes\//);
+});
+test('page body compiler does not add a second countdown',()=>{
  const builder=readFileSync(new URL('../scripts/build-launch.mjs',import.meta.url),'utf8');
  assert.doesNotMatch(builder,/\$\{launchWidget\(\)\}/);
 });
