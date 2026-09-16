@@ -48,6 +48,7 @@ with sync_playwright() as w:
   ok('Escape works from inside the quiz frame')
   p.locator('.hero-button').click();f=frame();expect(f.locator('.finder-progress-row')).to_contain_text('Question 3')
   p.go_back();closed();p.go_forward();expect(p.locator('dialog[open]')).to_have_count(1);f=frame()
+  expect(f.locator('input[value=bodyweight]')).to_be_visible()
   ok('Browser Back closes and Forward restores the quiz without leaving the page')
   for values in [['bodyweight','weights'],['3'],['30'],['arms','chest','shoulders'],['consistency']]:
    for value in values:f.locator(f'input[value="{value}"]').check()
@@ -80,6 +81,12 @@ with sync_playwright() as w:
   expect(p.locator('dialog[open] .nf-form-status')).to_contain_text('Added.')
   expect(p.locator('dialog[open] .nf-form-status a[href="/basket/"]')).to_be_visible()
   ok('Product quantities, add-to-basket handler and actionable feedback survive modal presentation');close()
+  goto('/');p.locator('a[href="/subscriptions/"]').first.click();f=frame()
+  expect(f.locator('#box-form')).to_be_visible();expect(f.locator('#box-summary')).to_be_visible()
+  f.locator('#box-form button[type=submit]').click();expect(f.locator('.notification')).to_contain_text('Your box is in the basket')
+  count=p.evaluate("JSON.parse(localStorage.getItem('nutrition-fitness-site-v2')).cart.reduce((sum,line)=>sum+line.qty,0)")
+  close();expect(p.locator('.bag-count').first).to_have_text(str(count))
+  ok('Subscription modal retains its price summary and refreshes the parent basket after a change')
   # Existing food controller navigates on success. That navigation must escape the frame.
   goto('/recipes/');p.locator('a[href="/meal-planner/add/?recipe=tropical-overnight-oats"]').first.click();f=frame()
   f.locator('[name=servings]').fill('2');f.locator('[data-meal-form] button[type=submit]').click()
@@ -114,6 +121,16 @@ with sync_playwright() as w:
     p.mouse.click(8,8);closed();p.wait_for_timeout(120);ok('Backdrop click closes desktop modal')
    else:close()
   ok('No unhandled JavaScript errors',not errors)
+ except Exception:
+  try:
+   p.screenshot(path=str(OUT/'form-modal-failure.png'))
+   diagnostic={'url':p.url,'frames':[]}
+   for child in p.frames:
+    diagnostic['frames'].append(child.evaluate('''() => ({url:location.href,body:document.body.outerHTML, ancestors:[...document.querySelectorAll('dialog,iframe,[data-nf-modal-path],[data-nf-modal-content],input[value=bodyweight]')].map(n=>({tag:n.tagName,cls:n.className,open:n.open,rect:n.getBoundingClientRect().toJSON(),display:getComputedStyle(n).display,visibility:getComputedStyle(n).visibility}))})'''))
+   (OUT/'form-modal-failure.json').write_text(json.dumps(diagnostic,indent=2))
+   print('MODAL FAILURE DIAGNOSTICS',json.dumps([{**x,'body':x['body'][:300]} for x in diagnostic['frames']]),flush=True)
+  except Exception as diagnostic_error: print('Diagnostic capture failed:',str(diagnostic_error),flush=True)
+  raise
  finally:
   (OUT/'form-modals-browser.json').write_text(json.dumps({'checks':checks,'errors':errors,'mocked_reservations':len(leads)},indent=2))
   if errors:print(errors,flush=True)
