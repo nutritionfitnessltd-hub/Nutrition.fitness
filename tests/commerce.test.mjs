@@ -8,7 +8,7 @@ test('subscription discount is rounded in integer pence',()=>{assert.equal(unitP
 test('one-off extras do not repeat',()=>{const q=quoteCart([sub,{id:'shot-vanilla',qty:1,mode:'once',cadence:null}]);assert.equal(q.total,3700);assert.equal(q.recurring[0].total,3005);});
 test('shipping threshold uses physical items only',()=>{const q=quoteCart([one,{id:'nufi-membership',qty:1,mode:'subscription',cadence:'year'}]);assert.equal(q.delivery,395);assert.equal(q.recurring[0].delivery,0);});
 test('free shipping for enough physical merchandise',()=>assert.equal(quoteCart([{...one,qty:2}]).delivery,0));
-test('digital-only baskets have no delivery',()=>assert.equal(quoteCart([{id:'high-protein-kitchen',qty:1,mode:'once',cadence:null}]).delivery,0));
+test('digital-only baskets have no delivery',()=>assert.equal(quoteCart([{id:'high-protein-snacks',qty:1,mode:'once',cadence:null}]).delivery,0));
 test('different renewal cadences remain separate',()=>{const q=quoteCart([sub,{id:'shot-chocolate',qty:2,mode:'subscription',cadence:'8w'},{id:'nufi-membership',qty:1,mode:'subscription',cadence:'month'}]);assert.deepEqual(q.recurring.map(r=>r.cadence),['4w','8w','month']);});
 test('repeat line merges but one-off remains distinct',()=>{let l=addLine([sub],sub);assert.equal(l[0].qty,2);l=addLine(l,one);assert.equal(l.length,2);});
 test('unknown product rejected',()=>assert.throws(()=>validateLine({...one,id:'bogus'})));

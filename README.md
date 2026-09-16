@@ -37,3 +37,8 @@ Shop catalogue prices, stock, terms and proposed packaging are still examples. T
 - `tests/food-browser.py`: real HTTP browser journeys; explicit `--offline` harness is also available.
 
 GitHub Actions runs code/link, PostgreSQL and HTTP browser checks and creates a complete ZIP plus screenshot evidence. Keep that ZIP for handover and rollback. The historical standalone HTML review generator is retired; use the actual HTTP website so module navigation, storage and connection errors behave correctly.
+
+
+## Full High Protein Kitchen catalogue
+
+The full supplied 100-recipe catalogue and actual book listing are now included. See `docs/COOKBOOK-IMPORT.md` for provenance, source-review notes, exact database-import boundaries and tests. The hosted database must be the existing Nutrition.Fitness project; no replacement or unrelated database is selected.

@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "description": "Nutrition.Fitness launch website, source-backed recipe planner and guarded membership integrations",
-  "engines": {"node": "22.x"},
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
-    "prebuild": "node scripts/fetch-photo-assets.mjs",
+    "prebuild": "node scripts/build-recipe-catalogue.mjs && node scripts/fetch-photo-assets.mjs",
     "build": "node scripts/build.mjs && node scripts/build-launch.mjs && node scripts/build-knowledge-centre.mjs",
     "dev": "npm run build && node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",

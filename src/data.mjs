@@ -26,6 +26,18 @@ export const products = [
   ].map(([slug,name,short,color,image,quip])=>({id:slug,name,short,category:'books',price:1495,size:'Digital recipe book',type:'digital',recurring:false,color,art:'book',image,label:name.replace('The ',''),quip,description:'A recipe-book concept for proper food that fits real life. Clear ingredients, straightforward methods and useful nutrition information are the brief. Not a lecture in a very expensive apron.',details:['Digital recipe-book format.','Full recipe content is not included in this website build.','Final recipe count, testing and nutrition need approval.'],caution:'Cover and product-page concept only. No ebook is delivered by the demo checkout.'})),
   {id:'nufi-membership',name:'NUFI+ membership',short:'NUFI+',category:'membership',price:1499,annualPrice:9900,type:'digital',recurring:true,color:'aqua',art:'membership',label:'NUFI+',quip:'Less figuring out. More getting on with it.',description:'Programmes, meal planning, shopping lists, courses and progress. The useful bits, brought together.',caution:'Example pricing for review. No membership or real account is activated in this preview.'}
 ];
+const kitchen = products.find(p=>p.id==='high-protein-kitchen');
+Object.assign(kitchen, {
+  name:'The High Protein Kitchen', short:'The High Protein Kitchen',
+  price:null, priceStatus:'awaiting-approval', availability:'coming-soon',
+  size:'100 recipes · 143-page digital edition', art:'published-book',
+  image:'/assets/cookbook/high-protein-kitchen-cover.webp',
+  formats:['Digital PDF','Hardback'],
+  quip:'Proper food. A little less fuss.',
+  description:'100 recipes for real life: breakfasts, lunches, dinners, snacks and drinks. The complete High Protein Kitchen, with the original recipe photographs, clear methods and the supplied nutrition figures.',
+  details:['22 breakfasts, 24 lunches, 25 dinners, 14 snacks and 15 smoothies and drinks.','143 pages in the supplied digital edition, including the practical kitchen, nutrition and fitness notes.','The salmon, coriander & lime rice bowl on the cover is recipe 67, page 99.','Explore all 100 recipes on the website and save your favourites to your meal planner.'],
+  caution:'Launching 1 November 2026 at 9am UK time. Digital and hardback pricing, physical availability and delivery terms are still to be confirmed. No payment is taken and no paid PDF download is exposed on this page.'
+});
 export const programmes = [
   {slug:'start',name:'Start',title:'A start you can actually stick to.',tag:'Start here',level:'Beginner',place:'Home or gym',weeks:6,sessions:3,minutes:'20–30',color:'aqua',icon:'dumbbell',description:'For anyone who would like to get going without being told to become a different person by Thursday.',goal:'Build a routine',outcome:'Find your feet, learn the movements and build a week you can repeat.',focus:['Simple full-body sessions','A gradual introduction to training','Food planning that fits your week'],quip:'No previous enthusiasm required.'},
   {slug:'lose',name:'Lose',title:'Less all-or-nothing. More getting somewhere.',tag:'Feel better in yourself',level:'All levels',place:'Home or gym',weeks:12,sessions:3,minutes:'25–40',color:'blush',icon:'heart',description:'A proposed fat-loss programme built around consistency, realistic training and food you still look forward to.',goal:'Manage weight',outcome:'Work towards your goals without turning every meal into a maths exam.',focus:['A manageable weekly structure','Personal nutrition targets from onboarding','Progress reviews beyond the scales'],quip:'Cake has not been appointed the enemy.'},
