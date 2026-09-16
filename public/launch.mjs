@@ -2,7 +2,7 @@ import {LAUNCH,countdownParts} from './launch-config.mjs';
 import {BASES,QUESTIONS,recommend,validateAnswers} from './programme-finder.mjs';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const clock=document.querySelector('[data-launch-clock]');
-function updateClock(){if(!clock)return;const t=countdownParts();for(const k of ['days','hours','minutes'])clock.querySelector(`[data-${k}]`).textContent=String(t[k]).padStart(2,'0');if(t.reached){clock.hidden=true;document.querySelector('[data-launch-kicker]').textContent='The countdown is complete. Your next step starts here.';}}
+function updateClock(){if(!clock)return;const t=countdownParts();for(const k of ['days','hours','minutes'])clock.querySelector(`[data-${k}]`).textContent=String(t[k]).padStart(2,'0');if(t.reached){clock.hidden=true;const title=document.querySelector('[data-launch-kicker]');title.textContent='The countdown is complete.';title.removeAttribute('aria-label');}}
 updateClock();if(clock)setInterval(updateClock,15000);
 function newRequestId(){if(crypto.randomUUID)return crypto.randomUUID();const bytes=crypto.getRandomValues(new Uint8Array(16));bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;const h=[...bytes].map(x=>x.toString(16).padStart(2,'0')).join('');return [h.slice(0,8),h.slice(8,12),h.slice(12,16),h.slice(16,20),h.slice(20)].join('-');}
 const root=document.querySelector('[data-programme-finder]');

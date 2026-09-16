@@ -1,7 +1,7 @@
 name: Launch preview build
 on:
   push:
-    branches: [launch/december-2026]
+    branches: [launch/december-2026, main]
   pull_request:
     branches: [main]
 permissions:
@@ -52,6 +52,11 @@ jobs:
           python tests/food-browser.py
           python tests/packshot-browser.py
           python tests/timer-browser.py
+      - name: Confirm public production after authorised main deployment
+        if: github.ref == 'refs/heads/main'
+        run: |
+          node scripts/check-production.mjs
+          NUFI_TEST_BASE_URL=https://nutrition.fitness python tests/timer-browser.py
       - name: Package source, generated site and test evidence
         run: zip -qr nutrition-fitness-source.zip . -x '.git/*' '*.zip' 'node_modules/*'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
