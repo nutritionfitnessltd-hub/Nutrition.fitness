@@ -40,7 +40,11 @@ with sync_playwright() as p:
         check('Complete method '+path,page.locator('[data-method] li').count()==count)
     check('Missing original photo explicit',page.locator('.recipe-no-photo').count()>0)
     visit('/recipes/fragrant-spiced-chickpea-hash/')
-    check('Printed serving conflict explained','Source serving conflict' in page.locator('body').inner_text())
+    note=page.locator('.source-review')
+    check('Source review prompt is visible',note.locator('summary').is_visible())
+    if note.get_attribute('open') is None:
+        note.locator('summary').click()
+    check('Printed serving conflict explained','Source serving conflict' in note.inner_text())
     visit('/shop/high-protein-kitchen/')
     check('Book uses supplied cover',page.locator('.cookbook-cover img').get_attribute('src')=='/assets/cookbook/high-protein-kitchen-cover.webp')
     check('143-page digital edition described','143 pages' in page.locator('body').inner_text())
