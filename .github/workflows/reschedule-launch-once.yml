@@ -28,9 +28,9 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           fetch-depth: 2
-      - name: Apply bounded source edits to the verified base
+      - name: Apply bounded application-source edits
         run: |
-          test "$(git rev-parse HEAD^)" = '4a3da5c48a283899d11a1696f3b6242e33c28fdf'
+          test "$(git rev-parse HEAD^)" = '1d704f44ebb3447911ebf4cf1729d5fae2db3657'
           python - <<'PY'
           from pathlib import Path
           import re,json
@@ -49,8 +49,8 @@ jobs:
             'supabase/tests/integrity.sql':[('2026-12-01T09:00:00Z','2026-11-01T09:00:00Z',1)],
             'README.md':[('— December launch website','— November launch website',1),('1 December 2026','1 November 2026',1)],
             'docs/LAUNCH-BUILD-STATUS.md':[('1 December 2026','1 November 2026',1)],
-            '.github/workflows/launch-build.yml':[('          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202609160001_nufi_launch.sql','          for migration in supabase/migrations/*.sql; do psql -v ON_ERROR_STOP=1 -f "$migration"; done',1)],
           }
+          assert 'for migration in supabase/migrations/*.sql;' in (root/'.github/workflows/launch-build.yml').read_text()
           prepared={}
           for name,edits in changes.items():
               text=(root/name).read_text()
@@ -122,9 +122,10 @@ jobs:
           });
           '''
           for name,text in prepared.items():
+              assert not name.startswith('.github/')
               p=root/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(text)
           Path('/tmp/nufi-reschedule-files.json').write_text(json.dumps(list(prepared)))
-          print('Prepared',len(prepared),'bounded source changes. Original offer identity retained.')
+          print('Prepared',len(prepared),'application-source changes; no workflow mutation.')
           PY
       - name: Verify code and generated site
         run: npm run check
@@ -142,24 +143,24 @@ jobs:
           python tests/food-browser.py
           python tests/packshot-browser.py
           python tests/timer-browser.py
-      - name: Commit verified edits and remove this one-time maintenance workflow
+      - name: Commit only verified application source
         run: |
           python - <<'PY'
           import json,subprocess
           from pathlib import Path
           files=json.loads(Path('/tmp/nufi-reschedule-files.json').read_text())
-          maintenance='.github/workflows/reschedule-launch-once.yml'
-          Path(maintenance).unlink()
-          subprocess.run(['git','add','--',*files,maintenance],check=True)
+          assert all(not f.startswith('.github/') for f in files)
+          subprocess.run(['git','add','--',*files],check=True)
           staged=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
-          assert set(staged)==set(files)|{maintenance}
+          assert set(staged)==set(files)
           PY
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git commit -m 'Move Nutrition.Fitness launch to 1 November 2026 at 9am UK' -m 'Update countdown, customer-facing launch wording, activation date checks and additive database migration. Preserve the enlarged timer styling, approved homepage, original free-month offer identity and production main. Code, database and HTTP browser checks passed before commit.'
+          git commit -m 'Move Nutrition.Fitness launch to 1 November 2026 at 9am UK' -m 'Update countdown, customer-facing launch wording, activation date checks and additive database migration. Preserve enlarged timer styling, approved homepage, original free-month offer identity and production main. Code, database and HTTP browser checks passed before commit.'
           git push origin HEAD:launch/december-2026
           git rev-parse HEAD > test-results/verified-commit.txt
       - name: Package updated source and verification evidence
+        if: always()
         run: zip -qr nutrition-fitness-november-launch.zip . -x '.git/*' '*.zip' 'node_modules/*'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()

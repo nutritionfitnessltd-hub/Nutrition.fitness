@@ -39,7 +39,7 @@ jobs:
       - name: Test database migration and account isolation
         run: |
           psql -v ON_ERROR_STOP=1 -f supabase/tests/bootstrap.sql
-          psql -v ON_ERROR_STOP=1 -f supabase/migrations/202609160001_nufi_launch.sql
+          for migration in supabase/migrations/*.sql; do psql -v ON_ERROR_STOP=1 -f "$migration"; done
           psql -v ON_ERROR_STOP=1 -f supabase/tests/integrity.sql
       - name: Install test browser
         run: |
