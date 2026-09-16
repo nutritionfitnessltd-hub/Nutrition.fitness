@@ -8,7 +8,7 @@ export function compileLaunchLayout(html,route){
  if(preview<0||header<preview)throw new Error(`Base header contract changed: ${route}`);
  html=html.slice(0,preview)+html.slice(header);
  html=html.replace('<meta name="theme-color" content="#faf6ef">','<meta name="theme-color" content="#ffffff">');
- html=html.replace('</head>','<link rel="stylesheet" href="/launch.css"><script type="module" src="/launch.mjs"></script></head>');
+ html=html.replace('</head>','<link rel="stylesheet" href="/launch.css"><link rel="stylesheet" href="/product-layout.css"><script type="module" src="/launch.mjs"></script></head>');
  html=html.replace(/<body([^>]*)>/,`<body$1 data-accent="${accentFor(route)}">`);
  html=html.replace('href="/get-started/">Get started','href="/get-started/">Find my programme');
  return html;

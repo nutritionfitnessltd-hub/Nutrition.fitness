@@ -1,0 +1,9 @@
+/* Real packshots replace the old illustration layout. Reset its fixed offsets
+   and important heights only inside this photographic component. */
+.shop-arrangement.cream{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(0,1fr);grid-template-rows:repeat(2,minmax(0,1fr));gap:10px;padding:32px 16px 46px;background:#fff;min-height:360px}
+.shop-arrangement>.product-photo.hero-pack,.shop-arrangement>.product-photo.hero-shot-one,.shop-arrangement>.product-photo.hero-shot-two{position:static;inset:auto!important;transform:none!important;height:100%!important;width:100%;min-width:0;min-height:0;background:#fff;align-self:stretch}
+.shop-arrangement>.product-photo.hero-pack{grid-column:1;grid-row:1/3}.shop-arrangement>.product-photo.hero-shot-one{grid-column:2;grid-row:1}.shop-arrangement>.product-photo.hero-shot-two{grid-column:2;grid-row:2}
+.shop-arrangement>.product-photo img{position:static;inset:auto;transform:none;width:100%;height:100%;max-height:100%;object-fit:contain}
+.shop-arrangement .arrangement-note{position:absolute;left:20px;right:auto;top:5px;font-size:17px;line-height:1.15;transform:rotate(4deg)}
+.shop-arrangement .concept-caption{position:absolute;bottom:12px;left:18px;right:18px;font-size:11px;text-align:center}
+@media(max-width:760px){.shop-arrangement.cream{min-height:320px;max-height:420px}.shop-arrangement .arrangement-note{font-size:15px}}
