@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 // The published www hostname is verified; the separate apex certificate issue is unchanged.
 const origin='https://www.nutrition.fitness';
 const digest=value=>createHash('sha256').update(value).digest('hex');
-const files=['launch.css','launch.mjs','launch-config.mjs','recipes-data.mjs','recipe-display.mjs'];
+const files=['launch.css','launch.mjs','launch-config.mjs','recipes-data.mjs','recipe-display.mjs','form-modals.css','form-modals.mjs'];
 const expected=Object.fromEntries(await Promise.all(files.map(async file=>[file,digest(await readFile(new URL('../public/'+file,import.meta.url)))])));
 let last='Deployment not verified';
 for(let attempt=1;attempt<=18;attempt++){
@@ -14,6 +14,7 @@ for(let attempt=1;attempt<=18;attempt++){
   const get=async path=>{const response=await fetch(`${origin}/${path}?verify=${stamp}`,{signal:AbortSignal.timeout(15000),headers:{'Cache-Control':'no-cache'}});if(!response.ok)throw new Error(`HTTP ${response.status} for ${path||'homepage'}`);return response.text();};
   const html=await get('');
   if(!html.includes('class="launch-widget launch-banner"')||!html.includes('2026-11-01T09:00:00.000Z'))throw new Error('Production still serves the previous homepage.');
+  if(!html.includes('src="/form-modals.mjs"')||!html.includes('href="/form-modals.css"'))throw new Error('Production modal presentation is not loaded yet.');
   if(!(html.indexOf('</header>')<html.indexOf('class="launch-widget launch-banner"')&&html.indexOf('class="launch-widget launch-banner"')<html.indexOf('<main id="main">')))throw new Error('Production banner is not between navigation and hero.');
   for(const file of files)if(digest(await get(file))!==expected[file])throw new Error(`Production ${file} is not the tested version.`);
   const recipes=await get('recipes/');
