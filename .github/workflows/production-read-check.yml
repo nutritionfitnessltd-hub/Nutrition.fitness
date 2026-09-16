@@ -1,0 +1,46 @@
+name: Public production connectivity check
+on:
+  push:
+    branches: [maintenance/verify-live-banner]
+    paths: [.github/workflows/production-read-check.yml]
+permissions:
+  contents: read
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Read public DNS and verify served banner
+        run: |
+          node --input-type=module <<'JS'
+          import dns from 'node:dns/promises';
+          import {readFile,appendFile} from 'node:fs/promises';
+          import {createHash} from 'node:crypto';
+          const names=['nutrition.fitness','www.nutrition.fitness','nutrition-fitness-website-2.vercel.app'];
+          const resolver=new dns.Resolver({timeout:3000,tries:1});
+          function detail(e){return {name:e?.name,message:String(e?.message||e).slice(0,300),code:e?.code,cause:e?.cause?detail(e.cause):undefined,errors:e?.errors?.map(detail)};}
+          const records=await Promise.all(names.map(async name=>({name,results:await Promise.all(['A','AAAA','CNAME'].map(async type=>{try{return {type,records:await resolver.resolve(name,type)}}catch(e){return {type,error:detail(e)}}}))})));
+          const hash=x=>createHash('sha256').update(x).digest('hex');
+          const paths=['launch.css','launch.mjs','launch-config.mjs'];
+          const expected=Object.fromEntries(await Promise.all(paths.map(async p=>[p,hash(await readFile('public/'+p))])));
+          const outputs=await Promise.all(names.map(async name=>{
+            const url='https://'+name+'/';
+            try{
+              const r=await fetch(url,{signal:AbortSignal.timeout(12000),headers:{'Cache-Control':'no-cache'}});
+              const html=await r.text();
+              const mark='class="launch-widget launch-banner"';
+              const banner=html.indexOf(mark),header=html.indexOf('</header>'),main=html.indexOf('<main id="main">');
+              const result={url,status:r.status,finalURL:r.url,title:html.match(/<title>([^<]*)<\/title>/i)?.[1],bannerPresent:banner>=0,correctPosition:header>=0&&banner>header&&main>banner,correctLaunch:html.includes('2026-11-01T09:00:00.000Z')};
+              if(r.ok&&result.correctPosition&&result.correctLaunch){
+                result.assets=await Promise.all(paths.map(async p=>{try{const a=await fetch(url+p,{signal:AbortSignal.timeout(8000)});return {path:p,status:a.status,matchesProductionSource:a.ok&&hash(Buffer.from(await a.arrayBuffer()))===expected[p]}}catch(e){return {path:p,error:detail(e)}}}));
+              }
+              return result;
+            }catch(e){return {url,error:detail(e)}}
+          }));
+          const report={checkedAt:new Date().toISOString(),productionSource:'11d144b4e29a9424fdfd6fde11c9d3969d071f9c',dns:records,http:outputs};
+          console.log(JSON.stringify(report,null,2));
+          await appendFile(process.env.GITHUB_STEP_SUMMARY,'## Read-only public production check\n\nNo credentials, customer records, form submissions, DNS changes or authentication bypass were used.\n\n```json\n'+JSON.stringify(report,null,2)+'\n```\n');
+          JS
