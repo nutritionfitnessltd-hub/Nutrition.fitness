@@ -51,6 +51,7 @@ jobs:
           for i in $(seq 1 30); do curl -fsS http://127.0.0.1:4173/ >/dev/null && break; sleep 1; done
           python tests/food-browser.py
           python tests/packshot-browser.py
+          python tests/timer-browser.py
       - name: Package source, generated site and test evidence
         run: zip -qr nutrition-fitness-source.zip . -x '.git/*' '*.zip' 'node_modules/*'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
