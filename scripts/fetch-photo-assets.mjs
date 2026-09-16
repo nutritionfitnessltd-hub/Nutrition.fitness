@@ -2,14 +2,14 @@ import fs from 'node:fs/promises';
 const articles=JSON.parse(await fs.readFile('src/knowledge-centre/articles.json','utf8'));
 const images=articles.filter(a=>a.image?.startsWith('https://images.unsplash.com/')).map(a=>({id:`knowledge-${a.id}`,url:a.image,alt:a.imageAlt,credit:a.imageCredit,creditUrl:a.imageCreditUrl}));
 images.push({id:'programme-build',url:'https://images.unsplash.com/photo-1641337221253-fdc7237f6b61',alt:'A man holding a dumbbell in a gym',credit:'Luke Witter / Unsplash',creditUrl:'https://unsplash.com/photos/k47w6BeapCs'});
-images.push({id:'programme-bike',url:'https://images.unsplash.com/photo-1681295692824-b2e2ec762c52',alt:'Two people cycling on a road',credit:'Tuvalum / Unsplash',creditUrl:'https://unsplash.com/photos/RGHlH2p08zg'});
+images.push({id:'programme-bike',url:'https://images.unsplash.com/photo-1681295692824-b2e2ec762c52',alt:'Two cyclists with road bikes outdoors',credit:'Tuvalum / Unsplash',creditUrl:'https://unsplash.com/photos/RGHlH2p08zg'});
+images.push({id:'recipe-chilli-real',url:'https://images.unsplash.com/photo-1591266798549-32fa7cd32f45',alt:'An illustrative chilli dish',credit:'micheile henderson / Unsplash',creditUrl:'https://unsplash.com/photos/FhMB8pMge5U'});
+images.push({id:'recipe-balls-real',url:'https://images.unsplash.com/photo-1596723455658-72ebb0d12edd',alt:'Illustrative cocoa energy balls',credit:'Abbie Whiddett / Unsplash',creditUrl:'https://unsplash.com/photos/e34KSdVAs1U'});
 for(const [id,photo,alt] of [
  ['programme-swim','1530549387789-4c1017266635','Swimming in a pool'],
  ['recipe-oats','1517673400267-0251440c45dc','An illustrative breakfast bowl'],
  ['recipe-yogurt','1488477181946-6428a0291777','An illustrative fruit and yogurt dish'],
- ['recipe-cookies','1499636136210-6f4ee915583e','Illustrative homemade cookies'],
- ['recipe-chilli','1547592180-85f173990554','An illustrative bowl of food'],
- ['recipe-balls','1511381939415-e44015466834','Illustrative chocolate ingredients']
+ ['recipe-cookies','1499636136210-6f4ee915583e','Illustrative homemade cookies']
 ])images.push({id,url:`https://images.unsplash.com/photo-${photo}`,alt,credit:'Unsplash photography',creditUrl:'https://unsplash.com/license'});
 await fs.mkdir('public/assets/photos',{recursive:true});
 const results=[];
