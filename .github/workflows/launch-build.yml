@@ -1,0 +1,23 @@
+name: Launch preview build
+on:
+  push:
+    branches: [launch/december-2026]
+permissions:
+  contents: read
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Verify source
+        run: npm run check
+      - name: Archive complete source for review and rollback
+        run: git archive --format=zip HEAD -o nutrition-fitness-source.zip
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: nutrition-fitness-source
+          path: nutrition-fitness-source.zip
+          retention-days: 14
