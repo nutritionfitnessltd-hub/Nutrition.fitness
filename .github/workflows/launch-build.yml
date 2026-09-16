@@ -4,6 +4,9 @@ on:
     branches: [launch/december-2026]
 permissions:
   contents: read
+concurrency:
+  group: launch-preview
+  cancel-in-progress: true
 jobs:
   package:
     runs-on: ubuntu-latest
@@ -12,10 +15,12 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
         with:
           persist-credentials: false
+      - name: Download licensed photo assets
+        run: node scripts/fetch-photo-assets.mjs
       - name: Verify source
         run: npm run check
-      - name: Archive complete source for review and rollback
-        run: git archive --format=zip HEAD -o nutrition-fitness-source.zip
+      - name: Archive source and generated site for review
+        run: zip -qr nutrition-fitness-source.zip . -x '.git/*' '*.zip'
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: nutrition-fitness-source
