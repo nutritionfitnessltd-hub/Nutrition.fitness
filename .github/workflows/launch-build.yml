@@ -57,6 +57,7 @@ jobs:
           python tests/packshot-browser.py
           python tests/timer-browser.py
           python tests/sitewide-banner-browser.py
+          python tests/form-modals-browser.py
       - name: Confirm public production after authorised main deployment
         if: github.ref == 'refs/heads/main'
         run: |
