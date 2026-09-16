@@ -1,14 +1,13 @@
 {
   "name": "nutrition-fitness-website",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "private": true,
   "type": "module",
-  "description": "Nutrition.Fitness multi-page website and subscription shop preview",
-  "engines": {
-    "node": "22.x"
-  },
+  "description": "Nutrition.Fitness launch website, source-backed recipe planner and guarded membership integrations",
+  "engines": {"node": "22.x"},
   "scripts": {
-    "build": "node scripts/build.mjs && node scripts/build-knowledge-centre.mjs",
+    "prebuild": "node scripts/fetch-photo-assets.mjs",
+    "build": "node scripts/build.mjs && node scripts/build-launch.mjs && node scripts/build-knowledge-centre.mjs",
     "dev": "npm run build && node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
     "test": "node --test tests/*.test.mjs",

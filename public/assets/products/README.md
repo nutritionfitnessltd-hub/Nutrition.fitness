@@ -1,0 +1,1 @@
+Nutrition.Fitness packaging visualisations generated for the website build. These are proposed packaging previews, not photographs of manufactured stock. Original sizes, prices, formulations and regulatory labels must be approved before sale. Cropped from the product grid supplied in this conversation.

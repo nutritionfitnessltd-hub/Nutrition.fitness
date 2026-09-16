@@ -1,0 +1,81 @@
+/** Pure, testable recipe / meal-planning domain. No network, DOM or assumed targets. */
+import {RECIPES, RECIPE_BY_ID} from './recipes-data.mjs';
+export const MACROS = ['protein','calories','carbs','fat'];
+export const SLOTS = ['Breakfast','Lunch','Dinner','Snacks'];
+export const SCHEMA = 1;
+export const clone = value => structuredClone(value);
+export const uid = () => {if(globalThis.crypto.randomUUID)return globalThis.crypto.randomUUID();const b=globalThis.crypto.getRandomValues(new Uint8Array(16));b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;const s=[...b].map(v=>v.toString(16).padStart(2,'0')).join('');return [s.slice(0,8),s.slice(8,12),s.slice(12,16),s.slice(16,20),s.slice(20)].join('-');};
+export const today = (date=new Date()) => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+export function validDate(s){return typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s+'T12:00:00Z'))&&new Date(s+'T12:00:00Z').toISOString().slice(0,10)===s;}
+export function addDays(s,n){if(!validDate(s)||!Number.isInteger(n))throw new Error('Choose a valid date.');const d=new Date(s+'T12:00:00Z');d.setUTCDate(d.getUTCDate()+n);return d.toISOString().slice(0,10);}
+export function monday(s=today()){const d=new Date(s+'T12:00:00Z');return addDays(s,-((d.getUTCDay()+6)%7));}
+export function number(value,label,min=0,max=1000000){if(typeof value!=='number'||!Number.isFinite(value)||value<min||value>max)throw new Error(`${label} must be between ${min} and ${max}.`);return value;}
+function text(value,label,max=240){if(typeof value!=='string'||value.length>max||/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value))throw new Error(`Check ${label}.`);return value.trim();}
+function id(value){const s=text(value,'identifier',80);if(!/^[a-zA-Z0-9][a-zA-Z0-9_-]*$/.test(s))throw new Error('Invalid identifier.');return s;}
+export function nutrition(value){if(value===null)return null;if(!value||typeof value!=='object'||Array.isArray(value))throw new Error('Check the nutrition values.');return Object.fromEntries(MACROS.map(k=>[k,number(value[k],k)]));}
+export function ingredient(value){if(!value||typeof value!=='object')throw new Error('Check the ingredient.');const name=text(value.name,'ingredient name',200);if(!name)throw new Error('An ingredient needs a name.');return {name,quantity:value.quantity===null?null:number(value.quantity,'ingredient amount',0,1000000),unit:text(value.unit||'','unit',30),note:text(value.note||'','ingredient note',600),group:text(value.group||'Main','ingredient group',80),optional:value.optional===true,aisle:text(value.aisle||'Other','aisle',60)};}
+export function recipe(value){if(!value||typeof value!=='object')throw new Error('Invalid recipe.');if(!Array.isArray(value.ingredients)||value.ingredients.length>100||!Array.isArray(value.steps)||value.steps.length>50)throw new Error('A recipe supports up to 100 ingredients and 50 steps.');const name=text(value.name,'recipe name',180);if(!name)throw new Error('Give the recipe a name.');const image=text(value.image||'','recipe image',220);if(image&&!/^\/assets\/[\w./-]+\.(jpg|webp|png)$/.test(image))throw new Error('Only local catalogue images are supported.');return {id:id(value.id),name,category:SLOTS.includes(value.category)?value.category:'Snacks',servings:number(value.servings,'recipe yield',0.01,1000),servingLabel:text(value.servingLabel||'serving','serving label',40),nutrition:nutrition(value.nutrition),nutritionStatus:['source-estimate','user-entered','review-needed'].includes(value.nutritionStatus)?value.nutritionStatus:'review-needed',nutritionSource:text(value.nutritionSource||'User-entered recipe; nutrition not yet supplied.','nutrition source',1000),source:text(value.source||'Your recipe','recipe source',240),image,imageNote:text(value.imageNote||'','image note',240),quote:text(value.quote||'','recipe note',300),ingredients:value.ingredients.map(ingredient),steps:value.steps.map(s=>text(s,'method step',2000)),prepMinutes:number(value.prepMinutes||0,'preparation minutes',0,1440),cookMinutes:number(value.cookMinutes||0,'cooking minutes',0,2880),waitMinutes:number(value.waitMinutes||0,'waiting minutes',0,10080),timeNote:text(value.timeNote||'','time note',400),notes:text(value.notes||'','recipe notes',4000),allergens:(value.allergens||[]).slice(0,30).map(x=>text(x,'allergen',100)),version:Number.isInteger(value.version)&&value.version>0?value.version:1};}
+export function newState(date=today()) {return {schema:SCHEMA,revision:0,collections:[],plans:[{id:'first-plan',name:'My first plan',start:monday(date),days:28,entries:[]}],activePlan:'first-plan',overrides:[],favourites:[],ratings:{},logs:[],shopping:{checked:[],extras:[]},onboarding:null,lessonProgress:[],audit:[]};}
+function array(v,label,max){if(!Array.isArray(v)||v.length>max)throw new Error(`Invalid or oversized ${label}.`);return v;}
+export function validateState(value){
+ if(!value||typeof value!=='object'||value.schema!==SCHEMA)throw new Error('This file is not a supported Nutrition.Fitness plan.');
+ const v=value;const out={schema:SCHEMA,revision:Number.isInteger(v.revision)&&v.revision>=0?v.revision:0};
+ out.overrides=array(v.overrides,'recipes',300).map(recipe);
+ out.favourites=[...new Set(array(v.favourites,'favourites',500).map(id))];
+ out.ratings={};for(const [k,n] of Object.entries(v.ratings||{}).slice(0,500))out.ratings[id(k)]=number(n,'rating',1,5);
+ out.collections=array(v.collections,'collections',50).map(c=>({id:id(c.id),name:text(c.name,'collection name',100),recipes:[...new Set(array(c.recipes,'collection recipes',500).map(id))]}));
+ out.plans=array(v.plans,'plans',30).map(p=>{
+  if(!validDate(p.start))throw new Error('Invalid plan date.');const days=number(p.days,'plan length',1,56);if(!Number.isInteger(days))throw new Error('Plan length must be whole days.');
+  return {id:id(p.id),name:text(p.name,'plan name',100),start:p.start,days,entries:array(p.entries,'meals in a plan',1500).map(e=>{
+   if(!validDate(e.date)||e.date<p.start||e.date>addDays(p.start,days-1)||!SLOTS.includes(e.slot))throw new Error('A meal has an invalid date or meal slot.');
+   return {id:id(e.id),recipeId:id(e.recipeId),date:e.date,slot:e.slot,servings:number(e.servings,'meal servings',0.01,1000),notes:text(e.notes||'','meal notes',500)};
+  })};
+ });
+ out.activePlan=id(v.activePlan);if(!out.plans.some(p=>p.id===out.activePlan))throw new Error('The selected plan is missing.');
+ const allRecipeIds=new Set([...RECIPES.map(r=>r.id),...out.overrides.map(r=>r.id)]);
+ for(const p of out.plans)for(const e of p.entries)if(!allRecipeIds.has(e.recipeId))throw new Error('A planned recipe is missing from this file.');
+ out.logs=array(v.logs,'food log',5000).map(l=>{if(!validDate(l.date)||!SLOTS.includes(l.slot))throw new Error('A food log date or slot is invalid.');return {id:id(l.id),entryId:l.entryId===null?null:id(l.entryId),planId:l.planId===null?null:id(l.planId),recipeId:l.recipeId===null?null:id(l.recipeId),name:text(l.name,'logged food name',180),date:l.date,slot:l.slot,servings:number(l.servings,'eaten servings',0.01,1000),nutrition:nutrition(l.nutrition),nutritionSource:text(l.nutritionSource||'','logged nutrition source',1000),reviewNeeded:l.reviewNeeded===true,loggedAt:text(l.loggedAt,'logged at',40)};});
+ const checked=array(v.shopping?.checked||[],'shopping ticks',2000).map(x=>text(x,'shopping key',1000));
+ out.shopping={checked:[...new Set(checked)],extras:array(v.shopping?.extras||[],'extra shopping items',200).map(e=>({id:id(e.id),...ingredient(e)}))};
+ out.onboarding=null;
+ if(v.onboarding!==null&&v.onboarding!==undefined){const o=v.onboarding;if(!validDate(o.date)||!['user-onboarding','coach-import'].includes(o.source))throw new Error('Targets must come from onboarding.');out.onboarding={date:o.date,source:o.source,sourceNote:text(o.sourceNote,'target source',400),targets:nutrition(o.targets),notes:text(o.notes||'','onboarding notes',2000)};}
+ out.lessonProgress=[...new Set(array(v.lessonProgress||[],'course progress',300).map(id))];
+ out.audit=array(v.audit||[],'audit',200).map(a=>({at:text(a.at,'change time',40),action:text(a.action,'change reason',500)}));
+ const ids=(items)=>{if(new Set(items.map(x=>x.id)).size!==items.length)throw new Error('Duplicate identifiers in the import.');};ids(out.overrides);ids(out.plans);ids(out.collections);ids(out.logs);out.plans.forEach(p=>ids(p.entries));
+ return out;
+}
+export const findRecipe=(state,id)=>state.overrides.find(r=>r.id===id)||(Object.hasOwn(RECIPE_BY_ID,id)?RECIPE_BY_ID[id]:undefined);
+export function allRecipes(state){return [...RECIPES.map(r=>findRecipe(state,r.id)),...state.overrides.filter(r=>!Object.hasOwn(RECIPE_BY_ID,r.id))];}
+export function plan(state,id=state.activePlan){const p=state.plans.find(p=>p.id===id);if(!p)throw new Error('That plan no longer exists.');return p;}
+export function audit(state,action,now=new Date()){state.audit.unshift({at:now.toISOString(),action});state.audit=state.audit.slice(0,200);}
+export function scaledIngredients(r,servings){number(servings,'recipe servings',0.01,1000);return r.ingredients.map(i=>({...i,quantity:i.quantity===null?null:i.quantity*servings/r.servings}));}
+export function portionNutrition(r,servings){if(!r.nutrition||r.nutritionStatus==='review-needed')return null;number(servings,'servings',0.01,1000);return Object.fromEntries(MACROS.map(k=>[k,r.nutrition[k]*servings]));}
+export const round = n=>Number(n.toFixed(2));
+export function formatAmount(n){if(n===null)return '';return Number(n.toFixed(2)).toLocaleString('en-GB',{maximumFractionDigits:2});}
+export function saveRecipe(state,input,confirmedNutrition=false){
+ const old=findRecipe(state,input.id),updated=recipe(input);
+ const changed=!old||JSON.stringify(old.ingredients)!==JSON.stringify(updated.ingredients)||old.servings!==updated.servings;
+ // Existing nutrient estimates must not silently survive ingredient/yield changes.
+ if(changed&&!confirmedNutrition){updated.nutritionStatus='review-needed';updated.nutrition=null;updated.nutritionSource='Ingredients or recipe yield changed. Enter and confirm nutrition for this version.';}
+ if(confirmedNutrition){if(!updated.nutrition)throw new Error('Supply all four nutrition values before confirming them.');updated.nutritionStatus='user-entered';updated.nutritionSource='Your explicitly confirmed per-serving values.';}
+ updated.version=(old?.version||0)+1;state.overrides=state.overrides.filter(r=>r.id!==updated.id);state.overrides.push(updated);audit(state,`Saved your version of ${updated.name}${changed&&!confirmedNutrition?'; nutrition requires review':''}. Planned meals use this version; previously logged food is unchanged.`);return updated;
+}
+export function addMeal(state,{recipeId,date,slot,servings=1,planId=state.activePlan,notes=''}){const p=plan(state,planId);if(!findRecipe(state,recipeId)||!validDate(date)||date<p.start||date>addDays(p.start,p.days-1)||!SLOTS.includes(slot))throw new Error('Check the recipe, date and meal slot.');const e={id:uid(),recipeId,date,slot,servings:number(servings,'servings',0.01,1000),notes:text(notes,'notes',500)};p.entries.push(e);audit(state,`Planned ${findRecipe(state,recipeId).name} for ${date} ${slot.toLowerCase()}.`);return e;}
+export function editMeal(state,entryId,changes){const p=plan(state);const e=p.entries.find(e=>e.id===entryId);if(!e)throw new Error('That meal no longer exists.');const next={...e,...changes,id:e.id};if(!findRecipe(state,next.recipeId)||!validDate(next.date)||next.date<p.start||next.date>addDays(p.start,p.days-1)||!SLOTS.includes(next.slot))throw new Error('Choose a date inside this plan and a valid recipe.');number(next.servings,'servings',0.01,1000);next.notes=text(next.notes||'','meal note',500);Object.assign(e,next);audit(state,'Changed a planned meal. Past food logs are unchanged.');return e;}
+export function logMeal(state,entryId,servings,date){const p=plan(state);const e=p.entries.find(e=>e.id===entryId);if(!e)throw new Error('That meal no longer exists.');if(state.logs.some(l=>l.entryId===entryId&&l.planId===p.id))throw new Error('This meal is already logged. Edit the existing food log instead.');const r=findRecipe(state,e.recipeId);number(servings,'eaten servings',0.01,1000);if(!validDate(date))throw new Error('Choose the date you ate the meal.');const l={id:uid(),entryId:e.id,planId:p.id,recipeId:r.id,name:r.name,date,slot:e.slot,servings,nutrition:portionNutrition(r,servings),nutritionSource:r.nutritionSource,reviewNeeded:r.nutritionStatus==='review-needed'||!r.nutrition,loggedAt:new Date().toISOString()};state.logs.push(l);audit(state,`Logged ${servings} ${r.servingLabel}(s) of ${r.name}. This food log keeps the nutrition from this version.`);return l;}
+export function dayTotals(state,date,planId=state.activePlan){const p=plan(state,planId);const zero=()=>Object.fromEntries(MACROS.map(k=>[k,0]));const eaten=zero(),planned=zero(),unlogged=zero();let unknownEaten=0,unknownPlanned=0;for(const l of state.logs.filter(l=>l.date===date)){if(!l.nutrition||l.reviewNeeded){unknownEaten++;continue;}for(const k of MACROS)eaten[k]+=l.nutrition[k];}
+ for(const e of p.entries.filter(e=>e.date===date)){const r=findRecipe(state,e.recipeId),n=portionNutrition(r,e.servings);if(!n){unknownPlanned++;continue;}for(const k of MACROS)planned[k]+=n[k];if(!state.logs.some(l=>l.planId===p.id&&l.entryId===e.id))for(const k of MACROS)unlogged[k]+=n[k];}
+ const targets=state.onboarding?.targets||null;const remaining=targets&&!unknownEaten?Object.fromEntries(MACROS.map(k=>[k,targets[k]-eaten[k]])):null;const projected=targets&&!unknownEaten&&!unknownPlanned?Object.fromEntries(MACROS.map(k=>[k,targets[k]-eaten[k]-unlogged[k]])):null;
+ return {eaten,planned,unlogged,unknownEaten,unknownPlanned,targets,remaining,projected};
+}
+function norm(s){return s.trim().toLowerCase().replace(/\s+/g,' ');}
+export function shoppingList(state,{planId=state.activePlan,dates,includeOptional=true,includeLogged=true}={}){
+ const p=plan(state,planId);const set=dates?new Set(dates):null;const rows=new Map();
+ function add(i,origin){const key=JSON.stringify([norm(i.name),norm(i.unit),norm(i.note),i.optional,i.quantity===null]);let row=rows.get(key);if(!row){row={...i,key,quantity:i.quantity===null?null:0,origins:[]};rows.set(key,row);}if(i.quantity!==null)row.quantity+=i.quantity;if(!row.origins.includes(origin))row.origins.push(origin);}
+ for(const e of p.entries){if(set&&!set.has(e.date))continue;if(!includeLogged&&state.logs.some(l=>l.planId===p.id&&l.entryId===e.id))continue;const r=findRecipe(state,e.recipeId);for(const i of scaledIngredients(r,e.servings)){if(i.optional&&!includeOptional)continue;add(i,r.name);}}
+ for(const i of state.shopping.extras)add(i,'Your extra item');
+ return [...rows.values()].map(r=>({...r,quantity:r.quantity===null?null:round(r.quantity),checked:state.shopping.checked.includes(JSON.stringify([r.key,round(r.quantity??0)])),checkKey:JSON.stringify([r.key,round(r.quantity??0)])})).sort((a,b)=>a.aisle.localeCompare(b.aisle)||a.name.localeCompare(b.name));
+}
+export function duplicatePlan(state,planId,newName,start){const old=plan(state,planId);if(!validDate(start))throw new Error('Choose a starting date.');const delta=Math.round((Date.parse(start+'T12:00:00Z')-Date.parse(old.start+'T12:00:00Z'))/86400000);const p={...clone(old),id:uid(),name:text(newName,'plan name',100),start,entries:old.entries.map(e=>({...clone(e),id:uid(),date:addDays(e.date,delta)}))};state.plans.push(p);state.activePlan=p.id;audit(state,'Copied a meal plan. Existing food logs were not copied.');return p;}
+export function exportState(state){return JSON.stringify(validateState(state),null,2);}
+export function importState(input){if(typeof input!=='string'||input.length>2000000)throw new Error('Choose a plan file smaller than 2MB.');return validateState(JSON.parse(input));}
