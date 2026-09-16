@@ -38,7 +38,7 @@ do $$ begin
  raise exception 'Changed request replay accepted';
  exception when serialization_failure then null;end;
  if (public.nufi_trial_status('11111111-1111-4111-8111-111111111111')->>'eligible')::boolean is not true then raise exception 'Reserved member not eligible';end if;
- if now()<'2026-12-01T09:00:00Z'::timestamptz then
+ if now()<'2026-11-01T09:00:00Z'::timestamptz then
   begin
    perform public.nufi_activate_trial('11111111-1111-4111-8111-111111111111');
    raise exception 'Activated before launch';

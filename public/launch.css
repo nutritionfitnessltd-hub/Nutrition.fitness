@@ -1,4 +1,4 @@
-/* Shared brand accents and the December launch journey. Original layout is retained. */
+/* Shared brand accents and the November launch journey. Original layout is retained. */
 :root{--paper:#fff;--green:#376747;--terracotta:#9a4936;--ochre:#805c19;--accent:var(--plum)}
 body{background:#fff}body[data-accent="petrol"]{--accent:var(--petrol)}body[data-accent="green"]{--accent:var(--green)}body[data-accent="terracotta"]{--accent:var(--terracotta)}body[data-accent="ochre"]{--accent:var(--ochre)}
 body:not([data-page="home"]) .plum{color:var(--accent)}

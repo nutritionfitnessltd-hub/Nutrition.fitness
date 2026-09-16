@@ -2,7 +2,7 @@
 
 ## Agreed release
 
-The whole offering is scheduled for **1 December 2026, 09:00 Europe/London** (09:00 UTC). Completing the programme finder makes someone eligible for one free calendar month of NUFI+, without a purchase, card or automatic charge. The month begins at actual activation, not at prelaunch signup. Separate paid programmes and physical products are excluded.
+The whole offering is scheduled for **1 November 2026, 09:00 Europe/London** (09:00 UTC). Completing the programme finder makes someone eligible for one free calendar month of NUFI+, without a purchase, card or automatic charge. The month begins at actual activation, not at prelaunch signup. Separate paid programmes and physical products are excluded.
 
 ## Implemented in source
 
@@ -61,3 +61,9 @@ Work is confined to `launch/december-2026` / draft PR #1. Main's approved baseli
 - https://supabase.com/docs/guides/database/postgres/row-level-security
 - https://supabase.com/docs/guides/database/functions
 - https://developers.cloudflare.com/turnstile/get-started/server-side-validation/
+
+## Launch rescheduled — 16 September 2026
+
+The agreed launch is now **1 November 2026 at 9am UK time**. The larger countdown design is unchanged. Signup confirmations, programme availability, account activation wording, server date checks and browser tests use the new date.
+
+Apply all migrations in filename order, including `202609160002_nufi_november_launch.sql`. That additive migration moves the database activation guard; it does not delete or restart existing trials. The existing `nufi-launch-2026-12-v1` value remains an opaque offer identifier intentionally: changing it could grant a second free month. The branch name and preview URL remain unchanged to preserve review/deployment continuity. Private live-service configuration and explicit app-release approval are still required; the calendar alone never enables unfinished app access.

@@ -62,7 +62,7 @@ with sync_playwright() as pw:
         page.goto('http://127.0.0.1:4173/', wait_until='load')
     page.wait_for_function('document.querySelector("[data-days]").textContent !== "—"')
     check('Explicit goes-live headline', page.locator('[data-launch-kicker]').inner_text() == 'Nutrition.Fitness goes live in…')
-    check('Fixed launch date visible', page.locator('.launch-date').inner_text() == '1 December 2026 · 9am UK time')
+    check('Fixed launch date visible', page.locator('.launch-date').inner_text() == '1 November 2026 · 9am UK time')
     check('Whole-system launch explained', 'The full system launches together' in page.locator('.launch-widget').text_content())
     check('Timer accessible without repetitive announcements', page.locator('[role="timer"]').get_attribute('aria-live') == 'off')
     check('Original hero headline retained', 'Getting fit is' in page.locator('#hero-heading').inner_text())
@@ -78,7 +78,7 @@ with sync_playwright() as pw:
         if width in [390, 1440]:
             page.locator('.hero').screenshot(path=str(OUT / f'launch-hero-{width}.png'))
             page.locator('.launch-widget').screenshot(path=str(OUT / f'launch-countdown-{width}.png'))
-    page.clock.set_system_time(datetime(2026, 12, 1, 9, 0, tzinfo=timezone.utc))
+    page.clock.set_system_time(datetime(2026, 11, 1, 9, 0, tzinfo=timezone.utc))
     page.clock.fast_forward(20000)
     check('Clock disappears after launch rather than counting backwards', page.locator('[data-launch-clock]').is_hidden())
     check('Timer alone does not claim unfinished services are live', 'The countdown is complete.' in page.locator('[data-launch-kicker]').inner_text())

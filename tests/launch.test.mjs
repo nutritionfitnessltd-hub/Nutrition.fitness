@@ -8,14 +8,14 @@ const payload={firstName:'James',email:'  PERSON@example.com ',answers,source:'p
 const env={GHL_PRIVATE_TOKEN:'test-only-not-a-real-token',GHL_LOCATION_ID:'test-location',GHL_PROGRAMME_FIELD_ID:'test-programme',GHL_QUIZ_FIELD_ID:'test-quiz',SITE_URL:'https://nutrition.fitness',TURNSTILE_SECRET_KEY:'test-secret',TURNSTILE_SITE_KEY:'test-site'};
 function response(){return {code:0,data:null,headers:{},setHeader(k,v){this.headers[k]=v;},status(c){this.code=c;return this;},json(v){this.data=v;}};}
 const request=(body=payload)=>({method:'POST',headers:{origin:'https://nutrition.fitness','content-type':'application/json'},body});
-test('launch date is exactly the agreed fixed instant',()=>assert.equal(LAUNCH.at,'2026-12-01T09:00:00.000Z'));
+test('launch date is exactly the agreed fixed instant',()=>assert.equal(LAUNCH.at,'2026-11-01T09:00:00.000Z'));
 test('countdown rolls days/hours/minutes correctly',()=>assert.deepEqual(countdownParts(Date.parse(LAUNCH.at)-((2*24+3)*60+4)*60000),{days:2,hours:3,minutes:4,reached:false}));
 test('countdown never goes negative',()=>assert.deepEqual(countdownParts(Date.parse(LAUNCH.at)+99999),{days:0,hours:0,minutes:0,reached:true}));
 test('release requires date and an explicit live state',()=>{assert.equal(launchState(Date.parse(LAUNCH.at)-1,true),'prelaunch');assert.equal(launchState(Date.parse(LAUNCH.at),false),'awaiting-release');assert.equal(launchState(Date.parse(LAUNCH.at),true),'live');});
 test('invalid timestamps are rejected',()=>assert.throws(()=>countdownParts(NaN)));
 test('free month starts at activation and lasts a calendar month',()=>assert.equal(freeMonthEndsAt('2026-12-04T12:15:00Z'),'2027-01-04T12:15:00.000Z'));
 test('month expiry clamps shorter months',()=>assert.equal(freeMonthEndsAt('2027-01-31T12:15:00Z'),'2027-02-28T12:15:00.000Z'));
-test('free month cannot activate before launch',()=>assert.throws(()=>freeMonthEndsAt('2026-11-30T23:59:59Z')));
+test('free month cannot activate before launch',()=>assert.throws(()=>freeMonthEndsAt('2026-10-31T23:59:59Z')));
 test('all agreed bases are represented',()=>assert.deepEqual(Object.keys(BASES),['core','build','lean','fit','run','swim','bike']));
 test('multiple dot-appended focus areas survive',()=>assert.equal(recommend(answers).name,'core.arms.chest.shoulders'));
 test('build is a distinct base',()=>assert.equal(recommend({...answers,goal:'muscle'}).name,'build.arms.chest.shoulders'));

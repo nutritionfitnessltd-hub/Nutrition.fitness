@@ -1,8 +1,8 @@
 /** Shared browser/server launch contract. No customer data or credentials belong here. */
 export const LAUNCH = Object.freeze({
-  at: '2026-12-01T09:00:00.000Z',
+  at: '2026-11-01T09:00:00.000Z',
   timezone: 'Europe/London',
-  label: '1 December 2026 · 9am UK time',
+  label: '1 November 2026 · 9am UK time',
   offer: 'One free month of NUFI+ for everyone completing the programme finder.',
   version: 'nufi-launch-2026-12-v1',
 });

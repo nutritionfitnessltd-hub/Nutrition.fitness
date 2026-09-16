@@ -16,4 +16,4 @@ for(const route of [...routes,{url:'/404/',file:'404.html'}]){
  }
  await fs.writeFile(file,html);
 }
-console.log(`Compiled launch chrome for ${routes.length+1} pages; programme finder and 1 December countdown ready.`);
+console.log(`Compiled launch chrome for ${routes.length+1} pages; programme finder and 1 November countdown ready.`);

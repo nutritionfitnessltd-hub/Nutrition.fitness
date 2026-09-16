@@ -1,8 +1,8 @@
-# Nutrition.Fitness — December launch website
+# Nutrition.Fitness — November launch website
 
 The approved multi-page website, extended in-place with the launch programme finder, structured recipes, meal planner/shopping list, programme/course system and proposed supplement imagery. Source is maintained on `launch/december-2026`, draft PR #1. The production/main baseline is deliberately preserved.
 
-**Launch:** 1 December 2026 at 09:00 UK time. Everyone completing the programme finder may reserve one free calendar month of NUFI+, starting only at verified app activation on/after launch. No purchase/card/automatic charge.
+**Launch:** 1 November 2026 at 09:00 UK time. Everyone completing the programme finder may reserve one free calendar month of NUFI+, starting only at verified app activation on/after launch. No purchase/card/automatic charge.
 
 ## Run and test
 
