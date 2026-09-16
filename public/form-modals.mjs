@@ -27,7 +27,7 @@ function boot() {
  const embedded=(()=>{try{return window.parent!==window && window.frameElement?.hasAttribute('data-nf-modal-frame');}catch{return false;}})();
  const route=FORM_ROUTES[normalPath(location.pathname)];
  const entries=new Map(),remote=new Map(),prepared=new WeakSet();
- let active=null,sequence=0,scrollLock=null,primary=null,historyClosing=false;
+ let active=null,sequence=0,scrollLock=null,primary=null,historyClosing=false,pendingRefresh=false;
  const post=(type,extra={})=>parent.postMessage({type,...extra},location.origin);
  const titleOf=node=>node.querySelector('h1,h2,h3,legend')?.textContent.trim();
  const hasModifier=e=>e.button!==0||e.metaKey||e.ctrlKey||e.shiftKey||e.altKey;
@@ -80,8 +80,10 @@ function boot() {
  function close(){
   if(!active)return;const entry=active;
   const ownsHistory=entry.useHistory&&history.state?.nfFormModal===entry.id;
+  const refresh=entry.refreshOnClose;
   dismiss(entry);
-  if(ownsHistory){historyClosing=true;history.back();}
+  if(ownsHistory){historyClosing=true;pendingRefresh=!!refresh;history.back();}
+  else if(refresh)location.reload();
  }
  function open(entry,opener,{push=true}={}){
   if(historyClosing)return;
@@ -95,6 +97,7 @@ function boot() {
   entry.dialog.showModal();entry.opener?.setAttribute('aria-expanded','true');
   if(entry.useHistory&&push){try{history[replace?'replaceState':'pushState']({...history.state,nfFormModal:entry.id},'',location.href);}catch{/* Sandboxed/offline pages retain native close and Escape. */}}
   requestAnimationFrame(()=>{
+   if(active!==entry||!entry.dialog.open)return;
    const heading=entry.frame||$('[data-step-title],h1,h2,h3',entry.body)||entry.heading;
    if(!entry.frame)heading.setAttribute('tabindex','-1');heading.focus({preventScroll:true});
   });
@@ -117,7 +120,9 @@ function boot() {
   let outside=false;
   dialog.addEventListener('pointerdown',e=>{const r=dialog.getBoundingClientRect();outside=e.target===dialog&&(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom);});
   dialog.addEventListener('click',e=>{if(outside&&e.target===dialog)close();outside=false;});
-  dialog.addEventListener('close',()=>{if(active===entry)close();});
+  // The native close event is queued. Ignore a stale event if Back/Forward
+  // or a rapid reopen has already shown this same dialog again.
+  dialog.addEventListener('close',()=>{if(active===entry&&!dialog.open)close();});
   return entry;
  }
  function local(node,spec,{auto=false}={}){
@@ -200,9 +205,13 @@ function boot() {
   e.preventDefault();openRemote(a.href,a);
  });
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active){e.preventDefault();e.stopImmediatePropagation();close();}},true);
+ // Existing shop controllers hold their basket in memory. A box added in a
+ // different page controller must refresh the parent before another purchase.
+ window.addEventListener('storage',e=>{if(e.key==='nutrition-fitness-site-v2'&&active?.frame)active.refreshOnClose=true;});
  window.addEventListener('popstate',e=>{
   historyClosing=false;const next=entries.get(e.state?.nfFormModal);
-  if(active&&active!==next)dismiss(active);
+  if(active&&active!==next){pendingRefresh=pendingRefresh||!!active.refreshOnClose;dismiss(active);}
+  if(pendingRefresh){pendingRefresh=false;location.reload();return;}
   if(next&&!next.dialog.open)open(next,next.opener,{push:false});
  });
  window.addEventListener('message',e=>{
