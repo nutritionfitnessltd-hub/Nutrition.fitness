@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#ffffff">
+  <title>Nutrition.Fitness Launch Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">N</span><div><strong>nutrition.fitness®</strong><small>Launch Control</small></div></div>
+      <nav id="main-nav" aria-label="Launch control">
+        <button data-view="overview" class="active">Overview</button>
+        <button data-view="tasks">Tasks</button>
+        <button data-view="timeline">Timeline</button>
+        <button data-view="decisions">Decisions</button>
+        <button data-view="team">Team</button>
+      </nav>
+      <div class="sidebar-foot">
+        <p><strong>Launch target</strong><br>1 November 2026</p>
+        <span class="mode-pill">Preview data</span>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div><p class="eyebrow">NUTRITION.FITNESS · 1 NOVEMBER GO LIVE</p><h1 id="page-title">Launch overview</h1></div>
+        <div class="top-actions"><button class="ghost" id="export-btn">Export JSON</button><button class="primary" id="new-task-btn">+ New task</button></div>
+      </header>
+
+      <div class="notice" id="preview-notice"><strong>Working prototype:</strong> changes are saved in this browser. The Supabase schema is prepared; once connected, assignments, submissions and approvals become shared multi-user data.</div>
+      <section id="view-root"></section>
+    </main>
+  </div>
+
+  <dialog id="task-dialog" class="dialog">
+    <form method="dialog" class="dialog-head"><div><span id="dialog-task-id" class="task-id"></span><h2 id="dialog-task-title"></h2></div><button class="icon-close" value="cancel" aria-label="Close">×</button></form>
+    <div id="dialog-body"></div>
+  </dialog>
+
+  <dialog id="new-task-dialog" class="dialog small-dialog">
+    <form id="new-task-form">
+      <div class="dialog-head"><div><span class="task-id">NEW TASK</span><h2>Add launch task</h2></div><button type="button" class="icon-close" data-close-new>×</button></div>
+      <div class="form-grid">
+        <label>Task title<input name="title" required></label>
+        <label>Workstream<select name="workstream" id="new-workstream"></select></label>
+        <label>Priority<select name="priority"><option>P0</option><option>P1</option><option>P2</option></select></label>
+        <label>Phase<select name="phase" id="new-phase"></select></label>
+        <label>Due date<input name="due" type="date" required></label>
+        <label>Owner<select name="owner" id="new-owner"></select></label>
+        <label class="wide">Instructions<textarea name="instructions" rows="4" required></textarea></label>
+        <label class="wide">Done means<textarea name="done" rows="3" required></textarea></label>
+      </div>
+      <div class="dialog-actions"><button type="button" class="ghost" data-close-new>Cancel</button><button class="primary" type="submit">Create task</button></div>
+    </form>
+  </dialog>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
