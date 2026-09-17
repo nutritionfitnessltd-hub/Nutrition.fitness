@@ -1,0 +1,10 @@
+{
+  "name": "nutrition-fitness-launch-control",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npx serve . -l 4173",
+    "check": "node --check app.js && node --check store.js && node --check views.js && node --check task-ui.js && node --check seed-core.js && node --check seed.js && node --check tasks-a.js && node --check tasks-b.js && node --check tasks-c.js && node --check tasks-d.js"
+  }
+}
