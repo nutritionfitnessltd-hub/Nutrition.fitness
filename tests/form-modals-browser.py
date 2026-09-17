@@ -81,7 +81,7 @@ with sync_playwright() as w:
   expect(p.locator('dialog[open] .nf-form-status')).to_contain_text('Added.')
   expect(p.locator('dialog[open] .nf-form-status a[href="/basket/"]')).to_be_visible()
   ok('Product quantities, add-to-basket handler and actionable feedback survive modal presentation');close()
-  goto('/');p.locator('a[href="/subscriptions/"]').first.click();f=frame()
+  goto('/');p.get_by_role('link',name='Build a subscription',exact=True).click();f=frame()
   expect(f.locator('#box-form')).to_be_visible();expect(f.locator('#box-summary')).to_be_visible()
   f.locator('#box-form button[type=submit]').click();expect(f.locator('.notification')).to_contain_text('Your box is in the basket')
   count=p.evaluate("JSON.parse(localStorage.getItem('nutrition-fitness-site-v2')).cart.reduce((sum,line)=>sum+line.qty,0)")
