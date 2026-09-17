@@ -27,6 +27,7 @@ with sync_playwright() as w:
    f=p.frame_locator('dialog[open] iframe');expect(f.locator('.finder-branded')).to_be_visible()
    expect(f.locator('.finder-free-note')).to_contain_text('Actually free.')
    expect(f.locator('.finder-option-art')).to_have_count(7)
+   f.locator('html').evaluate('async()=>{await document.fonts.ready;}')
    ok(f'Branded quiz opens with seven illustrated choices at {width}px')
    ok(f'No horizontal overflow at {width}px',p.evaluate('document.documentElement.scrollWidth<=innerWidth') and f.locator('html').evaluate('(el)=>el.scrollWidth<=innerWidth'))
    close=p.locator('dialog[open] .nf-form-close');expect(close).to_be_in_viewport()
@@ -38,7 +39,7 @@ with sync_playwright() as w:
    ok(f'Reduced motion respected at {width}px',f.locator('.finder-option').first.evaluate('(el)=>getComputedStyle(el).transitionDuration')=='0s')
    if width==1440:
     last=f.locator('.finder-option').last.bounding_box();footer=f.locator('.finder-actions').bounding_box()
-    ok(f'All choices clear the sticky action bar at {width}x{height}',last['y']+last['height']<=footer['y']+1)
+    ok(f'All choices clear the sticky action bar at {width}x{height} (last bottom {last["y"]+last["height"]:.1f}; footer top {footer["y"]:.1f})',last['y']+last['height']<=footer['y']+1)
     expect(f.locator('.finder-choice-note')).to_be_in_viewport(ratio=1)
    if width in (390,1440):
     # Wait for the existing web fonts before taking review screenshots.
