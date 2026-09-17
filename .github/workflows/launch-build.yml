@@ -65,6 +65,7 @@ jobs:
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/timer-browser.py
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/sitewide-banner-browser.py
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/cookbook-browser.py
+          NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/form-modals-browser.py
       - name: Package source, generated site and test evidence
         if: always()
         run: zip -qr nutrition-fitness-source.zip . -x '.git/*' '*.zip' 'node_modules/*'
