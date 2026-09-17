@@ -20,7 +20,7 @@ with sync_playwright() as w:
  ctx.route('**/api/**',lambda r:r.fulfill(status=503,content_type='application/json',body='{"error":"QA: no real submission"}'))
  p=None
  try:
-  for width,height in [(320,740),(390,844),(640,900),(768,1000),(1024,768),(1440,1000)]:
+  for width,height in [(320,740),(390,844),(640,900),(768,1000),(1024,768),(1440,900),(1440,1000)]:
    if p:p.close()
    p=ctx.new_page();p.set_viewport_size({'width':width,'height':height});p.on('pageerror',lambda e:errors.append(str(e)))
    p.goto(BASE+'/');p.wait_for_function('document.documentElement.dataset.nfFormModals==="ready"');p.locator('.hero-button').click()
@@ -36,6 +36,10 @@ with sync_playwright() as w:
    for opt in f.locator('.finder-option').all():
     ok(f'Answer touch target at least 44px ({width}px)',opt.bounding_box()['height']>=44)
    ok(f'Reduced motion respected at {width}px',f.locator('.finder-option').first.evaluate('(el)=>getComputedStyle(el).transitionDuration')=='0s')
+   if width==1440:
+    last=f.locator('.finder-option').last.bounding_box();footer=f.locator('.finder-actions').bounding_box()
+    ok(f'All choices clear the sticky action bar at {width}x{height}',last['y']+last['height']<=footer['y']+1)
+    expect(f.locator('.finder-choice-note')).to_be_in_viewport(ratio=1)
    if width in (390,1440):
     # Wait for the existing web fonts before taking review screenshots.
     f.locator('html').evaluate('async()=>{await document.fonts.ready;}')

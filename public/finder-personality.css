@@ -1,6 +1,7 @@
 /* Quiz-only character: existing DM Sans + Kalam, white paper, plum/navy and
    small sketched asides. No external artwork, animation library or new fonts. */
 .nf-form-quiz{width:min(920px,calc(100vw - 48px));border-top:4px solid var(--plum,#863954)}
+.nf-form-quiz.nf-form-remote{height:min(920px,calc(100dvh - 40px));max-height:calc(100dvh - 40px)}
 .nf-form-quiz .nf-form-header{min-height:60px;padding-block:8px}
 .finder-branded{--finder-plum:var(--plum,#863954);--finder-pink:#f6edf1;--finder-border:#c7d0d5}
 .finder-branded .finder-welcome{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 22px 18px;border-radius:16px;background:var(--finder-pink)}
@@ -16,17 +17,17 @@
 .finder-branded .finder-free-note>.finder-sketch:first-child{position:absolute;width:35px;height:35px;right:-4px;top:-5px;color:var(--finder-plum);transform:rotate(14deg)}
 .finder-branded .finder-free-note>.finder-sketch:last-child{width:95px;height:39px;color:var(--finder-plum);align-self:flex-start;transform:rotate(13deg);margin-left:-10px;margin-bottom:-18px}
 .finder-branded .finder-head>.lead{font-size:15px;line-height:1.5;max-width:none;margin:15px 0 10px}
-.finder-branded .finder-perks{display:flex;flex-wrap:wrap;gap:5px 17px;margin:0 0 23px;color:var(--ink);font-size:12px}
+.finder-branded .finder-perks{display:flex;flex-wrap:wrap;gap:5px 17px;margin:0 0 18px;color:var(--ink);font-size:12px}
 .finder-branded .finder-perks>span::before{content:'✓';font-weight:750;color:var(--finder-plum);margin-right:6px}
 .finder-branded .finder-progress-row{align-items:center;margin:0 0 10px;font-size:12px;font-weight:650}
 .finder-branded .finder-progress-row>span:first-child{color:var(--finder-plum)}
 .finder-branded .finder-topic{color:var(--muted)}
-.finder-branded .finder-progress{display:flex;gap:6px;height:7px;overflow:visible;background:transparent;border-radius:0;margin-bottom:21px}
+.finder-branded .finder-progress{display:flex;gap:6px;height:7px;overflow:visible;background:transparent;border-radius:0;margin-bottom:16px}
 .finder-branded .finder-progress>.finder-progress-step{flex:1;height:7px;background:var(--aqua);border:1px solid transparent;border-radius:4px;transition:none}
 .finder-branded .finder-progress>.is-current{background:var(--finder-pink);border-color:var(--finder-plum)}
 .finder-branded .finder-progress>.is-complete{background:var(--finder-plum)}
 .finder-branded .finder-question{font-size:clamp(24px,2.7vw,29px);line-height:1.16;letter-spacing:-.04em;margin:0 0 7px}
-.finder-branded .finder-help{font-size:14px;line-height:1.5;margin:0 0 17px}
+.finder-branded .finder-help{font-size:14px;line-height:1.5;margin:0 0 14px}
 .finder-branded .finder-pick{display:inline-block;font-size:11px;color:var(--finder-plum);font-weight:700;margin-left:5px}
 .finder-branded .finder-options{gap:10px;grid-template-columns:1fr 1fr}
 .finder-branded .finder-option{--option-ink:var(--petrol);--option-wash:var(--aqua);border:1px solid var(--finder-border);border-radius:13px;padding:13px 14px;min-height:67px;gap:11px;background:#fff;transition:border-color .15s,box-shadow .15s,background-color .15s}
@@ -75,6 +76,7 @@
 }
 @media(max-width:640px){
  .nf-form-quiz{width:100%;border-top:0}
+ .nf-form-quiz.nf-form-remote{height:100dvh;max-height:100dvh}
  .finder-branded .finder-welcome{padding:17px 15px;gap:10px;display:block}
  .finder-branded .finder-head h1{font-size:28px;line-height:1.13}
  .finder-branded .finder-desktop-offer,.finder-branded .finder-desktop-intro{display:none}

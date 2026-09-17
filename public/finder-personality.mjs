@@ -22,7 +22,7 @@ export const GOAL_DETAILS=Object.freeze({
 });
 // Small, deliberately loose line drawings. Never use icons as the only label.
 const SKETCHES=Object.freeze({
- strength:'<path d="m16 13-5 5 19 19 5-5M12 10l-5 5m28 17 5 5M8 19l-3 3 8 8 4-3m17-15 3-4 8 8-4 3M24 7l1-4m9 2 2-3"/>',
+ strength:'<path d="M9 14h6v20H9Zm24 0h6v20h-6ZM4 19h5v10H4Zm35 0h5v10h-5ZM15 21l18-1m-18 8 18-1M21 9l-1-5m8 5 2-4"/>',
  muscle:'<path d="M12 32c-4-7-3-14 0-21l9-2 4 6-5 4-3-3-1 10c7-7 21-8 23 3 3 14-22 17-30 9m18-16c4 0 7 2 8 5M34 10l3-4m3 10 5-1"/>',
  heart:'<path d="M24 40S6 30 7 19C8 7 19 8 24 16 30 6 42 9 42 19c0 11-18 21-18 21Z"/><path d="m8 25 10 0 4-8 5 13 4-6h10"/>',
  sun:'<path d="M35 25c0 7-5 12-12 12S11 32 11 25s5-12 12-12 12 5 12 12ZM23 4v4m15 3-3 3m8 11h-4m-1 14-3-3M23 45v-4M7 39l4-3M3 25h4M7 10l4 4m7 11 4 5 7-9"/>',
@@ -31,7 +31,7 @@ const SKETCHES=Object.freeze({
  bike:'<circle cx="11" cy="33" r="8"/><circle cx="38" cy="33" r="8"/><path d="m11 33 10-18 8 18H11l16-13h7m-9-9h8l5 22M17 15h8"/>',
  arrow:'<path d="M6 7c27 20 61 18 66 0 3-11-22-5-17 7 5 12 25 10 45 6m-10-7 11 7-11 8"/>',
  curve:'<path d="M103 4c1 27-25 45-69 42M43 38l-11 8 12 6"/>',
- spark:'<path d="m15 2 2 12 12 3-12 3-2 12-3-12L1 17l11-3 3-12Zm26 4 1 6 6 2-6 1-1 7-2-7-6-1 6-2 2-6Z"/>'
+ spark:'<path d="M11 27 3 22m14-8-3-9m13 8 5-9m3 18 10-4m-11 15 8 6"/>'
 });
 export function sketch(name){return SKETCHES[name]?`<svg class="finder-sketch" viewBox="0 0 ${name==='arrow'||name==='curve'?'112 56':'48 48'}" aria-hidden="true" focusable="false">${SKETCHES[name]}</svg>`:'';}
 export function doodleNote(text,extra=''){return `<span class="finder-doodle ${esc(extra)}">${esc(text).replace(/\n/g,'<br> ')}</span>`;}
