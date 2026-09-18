@@ -11,7 +11,7 @@ export function compileLaunchLayout(html,route){
  html=html.replace('<meta name="theme-color" content="#faf6ef">','<meta name="theme-color" content="#ffffff">');
  html=html.replace('</head>','<link rel="stylesheet" href="/launch.css"><link rel="stylesheet" href="/product-layout.css"><script type="module" src="/launch.mjs"></script><link rel="stylesheet" href="/form-modals.css"><script type="module" src="/form-modals.mjs"></script><link rel="stylesheet" href="/finder-personality.css"></head>');
  // Load the new highlights only on the homepage; other page styling is untouched.
- if(route==='/')html=html.replace('</head>','<link rel="stylesheet" href="/home-highlights.css" data-page-style="home"></head>');
+ if(route==='/')html=html.replace('</head>','<link rel="stylesheet" href="/home-highlights.css" data-page-style="home"><link rel="stylesheet" href="/home-feature-panels.css" data-page-style="home"></head>');
  html=html.replace(/<body([^>]*)>/,`<body$1 data-accent="${accentFor(route)}">`);
  html=html.replace('href="/get-started/">Get started','href="/get-started/">Find my programme');
  // Shared across every page; Knowledge Centre pages inherit this same shell.

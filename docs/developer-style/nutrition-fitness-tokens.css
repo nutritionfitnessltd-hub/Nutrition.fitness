@@ -1,0 +1,52 @@
+/* Nutrition.Fitness developer tokens — source snapshot 20bb88ed (18 Sep 2026).
+   Handoff aliases; NOT loaded into production. Do not replace the site's CSS.
+   Pale tones are surfaces, dark tones are text. Global page canvas is WHITE.
+   Font files are not bundled. Use the existing approved font loader. */
+:root {
+  --nf-bg-page: #FFFFFF;
+  --nf-text: #092A3E;
+  --nf-text-secondary: #536572;
+  --nf-petrol: #06475E;
+  --nf-petrol-hover: #05394C;
+  --nf-plum: #863954;
+  --nf-plum-hover: #702D47;
+  --nf-green: #376747;
+  --nf-terracotta: #9A4936;
+  --nf-ochre: #805C19;
+  --nf-bg-aqua: #E3EDF0;
+  --nf-bg-sage: #DFE5D0;
+  --nf-bg-blush: #F9E7E3;
+  --nf-bg-protein: #FBE9E7;
+  --nf-bg-peach: #F2DFD2;
+  --nf-bg-soft-plum: #E8D8E0;
+  --nf-bg-quiz: #F6EDF1;
+  --nf-bg-gold: #F6ECD7;
+  --nf-bg-icon-green: #E9EEDF;
+  --nf-bg-icon-rose: #F0E2E9;
+  --nf-divider: #D6DDD9; /* decorative, not a sufficient input outline */
+  --nf-error: #962F2F;
+  --nf-font-body: 'DM Sans', Arial, sans-serif;
+  --nf-font-heading: 'DM Sans', Arial, sans-serif;
+  --nf-font-doodle: 'Kalam', cursive;
+  /* Proposed common component defaults, not a sitewide restyling. */
+  --nf-radius-card: 20px;
+  --nf-radius-field: 10px;
+  --nf-radius-pill: 100px;
+  --nf-space-1: 4px;
+  --nf-space-2: 8px;
+  --nf-space-3: 12px;
+  --nf-space-4: 16px;
+  --nf-space-6: 24px;
+  --nf-space-8: 32px;
+  --nf-space-12: 48px;
+  --nf-space-16: 64px;
+}
+/* Opt-in utility classes only. Existing components keep their own selectors. */
+.nf-surface-aqua { background:var(--nf-bg-aqua); color:var(--nf-petrol); }
+.nf-surface-plum { background:var(--nf-bg-soft-plum); color:var(--nf-plum); }
+.nf-surface-sage { background:var(--nf-bg-sage); color:var(--nf-green); }
+.nf-surface-peach { background:var(--nf-bg-peach); color:var(--nf-terracotta); }
+.nf-surface-gold { background:var(--nf-bg-gold); color:var(--nf-ochre); }
+.nf-surface-quiz { background:var(--nf-bg-quiz); color:var(--nf-plum); }
+.nf-body-copy { font-family:var(--nf-font-body); color:var(--nf-text); font-size:1rem; line-height:1.5; }
+.nf-doodle-copy { font-family:var(--nf-font-doodle); font-size:1.375rem; line-height:1.3; font-weight:400; }

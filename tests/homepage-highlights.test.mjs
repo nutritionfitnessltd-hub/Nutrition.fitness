@@ -7,10 +7,10 @@ import {products} from '../src/data.mjs';
 import {compileLaunchLayout} from '../src/launch-layout.mjs';
 const html=readFileSync(new URL('../src/home.html',import.meta.url),'utf8');
 const rows=html.match(/<!-- Homepage highlights:[\s\S]*?<!-- End homepage highlights\. -->\n/)[0];
-test('only the former homepage coach section and its obsolete anchor change',()=>{
- const rest=html.replace(rows,'');
- // Approved pre-change home body, excluding the removed coach section and fixing its support link.
- assert.equal(createHash('sha256').update(rest).digest('hex'),'23011079c6c3e277b62c24bc4f183bd3bd0f607af94efd56da430c81ddd28597');
+test('homepage outside the approved highlights and revised feature panels is unchanged',()=>{
+ const rest=html.replace(rows,'').replace(/<!-- Homepage feature panels:[\s\S]*?<!-- End homepage feature panels\. -->\n/,'');
+ // Baseline from production 20bb88e, excluding the approved rows and the two requested feature panels.
+ assert.equal(createHash('sha256').update(rest).digest('hex'),'68ec44d30a40233567e84d079f21899321dbe796321c0fa8acbda3d3fefb6935');
  assert.doesNotMatch(html,/id="coaches"|coach-card|jeff\.webp|steff\.webp|href="#coaches"/);
  assert.match(html,/href="\/coaches\/"/);
 });
