@@ -53,8 +53,10 @@ with sync_playwright() as w:
   doc.evaluate('async()=>await document.fonts.ready')
   loaded=doc.evaluate('Array.from(document.fonts).filter(f=>f.status==="loaded").map(f=>f.family)')
   ok('Developer guide uses loaded DM Sans and Kalam',any('DM Sans' in x for x in loaded) and any('Kalam' in x for x in loaded))
-  for page in doc.locator('.page').all():
-   ok('Guide page content clears its footer',page.evaluate('(el)=>{const f=el.querySelector(".footer").getBoundingClientRect();return [...el.children].filter(c=>!c.classList.contains("footer")).every(c=>c.getBoundingClientRect().bottom<=f.top-3)}'))
+  for n,page in enumerate(doc.locator('.page').all(),1):
+   page.screenshot(path=str(OUT/f'developer-guide-page-{n}.png'))
+   print('Guide page',n,'geometry',page.evaluate('(el)=>{const f=el.querySelector(".footer").getBoundingClientRect();return {footer:f.top,content:Math.max(...[...el.children].filter(c=>!c.classList.contains("footer")).map(c=>c.getBoundingClientRect().bottom))}}'),flush=True)
+   ok(f'Guide page {n} content clears its footer',page.evaluate('(el)=>{const f=el.querySelector(".footer").getBoundingClientRect();return [...el.children].filter(c=>!c.classList.contains("footer")).every(c=>c.getBoundingClientRect().bottom<=f.top-3)}'))
   doc.pdf(path=str(OUT/'Nutrition-Fitness-Developer-Style-Sheet.pdf'),print_background=True,prefer_css_page_size=True)
   doc.locator('.page').first.screenshot(path=str(OUT/'developer-palette.png'));doc.close()
   ok('No unhandled JavaScript errors',not errors)
