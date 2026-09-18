@@ -60,6 +60,7 @@ jobs:
           python tests/form-modals-browser.py
           python tests/finder-character-browser.py
           python tests/homepage-highlights-browser.py
+          python tests/home-feature-panels-browser.py
       - name: Confirm public production after authorised main deployment
         if: github.ref == 'refs/heads/main'
         run: |
@@ -70,6 +71,7 @@ jobs:
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/form-modals-browser.py
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/finder-character-browser.py
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/homepage-highlights-browser.py
+          NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/home-feature-panels-browser.py
       - name: Package source, generated site and test evidence
         if: always()
         run: zip -qr nutrition-fitness-source.zip . -x '.git/*' '*.zip' 'node_modules/*'

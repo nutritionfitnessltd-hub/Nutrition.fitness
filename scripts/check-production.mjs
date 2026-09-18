@@ -5,7 +5,7 @@ import {createHash} from 'node:crypto';
 // The published www hostname is verified; the separate apex certificate issue is unchanged.
 const origin='https://www.nutrition.fitness';
 const digest=value=>createHash('sha256').update(value).digest('hex');
-const files=['launch.css','launch.mjs','launch-config.mjs','recipes-data.mjs','recipe-display.mjs','form-modals.css','form-modals.mjs','finder-personality.css','finder-personality.mjs','home-highlights.css'];
+const files=['launch.css','launch.mjs','launch-config.mjs','recipes-data.mjs','recipe-display.mjs','form-modals.css','form-modals.mjs','finder-personality.css','finder-personality.mjs','home-highlights.css','home-feature-panels.css'];
 const expected=Object.fromEntries(await Promise.all(files.map(async file=>[file,digest(await readFile(new URL('../public/'+file,import.meta.url)))])));
 let last='Deployment not verified';
 for(let attempt=1;attempt<=18;attempt++){
