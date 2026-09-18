@@ -10,6 +10,8 @@ const taxonomy=JSON.parse(fs.readFileSync(`${source}/taxonomy.json`,'utf8'));
 const homepage=fs.readFileSync('dist/index.html','utf8');
 if(!/<main id="main"[^>]*>/.test(homepage)||!homepage.includes('/base.css')||!homepage.includes('/site.css'))throw new Error('Build the restored website before the Knowledge Centre.');
 const shell=homepage
+ // Do not inherit page-local styles when reusing the shared site shell.
+ .replace(/<link\b(?=[^>]*\bdata-page-style="home")[^>]*>/g,'')
  .replace(/<title>[\s\S]*?<\/title>/,'<title>{{TITLE}} | Nutrition.Fitness</title>')
  .replace(/<meta name="description" content="[^"]*">/,'<meta name="description" content="{{DESCRIPTION}}">')
  .replace(/<body[^>]*>/,'<body data-page="knowledge-centre" class="kc-page">')

@@ -53,8 +53,10 @@ test('The Knowledge Centre uses the restored site shell and is included in its e
  const home=fs.readFileSync('dist/index.html','utf8');
  const hub=fs.readFileSync('dist/knowledge-centre/index.html','utf8');
  const styles=html=>[...html.matchAll(/<link[^>]*rel="stylesheet"[^>]*>/g)].map(m=>m[0]);
- for(const stylesheet of styles(home))assert.ok(hub.includes(stylesheet),stylesheet);
- assert.equal(styles(hub).length,styles(home).length+1);
+ const sharedStyles=styles(home).filter(stylesheet=>!stylesheet.includes('data-page-style="home"'));
+ for(const stylesheet of sharedStyles)assert.ok(hub.includes(stylesheet),stylesheet);
+ for(const stylesheet of styles(home).filter(stylesheet=>stylesheet.includes('data-page-style="home"')))assert.ok(!hub.includes(stylesheet),'Homepage-only stylesheet leaked into Knowledge Centre');
+ assert.equal(styles(hub).length,sharedStyles.length+1);
  assert.ok(hub.includes('src="/site.mjs"'));
  assert.ok(hub.includes('<body data-page="knowledge-centre" class="kc-page">'));
  assert.equal(hub.match(/<footer[\s\S]*?<\/footer>/)?.[0],home.match(/<footer[\s\S]*?<\/footer>/)?.[0]);
