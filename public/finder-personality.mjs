@@ -13,12 +13,12 @@ export const QUESTION_NOTES=Object.freeze({
 const TOPICS=Object.freeze({goal:'Your goal',experience:'Your starting point',equipment:'Your space & kit',days:'Your week',minutes:'Your time',focus:'Your focus',barrier:'Your real life'});
 export const GOAL_DETAILS=Object.freeze({
  foundation:{tone:'petrol',caption:'A routine that feels doable.',icon:'strength'},
- muscle:{tone:'plum',caption:'A little more lift in your life.',icon:'muscle'},
+ muscle:{tone:'green',caption:'A little more lift in your life.',icon:'muscle'},
  'fat-loss':{tone:'green',caption:'Good habits. Not crash diets.',icon:'heart'},
  fitness:{tone:'ochre',caption:'More get-up-and-go.',icon:'sun'},
  running:{tone:'terracotta',caption:'Find your stride.',icon:'shoe'},
  swimming:{tone:'petrol',caption:'Make a little splash.',icon:'swim'},
- cycling:{tone:'plum',caption:'A bit of forward motion.',icon:'bike'}
+ cycling:{tone:'green',caption:'A bit of forward motion.',icon:'bike'}
 });
 // Small, deliberately loose line drawings. Never use icons as the only label.
 const SKETCHES=Object.freeze({
