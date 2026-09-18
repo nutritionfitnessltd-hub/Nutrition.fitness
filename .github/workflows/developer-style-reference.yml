@@ -1,0 +1,32 @@
+name: Developer style reference
+on:
+  push:
+    branches: [docs/developer-style-reference]
+permissions:
+  contents: read
+concurrency:
+  group: developer-style-reference
+  cancel-in-progress: true
+jobs:
+  guide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Install renderer
+        run: |
+          python -m pip install playwright==1.57.0
+          python -m playwright install --with-deps chromium
+      - name: Capture interface examples and build guide
+        run: python docs/website-style-guide/build_style_guide.py
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
+        with:
+          name: website-style-reference
+          path: |
+            style-guide-output/
+            style-guide-proof/
+            Nutrition-Fitness-Developer-Style-Pack.zip
+          retention-days: 14
