@@ -59,6 +59,7 @@ jobs:
           python tests/sitewide-banner-browser.py
           python tests/form-modals-browser.py
           python tests/finder-character-browser.py
+          python tests/finder-green-browser.py
           python tests/homepage-highlights-browser.py
       - name: Confirm public production after authorised main deployment
         if: github.ref == 'refs/heads/main'
@@ -69,6 +70,7 @@ jobs:
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/cookbook-browser.py
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/form-modals-browser.py
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/finder-character-browser.py
+          NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/finder-green-browser.py
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/homepage-highlights-browser.py
       - name: Package source, generated site and test evidence
         if: always()
