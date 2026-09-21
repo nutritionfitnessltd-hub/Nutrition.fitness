@@ -1,0 +1,22 @@
+{
+  "newRecipes": 499,
+  "existingRecipesPreserved": 100,
+  "combined": 599,
+  "books": 31,
+  "sourceEntriesCovered": 622,
+  "duplicateEntriesConsolidated": 123,
+  "newPhotoFiles": 499,
+  "imageBytes": 59048994,
+  "ingredientRows": 4725,
+  "methodSteps": 2222,
+  "nutritionReviewRecipes": 19,
+  "sourceWarningRecipes": 34,
+  "categories": {
+    "Breakfast": 153,
+    "Snacks": 98,
+    "Dinner": 165,
+    "Lunch": 40,
+    "Drinks": 43
+  },
+  "sha256": "3f7e6c15b0b51f7071d49ae4b45f47ae6c4bbeaf069acd252f4f323721c2be50"
+}

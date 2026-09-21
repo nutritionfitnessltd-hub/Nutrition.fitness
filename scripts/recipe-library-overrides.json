@@ -1,0 +1,390 @@
+{
+  "DAGzG9No8WQ:7": {
+    "serving": {
+      "servings": 4,
+      "servingLabel": "3 muffins"
+    }
+  },
+  "DAGzHmYOscY:1": {
+    "serving": {
+      "servings": 2,
+      "servingLabel": "3 muffins"
+    }
+  },
+  "DAGzIDMws-8:14": {
+    "sourceWarnings": [
+      "The source gives inconsistent metric and ounce quantities: Cheddar Cheese 30 g or 1.7 oz, half fat. Scaling uses the printed metric quantity.",
+      "Source says Makes 10 slices, but ingredients have 2 eggs and 2 bread slices; method cracks one egg into each slice. Cook label is 45 minutes but method says air fry 8 minutes.",
+      "Portion tools use one complete batch until the conflicting source yield is clarified."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 1,
+      "servingLabel": "batch"
+    }
+  },
+  "DAGzG6IttWg:18": {
+    "serving": {
+      "servings": 3,
+      "servingLabel": "5 pancakes"
+    }
+  },
+  "DAGzG7t1DBE:10": {
+    "serving": {
+      "servings": 4,
+      "servingLabel": "1 pancake"
+    },
+    "sourceWarnings": [
+      "Malformed source value FAT 21.g. The affected nutrition is excluded from meal-plan totals pending source verification.",
+      "Ingredients say cornflour but method says potato starch and additionally onion powder, absent from ingredient list. Fat is malformed 21.g."
+    ],
+    "nutritionReviewRequired": true
+  },
+  "DAGzG7t1DBE:18": {
+    "serving": {
+      "servings": 8,
+      "servingLabel": "1 slice"
+    }
+  },
+  "DAGzrciRXV8:13": {
+    "serving": {
+      "servings": 4,
+      "servingLabel": "3 balls"
+    }
+  },
+  "DAGzrciRXV8:17": {
+    "sourceWarnings": [
+      "Makes 3 conflicts with final method dividing between two bowls; nutrition label is Per 4 balls even though this is sliced chicken. Ingredient vinegar is 1½ tsp while method says 1½ tbsp; method adds spring onions absent from ingredients.",
+      "Portion tools use one complete batch until the conflicting source yield is clarified."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 1,
+      "servingLabel": "batch"
+    }
+  },
+  "DAGzsS8a0sY:11": {
+    "sourceWarnings": [
+      "The source gives inconsistent metric and ounce quantities: Cheddar Cheese 30 g or 1.7 oz, half fat. Scaling uses the printed metric quantity.",
+      "Source says Makes 10 slices, but ingredients have 2 eggs and 2 bread slices; method cracks one egg into each slice. Cook label is 45 minutes but method says air fry 8 minutes.",
+      "Portion tools use one complete batch until the conflicting source yield is clarified."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 1,
+      "servingLabel": "batch"
+    }
+  },
+  "DAGzsS8a0sY:18": {
+    "serving": {
+      "servings": 2,
+      "servingLabel": "10 nuggets"
+    }
+  },
+  "DAGzG7lWGpg:11": {
+    "sourceWarnings": [
+      "The source gives inconsistent metric and ounce quantities: Sweet Potato 300 g or 5.2 oz. Scaling uses the printed metric quantity."
+    ]
+  },
+  "DAGzTzWqO9Y:1": {
+    "sourceWarnings": [
+      "Makes 3 conflicts with 4 tortillas and method rolling 4 balls/4 tacos. Nutrition basis says Per 4 balls.",
+      "Portion tools use one complete batch until the conflicting source yield is clarified."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 1,
+      "servingLabel": "batch"
+    }
+  },
+  "DAGzTzWqO9Y:2": {
+    "sourceWarnings": [
+      "Makes 3 conflicts with final method dividing between two bowls; nutrition label is Per 4 balls even though this is sliced chicken. Ingredient vinegar is 1½ tsp while method says 1½ tbsp; method adds spring onions absent from ingredients.",
+      "Portion tools use one complete batch until the conflicting source yield is clarified."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 1,
+      "servingLabel": "batch"
+    }
+  },
+  "DAGzTzWqO9Y:15": {
+    "sourceWarnings": [
+      "Makes 3 / Per 4 balls, method makes about 12-14 meatballs. Spicy Mayo ingredients say 4 tbsp light mayo but method says 2 tbsp."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 3,
+      "servingLabel": "4 meatballs"
+    }
+  },
+  "DAGzZEFI7xU:10": {
+    "sourceWarnings": [
+      "The source gives inconsistent metric and ounce quantities: Beef  mince 500 g or 9.1 oz. Scaling uses the printed metric quantity."
+    ]
+  },
+  "DAGzY35JV74:11": {
+    "serving": {
+      "servings": 2,
+      "servingLabel": "10 nuggets"
+    }
+  },
+  "DAGzN9uwKv4:8": {
+    "sourceWarnings": [
+      "Makes 3 conflicts with final method dividing between two bowls; nutrition label is Per 4 balls even though this is sliced chicken. Ingredient vinegar is 1½ tsp while method says 1½ tbsp; method adds spring onions absent from ingredients.",
+      "Portion tools use one complete batch until the conflicting source yield is clarified."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 1,
+      "servingLabel": "batch"
+    }
+  },
+  "DAGzGx0bLos:1": {
+    "serving": {
+      "servings": 4,
+      "servingLabel": "3 balls"
+    }
+  },
+  "DAGzGx0bLos:8": {
+    "serving": {
+      "servings": 3,
+      "servingLabel": "one third of batch"
+    }
+  },
+  "DAGzGx0bLos:15": {
+    "sourceWarnings": [
+      "The source gives inconsistent metric and ounce quantities: Sunflower Seeds 35 g or 1.75 oz. Scaling uses the printed metric quantity.",
+      "The source gives inconsistent metric and ounce quantities: Pumpkin Seeds  35 g or 1.75 oz. Scaling uses the printed metric quantity."
+    ]
+  },
+  "DAGzGx0bLos:16": {
+    "serving": {
+      "servings": 12,
+      "servingLabel": "1 ball"
+    }
+  },
+  "DAGzGy9pBDk:15": {
+    "sourceWarnings": [
+      "The source gives inconsistent metric and ounce quantities: Baby  Potatoes 250 g or 10.4 oz. Scaling uses the printed metric quantity.",
+      "Ingredient list repeats Rosemary 1 tsp twice; method uses rosemary and thyme. Snack source CARB 48.2 differs from vegan source CARB 22.5 g with same kcal 126.9 and other macros."
+    ],
+    "nutritionReviewRequired": true
+  },
+  "DAGzGxJNC0U:7": {
+    "serving": {
+      "servings": 5,
+      "servingLabel": "2 slices"
+    }
+  },
+  "DAGzGxJNC0U:10": {
+    "sourceWarnings": [
+      "The source gives inconsistent metric and ounce quantities: Almond Flakes 5 g or 0.8 oz. Scaling uses the printed metric quantity."
+    ]
+  },
+  "DAGzG_RmMFU:14": {
+    "sourceWarnings": [
+      "Malformed source value FAT 35.g. The affected nutrition is excluded from meal-plan totals pending source verification."
+    ],
+    "nutritionReviewRequired": true
+  },
+  "DAGzG7jNyAk:18": {
+    "sourceWarnings": [
+      "The source gives inconsistent metric and ounce quantities: Raspberries 50 g or 0.7 oz frozen. Scaling uses the printed metric quantity."
+    ]
+  },
+  "DAGzG7jNyAk:24": {
+    "serving": {
+      "servings": 10,
+      "servingLabel": "1 fritter"
+    }
+  },
+  "DAGzG7jNyAk:57": {
+    "sourceWarnings": [
+      "The source gives inconsistent metric and ounce quantities: Baby  Potatoes 250 g or 10.4 oz. Scaling uses the printed metric quantity.",
+      "Ingredient list repeats Rosemary 1 tsp twice; method uses rosemary and thyme. Snack source CARB 48.2 differs from vegan source CARB 22.5 g with same kcal 126.9 and other macros."
+    ],
+    "nutritionReviewRequired": true
+  },
+  "DAGzsS8a0sY:2": {
+    "sourceWarnings": [
+      "Makes 9 tenders / Per serving does not state number of tenders per serving. Ingredients contain 4 average chicken breasts."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 9,
+      "servingLabel": "tender"
+    }
+  },
+  "DAGzG3TF63I:10": {
+    "sourceWarnings": [
+      "Makes 9 tenders / Per serving does not state number of tenders per serving. Ingredients contain 4 average chicken breasts."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 9,
+      "servingLabel": "tender"
+    }
+  },
+  "DAGzsS8a0sY:21": {
+    "sourceWarnings": [
+      "Makes 1 / Per serving paired with four 125 g chicken breasts (500 g total), 60 g cornflour, and 273.6 kcal /42.1 g protein. Serving size cannot be established consistently from source. Also White Pepper½tsp appears twice after first appearance.",
+      "Portion tools use one complete batch until the conflicting source yield is clarified."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 1,
+      "servingLabel": "batch"
+    }
+  },
+  "DAGzN6ztj9Y:13": {
+    "sourceWarnings": [
+      "Makes 1 / Per serving paired with four 125 g chicken breasts (500 g total), 60 g cornflour, and 273.6 kcal /42.1 g protein. Serving size cannot be established consistently from source. Also White Pepper½tsp appears twice after first appearance.",
+      "Portion tools use one complete batch until the conflicting source yield is clarified."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 1,
+      "servingLabel": "batch"
+    }
+  },
+  "DAGzG7t1DBE:19": {
+    "sourceWarnings": [
+      "Makes 8-10 / Per serving leaves the number used for nutrient calculation unknown. Description says gluten-free and method says gluten-free flour, but ingredients say plain flour and breadcrumbs without gluten-free qualification.",
+      "Portion tools use one complete batch until the conflicting source yield is clarified."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 1,
+      "servingLabel": "batch"
+    }
+  },
+  "DAGzG7t1DBE:17": {
+    "sourceWarnings": [
+      "Makes 2 - 4 pancakes per serve is ambiguous punctuation: two servings with four pancakes each versus 2-4 pancakes per serve.",
+      "Portion tools use one complete batch until the conflicting source yield is clarified."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 1,
+      "servingLabel": "batch"
+    }
+  },
+  "DAGzGxJNC0U:5": {
+    "sourceWarnings": [
+      "Makes 1 large or 3 small / Per serving. Source does not explicitly connect nutrition to large cake or one small cake. Method uses sweetener absent from ingredient list and calls flour oat flour.",
+      "Portion tools use one complete batch until the conflicting source yield is clarified."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 1,
+      "servingLabel": "batch"
+    }
+  },
+  "DAGzG7jNyAk:52": {
+    "sourceWarnings": [
+      "Makes 1 large or 3 small / Per serving. Source does not explicitly connect nutrition to large cake or one small cake. Method uses sweetener absent from ingredient list and calls flour oat flour.",
+      "Portion tools use one complete batch until the conflicting source yield is clarified."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 1,
+      "servingLabel": "batch"
+    }
+  },
+  "DAGznfgczTI:11": {
+    "sourceWarnings": [
+      "Makes 9 Bars while method cuts the mixture into 10 equal bars. Honey is mentioned as optional addition with no fixed quantity.",
+      "Portion tools use one complete batch until the conflicting source yield is clarified."
+    ],
+    "nutritionReviewRequired": true,
+    "serving": {
+      "servings": 1,
+      "servingLabel": "batch"
+    }
+  },
+  "DAGznfgczTI:12": {
+    "sourceWarnings": [
+      "Method includes lemon zest, bicarbonate of soda and flaked almonds absent from ingredient list."
+    ],
+    "nutritionReviewRequired": true
+  },
+  "DAGznfgczTI:8": {
+    "sourceWarnings": [
+      "Ingredient is Baking Powder 1 tsp but method instructs bicarbonate of soda."
+    ],
+    "nutritionReviewRequired": true
+  },
+  "DAGzIDMws-8:23": {
+    "sourceWarnings": [
+      "Source says Contains none while using vanilla whey, plus sesame seed garnish in method. The source allergen statement is unreliable; check the actual ingredients and product labels."
+    ]
+  },
+  "DAGzG6IttWg:21": {
+    "sourceWarnings": [
+      "Source says Contains none while using Greek yoghurt and sourdough. The source allergen statement is unreliable; check the actual ingredients and product labels."
+    ]
+  },
+  "DAGzq3cZ9co:11": {
+    "sourceWarnings": [
+      "Source says Contains none while using regular baguette. The source allergen statement is unreliable; check the actual ingredients and product labels."
+    ]
+  },
+  "DAGzG_RmMFU:13": {
+    "sourceWarnings": [
+      "Source says Contains none while using almond milk. The source allergen statement is unreliable; check the actual ingredients and product labels."
+    ]
+  },
+  "DAGzG7jNyAk:53": {
+    "sourceWarnings": [
+      "Source says Contains none while using almond milk. The source allergen statement is unreliable; check the actual ingredients and product labels."
+    ]
+  },
+  "DAGzG7jNyAk:11": {
+    "sourceWarnings": [
+      "Source says Contains none while using almond milk. The source allergen statement is unreliable; check the actual ingredients and product labels."
+    ]
+  },
+  "DAGzG7jNyAk:17": {
+    "sourceWarnings": [
+      "Source says Contains none while using soy yoghurt. The source allergen statement is unreliable; check the actual ingredients and product labels."
+    ]
+  },
+  "DAGzG7jNyAk:22": {
+    "sourceWarnings": [
+      "Source says Contains none while using soy yoghurt. The source allergen statement is unreliable; check the actual ingredients and product labels."
+    ]
+  },
+  "DAGzG7jNyAk:26": {
+    "sourceWarnings": [
+      "Source says Contains none while using plain wheat tortillas explicitly in method. The source allergen statement is unreliable; check the actual ingredients and product labels."
+    ]
+  },
+  "DAGzG_1owLk:7": {
+    "sourceWarnings": [
+      "The source method begins with mashed cooked sweet potato and then refers to a pan of browned turkey, but does not include the step for browning the raw turkey mince."
+    ]
+  },
+  "DAGzG8AduAU:16": {
+    "sourceWarnings": [
+      "The source lists breadcrumbs and sesame seeds, then refers to breaded tofu without explaining the coating step. The heading says Cook20min while the air-fryer instruction says30min; curry powder is1tsp in ingredients versus½tsp in the dressing method."
+    ]
+  },
+  "DAGzG7jNyAk:31": {
+    "sourceWarnings": [
+      "The source lists breadcrumbs and sesame seeds, then refers to breaded tofu without explaining the coating step. The heading says Cook20min while the air-fryer instruction says30min; curry powder is1tsp in ingredients versus½tsp in the dressing method."
+    ]
+  },
+  "DAGzG7t1DBE:6": {
+    "sourceWarnings": [
+      "The supplied editions use the same ingredient quantities but list different protein figures: 9.7g and 19.7g, with identical calories and other macros. Nutrition is excluded from meal-plan totals until the source difference is clarified."
+    ],
+    "nutritionReviewRequired": true
+  },
+  "DAGzG7jNyAk:4": {
+    "sourceWarnings": [
+      "The supplied editions use the same ingredient quantities but list different protein figures: 9.7g and 19.7g, with identical calories and other macros. Nutrition is excluded from meal-plan totals until the source difference is clarified."
+    ],
+    "nutritionReviewRequired": true
+  }
+}

@@ -56,7 +56,9 @@ with sync_playwright() as w:
  p.on('pageerror',lambda e:errors.append(str(e)))
  p.on('dialog',lambda d:d.accept())
  goto('/recipes/')
- ok('100 source-backed recipes load',p.locator('[data-recipe-grid] .food-card').count()==100)
+ expected_recipes=json.loads((R/'data/cookbooks/website-catalogue-manifest.json').read_text())['recipes']
+ ok('Complete source-backed recipe catalogue loads',p.locator('[data-recipe-grid] .food-card').count()==expected_recipes)
+ p.locator('[data-recipe-book]').select_option('high-protein-kitchen')
  p.locator('[data-recipe-search]').fill('tropical overnight');ok('Recipe search filters',p.locator('[data-recipe-grid] .food-card').count()==1)
  p.locator('[data-recipe-search]').fill('');p.locator('[data-recipe-category]').select_option('Dinner');ok('Meal filter works',p.locator('[data-recipe-grid] .food-card').count()==25)
  p.locator('[data-recipe-category]').select_option('');snap('recipes-desktop.png')
