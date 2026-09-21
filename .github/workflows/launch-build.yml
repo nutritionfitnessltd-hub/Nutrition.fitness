@@ -44,6 +44,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/seeds/high-protein-kitchen.sql
           psql -v ON_ERROR_STOP=1 -f supabase/seeds/high-protein-kitchen.sql
           psql -v ON_ERROR_STOP=1 -f supabase/tests/catalogue.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/private_recipe_content.sql
       - name: Install test browser
         run: |
           python -m pip install playwright==1.57.0
@@ -74,14 +75,14 @@ jobs:
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/finder-green-browser.py
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/homepage-highlights-browser.py
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/home-feature-panels-browser.py
-      - name: Package source, generated site and test evidence
-        if: always()
-        run: zip -qr nutrition-fitness-source.zip . -x '.git/*' '*.zip' 'node_modules/*'
+      - name: Package verified public site
+        if: success()
+        run: zip -qr nutrition-fitness-site-review.zip dist
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: always()
         with:
-          name: nutrition-fitness-source
+          name: nutrition-fitness-site-review
           path: |
-            nutrition-fitness-source.zip
+            nutrition-fitness-site-review.zip
             test-results/
           retention-days: 14
