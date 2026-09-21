@@ -2,12 +2,13 @@
  * No protection bypass, account requests, credentials or customer data are used. */
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
+import {RECIPES,COOKBOOKS} from '../public/recipes-data.mjs';
 // The published www hostname is verified; the separate apex certificate issue is unchanged.
 const origin='https://www.nutrition.fitness';
 const digest=value=>createHash('sha256').update(value).digest('hex');
 const cookbookPhoto={path:'assets/cookbook/recipe-061.webp',recipe:'Easy chicken stir-fry',book:'The High Protein Kitchen',page:91,sha256:'08d052958b67cb60897d5c585f6c4d101189b13b45512cda79672f53d8a3c3f3'};
 if(digest(await readFile(new URL('../public/'+cookbookPhoto.path,import.meta.url)))!==cookbookPhoto.sha256)throw new Error('Cookbook source photograph has changed.');
-const files=['launch.css','launch.mjs','launch-config.mjs','recipes-data.mjs','recipe-display.mjs','form-modals.css','form-modals.mjs','finder-personality.css','finder-personality.mjs','home-highlights.css','home-feature-panels.css'];
+const files=['launch.css','launch.mjs','launch-config.mjs','recipes-data.mjs','recipe-display.mjs','food.mjs','food.css','form-modals.css','form-modals.mjs','finder-personality.css','finder-personality.mjs','home-highlights.css','home-feature-panels.css'];
 const expected=Object.fromEntries(await Promise.all(files.map(async file=>[file,digest(await readFile(new URL('../public/'+file,import.meta.url)))])));
 let last='Deployment not verified';
 for(let attempt=1;attempt<=18;attempt++){
@@ -27,10 +28,13 @@ for(let attempt=1;attempt<=18;attempt++){
   const quiz=await get('get-started/');
   if(!quiz.includes('finder-branded')||!quiz.includes('finder-free-note'))throw new Error('Quiz personality is not published yet.');
   const recipes=await get('recipes/');
-  if(!recipes.includes('All 100 recipes'))throw new Error('Recipe library not updated yet.');
+  if(!recipes.includes(`data-catalogue-count="${RECIPES.length}"`)||!recipes.includes('data-recipe-book'))throw new Error('Recipe library not updated yet.');
+  for(const source of COOKBOOKS)if(!recipes.includes(`value="${source.id}"`))throw new Error('Recipe book filter is incomplete.');
+  const imported=RECIPES.find(r=>r.sourceBookId&&r.sourceBookId!=='high-protein-kitchen');
+  if(imported){const detail=await get(`recipes/${imported.id}/`);if(!detail.includes(`data-recipe-detail="${imported.id}"`))throw new Error('Imported recipe detail is missing.');if(imported.image){const photo=await fetch(`${origin}${imported.image}?verify=${stamp}`,{signal:AbortSignal.timeout(15000)});if(!photo.ok||digest(Buffer.from(await photo.arrayBuffer()))!==digest(await readFile(new URL('../public'+imported.image,import.meta.url))))throw new Error('Imported recipe photograph does not match the tested asset.');}}
   const book=await get('shop/high-protein-kitchen/');
   if(!book.includes('high-protein-kitchen-cover.webp')||!book.includes('143 pages'))throw new Error('Book listing not updated yet.');
-  const report={status:'passed',url:origin,verifiedAt:new Date().toISOString(),sourceCommit:process.env.GITHUB_SHA||null,assets:expected,cookbookPhoto};
+  const report={status:'passed',url:origin,verifiedAt:new Date().toISOString(),sourceCommit:process.env.GITHUB_SHA||null,assets:expected,cookbookPhoto,recipes:RECIPES.length,books:COOKBOOKS.length};
   await mkdir('test-results',{recursive:true});await writeFile('test-results/production-smoke.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));process.exit(0);
  }catch(error){last=error.message;console.log(`Production check ${attempt}/18: ${last}`);if(attempt<18)await new Promise(resolve=>setTimeout(resolve,10000));}
 }

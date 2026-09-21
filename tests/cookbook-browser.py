@@ -5,6 +5,7 @@ import json, os
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'test-results'
 OUT.mkdir(exist_ok=True)
+MANIFEST = json.loads((ROOT / 'data/cookbooks/website-catalogue-manifest.json').read_text())
 BASE = os.environ.get('NUFI_TEST_BASE_URL', 'http://127.0.0.1:4173').rstrip('/')
 checks = []
 def check(label, value):
@@ -25,15 +26,21 @@ with sync_playwright() as p:
         check('One banner on '+path,page.locator('.launch-banner').count()==1)
         page.wait_for_timeout(180)
     visit('/recipes/')
-    page.wait_for_function("document.querySelectorAll('[data-recipe-grid] .food-card').length===100")
-    check('All 100 recipes available', page.locator('[data-recipe-grid] .food-card').count()==100)
+    page.wait_for_function("expected => document.querySelectorAll('[data-recipe-grid] .food-card').length===expected", arg=MANIFEST['recipes'])
+    check('Complete recipe catalogue available', page.locator('[data-recipe-grid] .food-card').count()==MANIFEST['recipes'])
+    for source_book in MANIFEST['books']:
+        page.locator('[data-recipe-book]').select_option(source_book['id'])
+        check('Book filter: '+source_book['title'],page.locator('[data-recipe-grid] .food-card').count()==source_book['recipeCount'])
+        check('Book filter remains in URL: '+source_book['id'],'book='+source_book['id'] in page.url)
+    page.locator('[data-recipe-book]').select_option('high-protein-kitchen')
+    check('Original 100 recipes remain together', page.locator('[data-recipe-grid] .food-card').count()==100)
     for category,count in [('Breakfast',22),('Lunch',24),('Dinner',25),('Snacks',14),('Drinks',15)]:
         page.locator('[data-recipe-category]').select_option(category)
         check(category+' count matches the book', page.locator('[data-recipe-grid] .food-card').count()==count)
     page.locator('[data-recipe-category]').select_option('')
     page.locator('[data-recipe-search]').fill('vanilla berry')
     check('New recipes searchable',page.locator('[data-recipe-grid] .food-card').count()==1)
-    visit('/recipes/?category=Breakfast')
+    visit('/recipes/?book=high-protein-kitchen&category=Breakfast')
     check('Book category links filter the library',page.locator('[data-recipe-grid] .food-card').count()==22)
     for path,count in [('/recipes/vanilla-berry-smoothie/',2),('/recipes/omelette-muffins/',6),('/recipes/chocolate-fudge-bars/',6)]:
         visit(path)
