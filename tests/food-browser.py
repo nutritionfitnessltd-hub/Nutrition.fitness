@@ -114,7 +114,7 @@ with sync_playwright() as w:
   if route=='/shop/':snap('shop-mobile.png')
  goto('/programmes/',1440);snap('programmes-desktop.png')
  goto('/shop/');ok('Nine actual product-image files rendered',p.locator('.product-image-link .product-photo').count()>=9);snap('shop-desktop.png')
- goto('/account/');ok('Unconfigured login cannot fake registration',p.locator('[data-send-code] button').is_disabled())
+ goto('/login/');ok('Unconfigured login cannot fake registration',p.locator('[data-auth-form] button[type=submit]').is_disabled())
  ok('No unhandled JavaScript errors',not errors)
  b.close()
 report={'mode':'offline-in-memory'if OFFLINE else 'http-browser','passed':len(checks),'checks':checks,'errors':errors}

@@ -11,3 +11,6 @@ test-results/
 .env
 .env.local
 .env.*.local
+supabase/.temp/
+__pycache__/
+*.py[cod]

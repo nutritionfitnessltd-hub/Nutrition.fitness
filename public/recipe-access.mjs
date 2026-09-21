@@ -23,7 +23,24 @@ export async function loadAccountRecipes({fetcher=globalThis.fetch?.bind(globalT
       credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'},
       signal:AbortSignal.timeout(6000),
     });
-    if(!response.ok)return {available:0,status:response.status===401?'guest':'unavailable'};
+    if(!response.ok){
+      // Free catalogue edits are available to everyone; denied account access
+      // never makes an account recipe eligible through the public endpoint.
+      try {
+        const freeResponse=await fetcher('/api/recipes',{credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'},signal:AbortSignal.timeout(6000)});
+        const freeData=freeResponse.ok?await freeResponse.json():null;
+        if(freeData?.access==='free'&&Array.isArray(freeData.recipes)){
+          const next=new Map();
+          for(const value of freeData.recipes){
+            const source=RECIPE_BY_ID[value?.id];
+            if(!source||source.access==='account'||!isRecipeAvailable(value)||next.has(value.id))throw new Error('Invalid free catalogue');
+            next.set(value.id,{...value,access:'free',locked:false});
+          }
+          if(next.size===100)accountRecipes=next;
+        }
+      }catch{/* The original free source remains available when updates cannot be read. */}
+      return {available:0,status:response.status===401?'guest':'unavailable'};
+    }
     const data=await response.json();
     if(!['verified-account','active-launch-trial'].includes(data.access)||!Array.isArray(data.recipes))return {available:0,status:'unavailable'};
     const next=new Map(),seen=new Set();
@@ -31,12 +48,16 @@ export async function loadAccountRecipes({fetcher=globalThis.fetch?.bind(globalT
       const preview=RECIPE_BY_ID[value?.id];
       if(!preview||seen.has(value.id))return {available:0,status:'unavailable'};
       seen.add(value.id);
-      if(preview.access!=='account')continue;
-      if(preview.publicationStatus==='held'||value.publicationStatus!=='published'||!isRecipeAvailable(value))return {available:0,status:'unavailable'};
-      next.set(value.id,{...value,access:'account',locked:false,...(preview.nutritionStatus==='review-needed'?{nutrition:null,nutritionStatus:'review-needed'}:{})});
+      if(!isRecipeAvailable(value))return {available:0,status:'unavailable'};
+      if(preview.access!=='account'){next.set(value.id,{...value,access:'free',locked:false});continue;}
+      if(value.publicationStatus!=='published')return {available:0,status:'unavailable'};
+      if(preview.publicationStatus==='held'&&(!Number.isSafeInteger(value.contentVersion)||value.contentVersion<1))return {available:0,status:'unavailable'};
+      // A reviewed publication from the protected API can release a source hold.
+      // A static preview, local flag or malformed payload never supplies access.
+      next.set(value.id,{...value,access:'account',locked:false,...(preview.nutritionStatus==='review-needed'&&!value.nutritionReviewed?{nutrition:null,nutritionStatus:'review-needed'}:{})});
     }
     accountRecipes=next;
-    return {available:next.size,status:'authorised'};
+    return {available:[...next.values()].filter(r=>r.access==='account').length,status:'authorised'};
   } catch {
     return {available:0,status:'unavailable'};
   }

@@ -1,6 +1,12 @@
 # Nutrition.Fitness — November launch website
 
-The approved multi-page website, extended in-place with the launch programme finder, structured recipes, meal planner/shopping list, programme/course system and proposed supplement imagery. Source is maintained on `launch/december-2026`, draft PR #1. The production/main baseline is deliberately preserved.
+The Nutrition.Fitness multi-page website, extended in place with account access, protected website administration, the launch programme finder, source-backed recipes, meal planning, shopping lists and programmes. Vercel builds the deployable site from this source.
+
+## Accounts and website management
+
+The new full-page portal provides `/login/`, `/register/`, password recovery, `/account/` and `/admin/`. Administrators can manage members, recipe content, selected website copy, product descriptions, site settings and an activity log. These controls use verified sessions and protected server/database permissions.
+
+**Live account activation remains pending service configuration and the first administrator assignment.** See [the account/admin handover](docs/ACCOUNT-ADMIN-HANDOVER.md) for the exact setup, supported fields, security checks and operational limits. Local previews clearly report unavailable account services.
 
 **Launch:** 1 November 2026 at 09:00 UK time. Everyone completing the programme finder may reserve one free calendar month of NUFI+, starting only at verified app activation on/after launch. No purchase/card/automatic charge.
 
@@ -14,11 +20,11 @@ Deploy the repository root to a **Vercel preview** using the included `vercel.js
 
 `/get-started/`, `/recipes/`, `/meal-planner/`, `/shopping-list/`, `/collections/`, `/recipe-edit/`, `/onboarding/`, `/programmes/`, `/courses/`, `/shop/`, `/account/`, `/admin/`.
 
-Recipe and planner tools work as clearly labelled browser-only guest workspaces until accounts are configured. Account sync uses verified sessions, user-specific storage and optimistic version checks. A nutrition target is never silently inferred from the quiz. Edits to recipes do not rewrite already-logged food snapshots. The recipe library currently contains six recipes from the user's High Protein Kitchen, not the entire cookbook.
+Recipe and planner tools work as clearly labelled browser-only guest workspaces until accounts are configured. Account sync uses verified sessions, user-specific storage and optimistic version checks. A nutrition target is never silently inferred from the quiz. Edits to recipes do not rewrite already-logged food snapshots. The catalogue contains the original 100 free recipes and 499 additional account-restricted recipe previews. Private cooking content requires verified access; held content stays unavailable until reviewed.
 
 ## Integration setup and limits
 
-Read **`docs/LAUNCH-BUILD-STATUS.md`** before live deployment. It distinguishes finished code, six-recipe content coverage, external account/CRM configuration, the real NUFI app-access contract, tests and rollback. All server variable names are in `.env.example`; put actual values only in private environment settings.
+Read **`docs/LAUNCH-BUILD-STATUS.md`** before live deployment. It records the original launch integration boundaries. Current recipe coverage is documented in `docs/COOKBOOK-IMPORT.md`; the current account/admin release is documented in `docs/ACCOUNT-ADMIN-HANDOVER.md`. All server variable names are in `.env.example`; put actual values only in private environment settings.
 
 The database migration is in `supabase/migrations/`. Never run `supabase/tests/bootstrap.sql` in a real project: it only creates a disposable CI auth scaffold. No project/credentials have been selected or configured by this build. No real email, payment, CRM contact or app entitlement has been created by tests.
 
@@ -28,7 +34,10 @@ Shop catalogue prices, stock, terms and proposed packaging are still examples. T
 
 - `src/home.html`: preserved approved homepage.
 - `scripts/build.mjs`, `src/experience.mjs`, `src/launch-layout.mjs`: page families and shared presentation.
-- `public/food.mjs`, `public/food.css`: recipe/planner/course/account UI.
+- `public/food.mjs`, `public/food.css`: recipe/planner/course UI.
+- `src/account-pages.mjs`, `public/account.mjs`, `public/account.css`: login, account and administration.
+- `public/account-sync.mjs`: explicit account/guest plan sync and backup controls.
+- `public/managed-content.mjs`: published content updates for the supported website fields.
 - `public/meal-core.mjs`, `public/food-store.mjs`: data rules, validation, guest/account persistence and conflict safety.
 - `public/recipes-data.mjs`, `src/system-content.mjs`: source-backed recipe content and programme orientation.
 - `public/launch*.mjs`, `public/programme-finder.mjs`: fixed launch contract and quiz.
@@ -41,4 +50,4 @@ GitHub Actions runs code/link, PostgreSQL and HTTP browser checks and creates a 
 
 ## Full High Protein Kitchen catalogue
 
-The full supplied 100-recipe catalogue and actual book listing are now included. See `docs/COOKBOOK-IMPORT.md` for provenance, source-review notes, exact database-import boundaries and tests. The hosted database must be the existing Nutrition.Fitness project; no replacement or unrelated database is selected.
+The full supplied 100-recipe catalogue and actual book listing are now included. See `docs/COOKBOOK-IMPORT.md` for provenance, source-review notes, exact database-import boundaries and tests. Use the owner-confirmed Nutrition.Fitness database project; do not reuse an unrelated business's database. No hosted project is selected by this source release.

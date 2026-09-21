@@ -7,7 +7,6 @@ export const FORM_ROUTES = Object.freeze({
  '/search/': {title:'Search Nutrition.Fitness',label:'Search the website',selector:'.compact-page'},
  '/subscriptions/': {title:'Build your subscription',label:'Build my subscription',selector:'#box-form',kind:'wide'},
  '/checkout/': {title:'Review your order',label:'Review my order',selector:'#checkout-content',kind:'wide'},
- '/account/': {title:'Sign in or create an account',label:'Sign in / create account',selector:'.account-panel:has([data-send-code])'},
  '/meal-planner/add/': {title:'Add a meal',label:'Add a meal to my plan',selector:'[data-food-screen]'},
  '/meal-planner/edit/': {title:'Edit your planned meal',label:'Edit this meal',selector:'[data-food-screen]'},
  '/meal-planner/log/': {title:'Log what you ate',label:'Log my meal',selector:'[data-food-screen]'},
@@ -23,6 +22,8 @@ export function formRoute(href, base) {
 if (typeof document !== 'undefined' && typeof HTMLDialogElement !== 'undefined' && HTMLDialogElement.prototype.showModal) boot();
 
 function boot() {
+ // Account and management workflows have their own full-screen navigation.
+ if (/^\/(?:login|register|forgot-password|reset-password|account|admin)(?:\/|$)/.test(location.pathname)) {document.documentElement.dataset.nfFormModals='ready';return;}
  const $=(s,r=document)=>r.querySelector(s);
  const embedded=(()=>{try{return window.parent!==window && window.frameElement?.hasAttribute('data-nf-modal-frame');}catch{return false;}})();
  const route=FORM_ROUTES[normalPath(location.pathname)];
