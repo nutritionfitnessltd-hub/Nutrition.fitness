@@ -28,8 +28,8 @@ for(let attempt=1;attempt<=18;attempt++){
   const quiz=await get('get-started/');
   if(!quiz.includes('finder-branded')||!quiz.includes('finder-free-note'))throw new Error('Quiz personality is not published yet.');
   const recipes=await get('recipes/');
-  if(!recipes.includes(`data-catalogue-count="${RECIPES.length}"`)||!recipes.includes('data-recipe-book'))throw new Error('Recipe library not updated yet.');
-  for(const source of COOKBOOKS)if(!recipes.includes(`value="${source.id}"`))throw new Error('Recipe book filter is incomplete.');
+  if(!recipes.includes(`data-catalogue-count="${RECIPES.length}"`)||recipes.includes('data-recipe-book'))throw new Error('Simplified recipe browsing not updated yet.');
+  for(const control of ['search','category','sort'])if(!recipes.includes(`data-recipe-${control}`))throw new Error('Recipe browsing control is missing: '+control);
   const imported=RECIPES.find(r=>r.sourceBookId&&r.sourceBookId!=='high-protein-kitchen');
   if(imported){const detail=await get(`recipes/${imported.id}/`);if(!detail.includes(`data-recipe-detail="${imported.id}"`))throw new Error('Imported recipe detail is missing.');if(imported.image){const photo=await fetch(`${origin}${imported.image}?verify=${stamp}`,{signal:AbortSignal.timeout(15000)});if(!photo.ok||digest(Buffer.from(await photo.arrayBuffer()))!==digest(await readFile(new URL('../public'+imported.image,import.meta.url))))throw new Error('Imported recipe photograph does not match the tested asset.');}}
   const book=await get('shop/high-protein-kitchen/');

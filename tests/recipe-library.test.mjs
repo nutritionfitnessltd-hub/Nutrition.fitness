@@ -20,14 +20,28 @@ test('the website contains every source record and keeps existing recipe objects
  for(const source of [...original.recipes,...imported])assert.deepEqual(RECIPE_BY_ID[source.id],source,source.id);
 });
 
-test('book filters count recipes once in each book where they appear',()=>{
+test('source provenance still counts recipes once in every original book',()=>{
  assert.equal(COOKBOOKS.length,library.books.length+1);
  for(const book of COOKBOOKS){
   const members=RECIPES.filter(r=>recipeSources(r).some(source=>source.id===book.id));
   assert.equal(book.recipeCount,members.length,book.title);
-  assert.ok(html.get('/recipes/').includes(`value="${book.id}"`),book.title);
  }
  assert.equal(COOKBOOKS.find(b=>b.id==='high-protein-kitchen').recipeCount,100);
+});
+
+test('recipe browsing uses food filters without publishing source-volume controls or labels',()=>{
+ const catalogue=html.get('/recipes/');
+ for(const control of ['search','category','sort'])assert.match(catalogue,new RegExp(`data-recipe-${control}`));
+ assert.doesNotMatch(catalogue,/data-recipe-book|All books|recipes from \d+ books|Recipe book<select/);
+ assert.match(catalogue,new RegExp(`data-catalogue-count="${RECIPES.length}"`));
+ assert.match(catalogue,/data-original-recipes hidden/);
+ assert.match(catalogue,/data-all-recipes>Browse the full collection/);
+ for(const r of RECIPES)assert.doesNotMatch(recipeCard(r),/Volume \d|Explore The High Protein Kitchen/);
+ for(const r of imported){
+  const page=html.get(`/recipes/${r.id}/`);
+  assert.doesNotMatch(page,/Also in these books|href="\/recipes\/\?book=/);
+  assert.ok(page.includes(r.nutritionSource.replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll("'",'&#39;').replaceAll('<','&lt;').replaceAll('>','&gt;')),r.id);
+ }
 });
 
 test('every catalogue page has its own method, source and usable planner link',()=>{
