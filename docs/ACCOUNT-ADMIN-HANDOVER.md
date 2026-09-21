@@ -4,7 +4,11 @@
 
 This release adds the login, account and website management experience to the current Nutrition.Fitness website. It extends the existing Vercel functions and Supabase integration. It does not replace the public website or move the project to another hosting provider.
 
-**Live activation is pending.** At the time of this build, no dedicated Nutrition.Fitness Supabase project had been selected, no first administrator email had been supplied, and the live Vercel connection settings had not been configured. Readiness flags stay off until the actual services, email delivery and permissions are verified. The interface reports unavailable services instead of creating a demonstration login.
+**Live activation is pending.** The owner confirmed the Nutrition dot fitness organisation, `james@nutrition.fitness` for the first administrator, the quoted $0/month project, and project-specific Vercel setup. Supabase rejected project creation because this account already has its maximum two active free projects: Castle Grove and Tan Time. No new Nutrition.Fitness project was created. A paid-plan decision or explicit permission to pause a selected existing project is required.
+
+The private Vercel settings also remain unconfigured. Browser auto-review requires broader domain access than the project-specific permission, and the currently connected Vercel tools do not expose environment-variable writes. Readiness flags stay off until the actual services, email delivery and permissions are verified. The interface reports unavailable services instead of creating a demonstration login.
+
+James should choose his own password through the website signup flow and verify his email. Only then should the corresponding verified user UUID be assigned the protected administrator role. No administrator login or password has been invented or embedded in this release.
 
 ## Pages and capabilities
 
@@ -92,7 +96,7 @@ The release passes **330 Node tests**, **57 isolated account/admin browser check
 
 Local verification used Node 24, Chromium 153 and disposable PostgreSQL 18.3 through PGlite 0.5.8. The deployed project targets Node 22 and CI uses PostgreSQL 17. The migration tests executed the actual SQL under anonymous, authenticated and server roles. The local database harness uses one connection, so it does not prove simultaneous multi-connection race behaviour. Hosted Supabase Auth, CAPTCHA, email delivery and production configuration must still be verified during activation.
 
-The existing Google Fonts request failed in this isolated browser environment (`net::ERR_EMPTY_RESPONSE`). Portal layout checks ran with fallback fonts. The wider site's two developer-guide assertions requiring loaded DM Sans/Kalam remain unverified; their checks were not weakened. Responsive spacing now also fits fallback fonts at the tested phone and tablet breakpoints.
+The existing Google Fonts request failed in the isolated local browser environment (`net::ERR_EMPTY_RESPONSE`), so local portal layout checks also exercised fallback fonts. The full [GitHub Actions run](https://github.com/nutritionfitnessltd-hub/Nutrition.fitness/actions/runs/35653570447) subsequently passed on the integrated implementation, including every browser suite, actual font-loading checks and PostgreSQL 17 migration tests. No font assertion was weakened. Responsive spacing also fits fallback fonts at the tested phone and tablet breakpoints.
 
 Before enabling live flags, verify signup email, correct/incorrect login, logout, reset/replay, profile save, a normal member's admin denial, an administrator's content edit, stale-save conflict and suspended-member denial against the selected project. Confirm private recipe access is denied to guests and that all original 100 remain free.
 
