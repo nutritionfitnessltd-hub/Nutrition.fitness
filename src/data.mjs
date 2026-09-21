@@ -1,5 +1,6 @@
 /** The catalogue is for design review. All prices, sizes, formulations and curricula
  *  must be signed off before sales are enabled. Prices are integer GBP pence. */
+import {collectionProducts} from './collection-books.mjs';
 export const site = {
   name: 'nutrition.fitness', currency: 'GBP', preview: true,
   shipping: { fee: 395, freeOver: 5000 }, subscriptionDiscount: 10,
@@ -18,12 +19,8 @@ export const products = [
     ['banana','Banana','sage','Going bananas. In a very organised way.'],
     ['hazelnut','Hazelnut','aqua','Another flavour. Not another kilo of powder.']
   ].map(([slug,name,color,quip])=>({id:`shot-${slug}`,name:`${name} flavour shot`,short:name,category:'shots',price:695,size:'30 ml · concept size',type:'physical',recurring:true,color,art:'bottle',label:name.toLowerCase(),quip,description:`Add ${name.toLowerCase()} flavour separately to your plain protein. Keep the powder. Change your mind about the flavour. That is allowed.`,details:['Pipette-style flavour shot, not a ready-to-drink shake.','Sold separately from the protein powder.','Choose one flavour or mix a selection in your box.'],caution:'Proposed flavour and pack size. Ingredients, allergens, sweeteners, serving instructions and compatibility must be verified before sale. A flavour name does not establish whether an allergen is present.'})),
-  ...[
-    ['high-protein-kitchen','The High Protein Kitchen','The kitchen.','sage','chicken-bowl','Proper meals. Very little faff.'],
-    ['high-protein-smoothies','High Protein Smoothies','The smoothies.','blush','food-breakfast','Your blender finally has a proper job.'],
-    ['high-protein-fakeaways','High Protein Fakeaways','The fakeaways.','peach','food-fakeaway','Your delivery driver may miss you.'],
-    ['high-protein-snacks','High Protein Snacks','The snacks.','aqua','food-snacks','For the gap between lunch and a bad idea.']
-  ].map(([slug,name,short,color,image,quip])=>({id:slug,name,short,category:'books',price:1495,size:'Digital recipe book',type:'digital',recurring:false,color,art:'book',image,label:name.replace('The ',''),quip,description:'A recipe-book concept for proper food that fits real life. Clear ingredients, straightforward methods and useful nutrition information are the brief. Not a lecture in a very expensive apron.',details:['Digital recipe-book format.','Full recipe content is not included in this website build.','Final recipe count, testing and nutrition need approval.'],caution:'Cover and product-page concept only. No ebook is delivered by the demo checkout.'})),
+  {id:'high-protein-kitchen',category:'books',type:'digital',recurring:false,color:'sage',label:'High Protein Kitchen'},
+  ...collectionProducts,
   {id:'nufi-membership',name:'NUFI+ membership',short:'NUFI+',category:'membership',price:1499,annualPrice:9900,type:'digital',recurring:true,color:'aqua',art:'membership',label:'NUFI+',quip:'Less figuring out. More getting on with it.',description:'Programmes, meal planning, shopping lists, courses and progress. The useful bits, brought together.',caution:'Example pricing for review. No membership or real account is activated in this preview.'}
 ];
 const kitchen = products.find(p=>p.id==='high-protein-kitchen');

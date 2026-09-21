@@ -1,0 +1,13 @@
+.collection-product .cookbook-cover{background:#f6f6f2}
+.collection-product .cookbook-buybox h1{overflow-wrap:break-word}
+.collection-chapters{list-style:none;margin:0;padding:0}
+.collection-chapters li{display:flex;align-items:center;justify-content:space-between;gap:20px;padding:18px 0;border-bottom:1px solid var(--line)}
+.collection-chapters h3{font-size:19px;line-height:1.3;margin:0 0 7px}
+.collection-chapters p{font-size:13px;margin:0;color:var(--muted)}
+.collection-chapter-page{flex:none;color:var(--green);font-weight:700;font-size:14px}
+.collection-product .cookbook-contents{scroll-margin-top:110px}
+.product-card[data-category="books"] .card-name-row{display:block}
+.product-card[data-category="books"] .card-name-row>strong{display:block;font-size:15px;margin-top:7px}
+.product-card[data-category="books"] .product-meta{align-items:flex-start;gap:14px}
+.product-card[data-category="books"] .product-meta>span{max-width:65%}
+@media(max-width:760px){.collection-chapters li{gap:14px;padding:16px 0}.collection-chapters h3{font-size:18px}.collection-product .cookbook-contents{scroll-margin-top:90px}}

@@ -14,6 +14,9 @@
   "redirects": [
     {"source":"/programs/:path*","destination":"/programmes/:path*","permanent":false},
     {"source":"/academy/:path*","destination":"/courses/:path*","permanent":false},
-    {"source":"/membership","destination":"/nufi/#pricing","permanent":false}
+    {"source":"/membership","destination":"/nufi/#pricing","permanent":false},
+    {"source":"/shop/high-protein-smoothies/","destination":"/shop/blend-and-go/","permanent":true},
+    {"source":"/shop/high-protein-fakeaways/","destination":"/shop/big-night-in/","permanent":true},
+    {"source":"/shop/high-protein-snacks/","destination":"/shop/snack-happy/","permanent":true}
   ]
 }
