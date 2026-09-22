@@ -8,7 +8,7 @@ permissions:
 jobs:
   public-http:
     runs-on: ubuntu-latest
-    timeout-minutes: 3
+    timeout-minutes: 5
     steps:
       - name: Check only public readiness and disabled email endpoints
         run: |
@@ -19,21 +19,52 @@ jobs:
           const ready=await readinessResponse.json();
           if(ready.provisionedAccountsOnly!==true||ready.signupConfigured!==false||ready.recoveryConfigured!==false)throw new Error('Refusing email probes unless provisioned mode is confirmed');
           const results=[{action:'readiness',status:readinessResponse.status,loginReady:ready.passwordConfigured,provisioned:ready.provisionedAccountsOnly}];
-          for(const origin of [root,'https://nutrition.fitness','https://example.invalid']){
+          for(const redirect of ['manual','follow']){
             for(const path of ['/api/auth','/api/auth/']){
-              const response=await fetch(root+path,{method:'POST',redirect:'manual',signal:AbortSignal.timeout(15000),headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({action:'signup-password',email:'http-check@example.invalid',password:'Not a real credential'})});
+              const response=await fetch(root+path,{method:'POST',redirect,signal:AbortSignal.timeout(15000),headers:{Origin:root,'Content-Type':'application/json'},body:JSON.stringify({action:'signup-password',email:'http-check@example.invalid',password:'Not a real credential'})});
               const payload=await response.json().catch(()=>({}));
-              const location=response.headers.get('location');
-              const loc=location?new URL(location,root):null;
-              results.push({origin,path,status:response.status,setsCookie:response.headers.has('set-cookie'),location:loc?loc.origin+loc.pathname:null,error:typeof payload.error==='string'?payload.error.slice(0,250):null});
+              const location=response.headers.get('location');const loc=location?new URL(location,root):null;
+              results.push({redirect,path,status:response.status,setsCookie:response.headers.has('set-cookie'),location:loc?loc.origin+loc.pathname:null,error:typeof payload.error==='string'?payload.error.slice(0,250):null});
             }
           }
-          const report={noCredentialsUsed:true,noEmailsSent:true,results};
-          await writeFile('account-origin-check.json',JSON.stringify(report,null,2));
-          console.log(JSON.stringify(report,null,2));
+          await writeFile('account-origin-check.json',JSON.stringify({noCredentialsUsed:true,results},null,2));
           JS
+      - name: Install isolated test browser
+        run: |
+          python -m pip install playwright==1.57.0
+          python -m playwright install --with-deps chromium
+      - name: Check actual website form with a nonexistent account
+        run: |
+          python - <<'PY'
+          import json,uuid
+          from playwright.sync_api import sync_playwright
+          with sync_playwright() as p:
+              browser=p.chromium.launch(headless=True)
+              context=browser.new_context(viewport={'width':390,'height':844})
+              page=context.new_page()
+              page.goto('https://www.nutrition.fitness/login/',wait_until='networkidle')
+              ready=page.evaluate("fetch('/api/auth/').then(r=>r.json())")
+              assert ready.get('provisionedAccountsOnly') and ready.get('passwordConfigured'), 'Account test is not ready'
+              rows=[]
+              for path in ['/api/auth','/api/auth/']:
+                  rows.append(page.evaluate("""async path=>{const r=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'signup-password',email:'http-check@example.invalid',password:'Not a real credential'})});const d=await r.json();return {path,status:r.status,error:d.error||null,redirected:r.redirected};}""",path))
+              page.locator('#email').fill('release-'+str(uuid.uuid4())+'@example.invalid')
+              page.locator('#password').fill('Not a real credential')
+              page.get_by_role('button',name='Sign in',exact=True).click()
+              page.locator('[data-portal-message]').wait_for(state='visible')
+              form_message=page.locator('[data-portal-message]').inner_text()
+              cookies=context.cookies()
+              assert not any(c['name'].startswith('__Host-nufi-') for c in cookies),'A nonexistent account received a session'
+              page.screenshot(path='account-live-login-390.png')
+              with open('account-live-browser.json','w') as out:json.dump({'ownerCredentialsUsed':False,'emailActionsDisabled':True,'requests':rows,'invalidLoginMessage':form_message,'sessionCreated':False},out,indent=2)
+              browser.close()
+          PY
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: always()
         with:
           name: account-origin-check
-          path: account-origin-check.json
+          path: |
+            account-origin-check.json
+            account-live-browser.json
+            account-live-login-390.png
           retention-days: 3
