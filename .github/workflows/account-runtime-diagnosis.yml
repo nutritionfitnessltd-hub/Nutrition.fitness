@@ -1,0 +1,31 @@
+name: Account runtime diagnosis
+on:
+  push:
+    branches: [fix/account-runtime-verification-20260922]
+    paths: [.github/workflows/account-runtime-diagnosis.yml]
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check public responses without owner credentials
+        run: |
+          node --input-type=module <<'JS'
+          import {randomUUID,createHash} from 'node:crypto';
+          const origin='https://www.nutrition.fitness';
+          const report=[];
+          async function check(path,options={}) {
+            const response=await fetch(origin+path,{...options,cache:'no-store',signal:AbortSignal.timeout(20000)});
+            const raw=await response.text();let parsed;try{parsed=JSON.parse(raw);}catch{}
+            const fields=['configured','passwordConfigured','provisionedAccountsOnly','mode','release','signupConfigured','recoveryConfigured','passwordChangeConfigured','captchaRequired','error','message','code'];
+            const safe={};for(const field of fields){const value=parsed?.[field];if(typeof value==='boolean'||typeof value==='number')safe[field]=value;else if(typeof value==='string')safe[field]=value.replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+/g,'[redacted-token]').slice(0,450);}
+            const headers={};for(const name of ['content-type','cache-control','age','server','x-vercel-id','x-vercel-cache','x-matched-path','x-nufi-auth-release'])if(response.headers.has(name))headers[name]=response.headers.get(name);
+            report.push({method:options.method||'GET',path:path.split('?')[0],url:response.url.split('?')[0],status:response.status,headers,result:safe,responseSha256:createHash('sha256').update(raw).digest('hex'),sessionCookiePresent:!!response.headers.get('set-cookie')});
+            return {response,parsed};
+          }
+          const state=await check('/api/auth?release_diagnosis='+randomUUID());
+          if(state.parsed?.passwordConfigured===true&&state.parsed?.captchaRequired===false){await check('/api/auth',{method:'POST',headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({action:'login-password',email:'runtime-check-'+randomUUID()+'@example.invalid',password:randomUUID()+randomUUID()})});}
+          console.log(JSON.stringify({checkedAt:new Date().toISOString(),ownerCredentialsUsed:false,results:report},null,2));
+          JS
