@@ -38,7 +38,7 @@ function backend({identity=user,profile={...member},override}={}){
    });
    if(options.method==='DELETE'){for(const record of matches)grants.delete(record.token_hash);return json(matches);}
   }
-  if(u.pathname==='/rest/v1/nufi_workspaces')return json([{version:5,updated_at:'2026-09-21T13:00:00Z',onboarding:{targets:{protein:140}}}]);
+  if(u.pathname==='/rest/v1/nufi_workspaces')return json([{version:5,updated_at:'2026-09-21T13:00:00Z',onboarding:{targets:{protein:140}},course_progress:['core-1','core-2','build-1'],favourites:['recipe-a','recipe-b']}]);
   if(u.pathname==='/rest/v1/rpc/nufi_claim_crm')return json([]);
   throw new Error(`Unexpected upstream endpoint ${u.pathname}`);
  };
@@ -113,7 +113,7 @@ test('missing member seed never accepts user metadata roles and cannot overwrite
  const store=backend({profile:null}),current=await session(request(),response(),env,store.fetcher);assert.equal(current.member.role,'member');const insert=store.calls.find(c=>c.url.includes('nufi_members?on_conflict'));assert.equal(insert.payload.role,'member');assert.match(insert.options.headers.Prefer,/ignore-duplicates/);
 });
 test('account reads expose only current user profile and their workspace metadata',async()=>{
- const store=backend(),res=response();await createAccountHandler({env,fetcher:store.fetcher})(request(),res);assert.equal(res.code,200);assert.deepEqual(res.data.user,{id:user.id,email:user.email,firstName:'Pat',admin:false,status:'active'});assert.deepEqual(res.data.workspace,{version:5,updatedAt:'2026-09-21T13:00:00Z'});assert.deepEqual(res.data.access,{recipes:'account'});assert.deepEqual(res.data.onboarding,{targets:{protein:140}});
+ const store=backend(),res=response();await createAccountHandler({env,fetcher:store.fetcher})(request(),res);assert.equal(res.code,200);assert.deepEqual(res.data.user,{id:user.id,email:user.email,firstName:'Pat',admin:false,status:'active'});assert.deepEqual(res.data.workspace,{version:5,updatedAt:'2026-09-21T13:00:00Z',savedRecipes:2,courseProgress:['core-1','core-2','build-1']});assert.deepEqual(res.data.access,{recipes:'account'});assert.deepEqual(res.data.onboarding,{targets:{protein:140}});
  const workspace=store.calls.find(c=>c.url.includes('/nufi_workspaces'));assert.ok(workspace.url.includes(user.id));assert.equal(workspace.options.headers.Authorization,'Bearer test-access');assert.ok(!JSON.stringify(res.data).includes('test-access'));assert.equal(res.headers['Cache-Control'],'no-store, private');
 });
 test('profile change refuses role, identity and status inputs',async()=>{
