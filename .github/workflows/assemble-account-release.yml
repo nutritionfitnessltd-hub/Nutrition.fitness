@@ -32,7 +32,7 @@ jobs:
           fetch-depth: 2
       - name: Verify exact reviewed patch and stage source changes
         run: |
-          test "$(git rev-parse HEAD^)" = 65ce9be28cfbb80bbca1cca6947a402b306cfe4e
+          test "$(git rev-parse HEAD^)" = b348cc248088218c90c3832b0fb31ab46374ac97
           echo 'ff4a678df51d0db19a723b49be21edc69d4e5b66deb4db7bba93ee1939d659f5  .github/release/part1.patch' | sha256sum --check
           echo 'f9bbd22e1687c9ef14bb695b6b30e6a0637d5f239aa7e0995afe6d519ec77ae5  .github/release/part2.patch' | sha256sum --check
           echo '57bf65dfa630712bdb253a32c0a3e899b729bb61c24c4f1906d6683d178d9875  .github/release/part3.patch' | sha256sum --check
@@ -40,7 +40,9 @@ jobs:
           git apply --unidiff-zero --index .github/release/part1.patch .github/release/part2.patch .github/release/part3.patch
           git diff --cached --stat
       - name: Test source and build
-        run: npm run check
+        run: |
+          node scripts/fetch-photo-assets.mjs
+          npm run check
       - name: Test disposable database and concurrent login limits
         run: |
           psql -v ON_ERROR_STOP=1 -f supabase/tests/bootstrap.sql
