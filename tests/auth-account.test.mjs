@@ -6,7 +6,7 @@ import {session,requireAdmin,membership} from '../server/platform.mjs';
 
 const user={id:'11111111-1111-4111-a111-111111111111',email:'person@example.com',email_confirmed_at:'2026-09-21T12:00:00Z',is_anonymous:false,user_metadata:{first_name:'Pat',admin:true,role:'admin'}};
 const member={user_id:user.id,first_name:'Pat',role:'member',status:'active',created_at:'2026-09-21T12:00:00Z',updated_at:'2026-09-21T12:00:00Z'};
-const env={SITE_URL:'https://nutrition.fitness',SUPABASE_URL:'https://project.supabase.co',SUPABASE_ANON_KEY:'test-public-key',SUPABASE_SERVICE_ROLE_KEY:'test-private-key',TURNSTILE_SITE_KEY:'test-site',TURNSTILE_SECRET_KEY:'test-secret',NUFI_EMAIL_OTP_READY:'true',NUFI_AUTH_CAPTCHA_READY:'true',NUFI_PASSWORD_AUTH_READY:'true',NUFI_PASSWORD_RECOVERY_READY:'true',NUFI_RECIPE_CONTENT_READY:'true',NUFI_RECIPE_ACCESS_MODE:'registered',NUFI_ACCOUNT_MANAGEMENT_READY:'true',NUFI_RECOVERY_ENCRYPTION_KEY:Buffer.alloc(32,3).toString('base64')};
+const env={SITE_URL:'https://nutrition.fitness',SUPABASE_URL:'https://project.supabase.co',SUPABASE_ANON_KEY:'test-public-key',SUPABASE_SERVICE_ROLE_KEY:'test-private-key',TURNSTILE_SITE_KEY:'test-site',TURNSTILE_SECRET_KEY:'test-secret',NUFI_EMAIL_OTP_READY:'true',NUFI_AUTH_CAPTCHA_READY:'true',NUFI_PASSWORD_AUTH_READY:'true',NUFI_PASSWORD_RECOVERY_READY:'true',NUFI_PUBLIC_SIGNUP_READY:'true',NUFI_RECIPE_CONTENT_READY:'true',NUFI_RECIPE_ACCESS_MODE:'registered',NUFI_ACCOUNT_MANAGEMENT_READY:'true',NUFI_RECOVERY_ENCRYPTION_KEY:Buffer.alloc(32,3).toString('base64')};
 const credentials={email:user.email,password:'A memorable test password',firstName:'Pat',marketing:false,botToken:'test-captcha'};
 const request=(method='GET',body,options={})=>({method,body,headers:{origin:env.SITE_URL,'content-type':'application/json',cookie:'__Host-nufi-access=test-access',...options}});
 const response=()=>({code:0,data:null,headers:{},setHeader(k,v){this.headers[k]=v;},getHeader(k){return this.headers[k];},status(code){this.code=code;return this;},json(data){this.data=data;return this;}});
@@ -55,8 +55,8 @@ test('public password login can run without CAPTCHA or recovery email configurat
 });
 test('password verification can be ready independently of legacy OTP sign-in',async()=>{const res=response();await createAuthHandler({env:{...env,NUFI_EMAIL_OTP_READY:'false'}})(request(),res);assert.equal(res.data.passwordConfigured,true);assert.equal(res.data.configured,false);});
 test('free account registration is exposed only when explicitly enabled',async()=>{
- const open=response();await createAuthHandler({env:{...env,NUFI_AUTH_MODE:'public',NUFI_PUBLIC_SIGNUP_READY:'true'}})(request(),open);assert.equal(open.data.signupConfigured,true);
- const closed=response();await createAuthHandler({env:{...env,NUFI_AUTH_MODE:'public',NUFI_PUBLIC_SIGNUP_READY:'false'}})(request(),closed);assert.equal(closed.data.signupConfigured,false);
+ const open=response();await createAuthHandler({env:{...env,NUFI_AUTH_MODE:'public',NUFI_EMAIL_OTP_READY:'false',NUFI_PUBLIC_SIGNUP_READY:'true'}})(request(),open);assert.equal(open.data.signupConfigured,true);
+ const closed=response();await createAuthHandler({env:{...env,NUFI_AUTH_MODE:'public',NUFI_EMAIL_OTP_READY:'false',NUFI_PUBLIC_SIGNUP_READY:'false'}})(request(),closed);assert.equal(closed.data.signupConfigured,false);
 });
 test('password login delegates CAPTCHA once and returns only secure cookies',async()=>{
  const store=backend(),res=await auth({action:'login-password',...credentials},store);assert.equal(res.code,200);assert.equal(res.data.status,'signed-in');
