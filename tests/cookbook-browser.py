@@ -60,6 +60,7 @@ with sync_playwright() as p:
     check('Protein ordering uses descending source estimates',proteins==sorted(proteins,reverse=True))
     source_book=MANIFEST['books'][1]
     visit('/recipes/?book='+source_book['id']+'&category=Breakfast&q=avocado&sort=name')
+    page.wait_for_function("() => !new URL(location.href).searchParams.has('book')")
     check('Retired source-book links remove obsolete restriction','book=' not in page.url)
     check('Retired links preserve useful meal and search filters',page.locator('[data-recipe-category]').input_value()=='Breakfast' and page.locator('[data-recipe-search]').input_value()=='avocado' and page.locator('[data-recipe-sort]').input_value()=='name')
     check('Retired links return matching food',page.locator('[data-recipe-grid] .food-card').count()>0)
@@ -69,6 +70,7 @@ with sync_playwright() as p:
     visit('/recipes/?book=high-protein-kitchen&category=Breakfast')
     check('Book category links filter the library',page.locator('[data-recipe-grid] .food-card').count()==22)
     page.locator('[data-all-recipes]').click()
+    page.wait_for_function("expected => document.querySelectorAll('[data-recipe-grid] .food-card').length===expected && !new URL(location.href).searchParams.has('book')", arg=MANIFEST['categories']['Breakfast'])
     check('Full-collection link removes original-only restriction',page.locator('[data-recipe-grid] .food-card').count()==MANIFEST['categories']['Breakfast'] and 'book=' not in page.url)
     check('Reset keeps the chosen meal filter',page.locator('[data-recipe-category]').input_value()=='Breakfast')
     visit('/recipes/bacon-avocado-bowl/')
