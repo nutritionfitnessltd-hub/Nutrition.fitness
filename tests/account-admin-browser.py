@@ -183,7 +183,7 @@ class Fixtures:
             return self.response(route, {
                 "user": self.session,
                 "profile": {"firstName": self.session["firstName"]},
-                "workspace": {"version": 0, "updatedAt": None},
+                "workspace": {"version": 0, "updatedAt": None, "savedRecipes": 4, "courseProgress": ["core-1", "core-2", "build-1"]},
                 "access": {"recipes": self.access},
                 "onboarding": None,
             })
@@ -299,6 +299,13 @@ with sync_playwright() as playwright:
         p.get_by_role("button", name="Sign in", exact=True).click()
         expect(p).to_have_url(BASE + "/account/")
         expect(p.locator("#nf-account-heading")).to_contain_text("QA Member")
+        expect(p.locator('.nf-side-nav a[href="/courses/"]')).to_be_visible()
+        expect(p.locator('[data-course-card]')).to_have_count(7)
+        expect(p.locator('[data-member-stat="courses"]')).to_contain_text("3 / 21")
+        expect(p.locator('[data-member-stat="saved"]')).to_contain_text("4")
+        expect(p.locator('[data-course-card="core"]')).to_contain_text("2 of 3")
+        expect(p.locator('[data-course-card="core"] .nf-text-link')).to_have_attribute("href", "/courses/core/lesson-3/")
+        ok("Free member hub shows synced favourites, all seven courses and course progress")
         logins = fixtures.mutations("login-password")
         ok("Password login handles rejection, enables retry and opens the account", len(logins) == 2)
         ok("Consumed CAPTCHA tokens are refreshed before retry", logins[0]["payload"]["botToken"] != logins[1]["payload"]["botToken"])

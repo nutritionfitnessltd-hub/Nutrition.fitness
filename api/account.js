@@ -6,13 +6,15 @@ export function createAccountHandler({env=process.env,fetcher=fetch}={}){return 
  if(!accountManagementConfigured(env))throw new HttpError(503,'Account management has not been connected in this deployment.');
  const {user,access,api,member}=await session(req,res,env,fetcher);
  if(req.method==='GET'){
-  const rows=await api(`/rest/v1/nufi_workspaces?user_id=eq.${encodeURIComponent(user.id)}&select=version,updated_at,onboarding:state->onboarding&limit=1`,{access});
+  const rows=await api(`/rest/v1/nufi_workspaces?user_id=eq.${encodeURIComponent(user.id)}&select=version,updated_at,onboarding:state->onboarding,course_progress:state->lessonProgress,favourites:state->favourites&limit=1`,{access});
   if(!Array.isArray(rows))throw new HttpError(503,'Your saved account could not be confirmed.');
   const workspace=rows[0];
+  const courseProgress=Array.isArray(workspace?.course_progress)?[...new Set(workspace.course_progress.filter(value=>typeof value==='string').slice(0,300))]:[];
+  const savedRecipes=Array.isArray(workspace?.favourites)?new Set(workspace.favourites.filter(value=>typeof value==='string').slice(0,500)).size:0;
   const otpReady=env.NUFI_EMAIL_OTP_READY==='true'&&env.NUFI_AUTH_CAPTCHA_READY==='true'&&!!env.TURNSTILE_SITE_KEY&&!!env.TURNSTILE_SECRET_KEY;
   const recipesReady=env.NUFI_RECIPE_CONTENT_READY==='true'&&(otpReady||passwordLoginConfigured(env));
   const recipes=recipesReady&&env.NUFI_RECIPE_ACCESS_MODE==='registered'?'account':recipesReady&&['membership','membership-or-book'].includes(env.NUFI_RECIPE_ACCESS_MODE)?'membership-required':'pending';
-  return reply(res,200,{user:{id:user.id,email:user.email,firstName:member.first_name,admin:member.role==='admin',status:member.status},profile:{firstName:member.first_name},capabilities:{passwordChange:passwordConfigured(env)},workspace:{version:workspace?.version??0,updatedAt:workspace?.updated_at??null},access:{recipes},onboarding:workspace?.onboarding??null});
+  return reply(res,200,{user:{id:user.id,email:user.email,firstName:member.first_name,admin:member.role==='admin',status:member.status},profile:{firstName:member.first_name},capabilities:{passwordChange:passwordConfigured(env)},workspace:{version:workspace?.version??0,updatedAt:workspace?.updated_at??null,savedRecipes,courseProgress},access:{recipes},onboarding:workspace?.onboarding??null});
  }
  if(req.method==='PATCH'){
   if(Object.keys(input).some(key=>key!=='firstName'))throw new HttpError(400,'Only your first name can be changed here.');
