@@ -1,0 +1,12 @@
+{
+  "SITE_URL": "https://www.nutrition.fitness",
+  "NUFI_ALLOWED_ORIGINS": "",
+  "SUPABASE_URL": "https://fyzapcqcsfpknblsixku.supabase.co",
+  "NUFI_ACCOUNT_MANAGEMENT_READY": "false",
+  "NUFI_PASSWORD_AUTH_READY": "false",
+  "NUFI_AUTH_CAPTCHA_READY": "false",
+  "NUFI_EMAIL_OTP_READY": "false",
+  "NUFI_RECIPE_ACCESS_MODE": "registered",
+  "NUFI_RECIPE_CONTENT_READY": "false",
+  "NUFI_APP_ACCESS_READY": "false"
+}
