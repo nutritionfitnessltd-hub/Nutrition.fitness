@@ -21,16 +21,19 @@ export function setSession(res,next){
 }
 export function clearSession(res){appendCookies(res,[ACCESS,REFRESH,RECOVERY].map(k=>cookie(k,'',0)));}
 export function accountManagementConfigured(env){return platformConfigured(env)&&env.NUFI_ACCOUNT_MANAGEMENT_READY==='true';}
-export function passwordConfigured(env){return accountManagementConfigured(env)&&env.NUFI_PASSWORD_AUTH_READY==='true'&&env.NUFI_AUTH_CAPTCHA_READY==='true'&&!!env.TURNSTILE_SITE_KEY&&!!env.TURNSTILE_SECRET_KEY&&recoveryKey(env,false)!==null;}
+export function provisionedAccountsOnly(env){return env.NUFI_AUTH_MODE==='provisioned';}
+export function passwordLoginConfigured(env){return provisionedAccountsOnly(env)?accountManagementConfigured(env):passwordConfigured(env);}
+export function passwordConfigured(env){return !provisionedAccountsOnly(env)&&accountManagementConfigured(env)&&env.NUFI_PASSWORD_AUTH_READY==='true'&&env.NUFI_AUTH_CAPTCHA_READY==='true'&&!!env.TURNSTILE_SITE_KEY&&!!env.TURNSTILE_SECRET_KEY&&recoveryKey(env,false)!==null;}
 export function password(value,{existing=false}={}){if(typeof value!=='string'||value.length<(existing?1:12)||value.length>128||/[\x00]/.test(value))throw new HttpError(400,existing?'Enter your current password.':'Use a password with 12 to 128 characters.');return value;}
 export function verifiedUser(user){if(!user?.id||!user.email_confirmed_at||!user.email||user.is_anonymous===true)throw new HttpError(401,'Verify your email before using this account.');return user;}
 export async function membership(user,api,env){
  verifiedUser(user);
- if(!accountManagementConfigured(env))return null;
+ if(!accountManagementConfigured(env)){if(provisionedAccountsOnly(env))throw new HttpError(503,'Account permissions are not connected.');return null;}
  const endpoint=`/rest/v1/nufi_members?user_id=eq.${encodeURIComponent(user.id)}&select=user_id,first_name,role,status,created_at,updated_at&limit=1`;
  let rows=await api(endpoint,{service:true});
  if(!Array.isArray(rows))throw new HttpError(503,'Your account permissions could not be confirmed.');
  if(!rows.length){
+  if(provisionedAccountsOnly(env))throw new HttpError(403,'This account has not been enabled for the website test.');
   // User-editable metadata is display content only. Roles come from protected records.
   const firstName=typeof user.user_metadata?.first_name==='string'?user.user_metadata.first_name.replace(/[<>\x00-\x1f]/g,'').trim().slice(0,80):'';
   await api('/rest/v1/nufi_members?on_conflict=user_id',{method:'POST',service:true,headers:{Prefer:'resolution=ignore-duplicates,return=minimal'},payload:{user_id:user.id,first_name:firstName,role:isAdmin(user,env)?'admin':'member',status:'active'}});

@@ -1,4 +1,4 @@
-import {body,reply,fail,session,accountManagementConfigured,passwordConfigured,password,clearSession,HttpError,text} from '../server/platform.mjs';
+import {body,reply,fail,session,accountManagementConfigured,passwordConfigured,passwordLoginConfigured,password,clearSession,HttpError,text} from '../server/platform.mjs';
 
 export function createAccountHandler({env=process.env,fetcher=fetch}={}){return async(req,res)=>{try{
  if(!['GET','PATCH','POST'].includes(req.method)){res.setHeader('Allow','GET, PATCH, POST');throw new HttpError(405,'Method not allowed.');}
@@ -10,9 +10,9 @@ export function createAccountHandler({env=process.env,fetcher=fetch}={}){return 
   if(!Array.isArray(rows))throw new HttpError(503,'Your saved account could not be confirmed.');
   const workspace=rows[0];
   const otpReady=env.NUFI_EMAIL_OTP_READY==='true'&&env.NUFI_AUTH_CAPTCHA_READY==='true'&&!!env.TURNSTILE_SITE_KEY&&!!env.TURNSTILE_SECRET_KEY;
-  const recipesReady=env.NUFI_RECIPE_CONTENT_READY==='true'&&(otpReady||passwordConfigured(env));
+  const recipesReady=env.NUFI_RECIPE_CONTENT_READY==='true'&&(otpReady||passwordLoginConfigured(env));
   const recipes=recipesReady&&env.NUFI_RECIPE_ACCESS_MODE==='registered'?'account':recipesReady&&['membership','membership-or-book'].includes(env.NUFI_RECIPE_ACCESS_MODE)?'membership-required':'pending';
-  return reply(res,200,{user:{id:user.id,email:user.email,firstName:member.first_name,admin:member.role==='admin',status:member.status},profile:{firstName:member.first_name},workspace:{version:workspace?.version??0,updatedAt:workspace?.updated_at??null},access:{recipes},onboarding:workspace?.onboarding??null});
+  return reply(res,200,{user:{id:user.id,email:user.email,firstName:member.first_name,admin:member.role==='admin',status:member.status},profile:{firstName:member.first_name},capabilities:{passwordChange:passwordConfigured(env)},workspace:{version:workspace?.version??0,updatedAt:workspace?.updated_at??null},access:{recipes},onboarding:workspace?.onboarding??null});
  }
  if(req.method==='PATCH'){
   if(Object.keys(input).some(key=>key!=='firstName'))throw new HttpError(400,'Only your first name can be changed here.');

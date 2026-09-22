@@ -1,5 +1,6 @@
+import {provisionedLoginAvailable,signInProvisioned} from '../server/provisioned-login.mjs';
 import {syncOne} from '../server/crm.mjs';
-import {body,reply,fail,session,setSession,clearSession,platform,platformConfigured,passwordConfigured,password,verifiedUser,membership,setRecovery,consumeRecovery,verifyBot,email,text,HttpError} from '../server/platform.mjs';
+import {body,reply,fail,session,setSession,clearSession,platform,platformConfigured,passwordConfigured,passwordLoginConfigured,provisionedAccountsOnly,password,verifiedUser,membership,setRecovery,consumeRecovery,verifyBot,email,text,HttpError} from '../server/platform.mjs';
 
 const signupData=input=>({first_name:text(input.firstName,'first name',80),marketing_opt_in:input.marketing===true,signup_source:'website-account',consent_version:'email-optin-v1',consent_wording:'Yes, send me useful Nutrition.Fitness tips, news and offers by email.'});
 const code=value=>{if(typeof value!=='string'||!/^\d{6}$/.test(value))throw new HttpError(400,'Enter the six-digit code from your email.');return value;};
@@ -8,14 +9,28 @@ function providerError(error,fallback){if(error.upstreamStatus===429)throw new H
 async function endProviderSession(api,access,scope='global'){try{await api(`/auth/v1/logout?scope=${scope}`,{method:'POST',access});}catch{/* A completed password change must not be reported as failed because logout is unavailable. */}}
 
 export function createAuthHandler({env=process.env,fetcher=fetch}={}){return async(req,res)=>{try{
- const otpReady=platformConfigured(env)&&!!env.TURNSTILE_SECRET_KEY&&!!env.TURNSTILE_SITE_KEY&&env.NUFI_EMAIL_OTP_READY==='true'&&env.NUFI_AUTH_CAPTCHA_READY==='true';
+ const provisioned=provisionedAccountsOnly(env);
+ const otpReady=!provisioned&&platformConfigured(env)&&!!env.TURNSTILE_SECRET_KEY&&!!env.TURNSTILE_SITE_KEY&&env.NUFI_EMAIL_OTP_READY==='true'&&env.NUFI_AUTH_CAPTCHA_READY==='true';
  const passwordReady=passwordConfigured(env);
- if(req.method==='GET')return reply(res,200,{configured:otpReady,passwordConfigured:passwordReady,turnstileSiteKey:env.TURNSTILE_SITE_KEY||null});
+ if(req.method==='GET'){
+  let loginReady=passwordLoginConfigured(env);
+  if(provisioned&&loginReady){
+   try{await provisionedLoginAvailable(platform(env,fetcher));}catch{loginReady=false;}
+   if((env.TURNSTILE_SITE_KEY||env.TURNSTILE_SECRET_KEY)&&!(env.TURNSTILE_SITE_KEY&&env.TURNSTILE_SECRET_KEY&&env.NUFI_AUTH_CAPTCHA_READY==='true'))loginReady=false;
+  }
+  return reply(res,200,{configured:otpReady,passwordConfigured:loginReady,signupConfigured:!provisioned&&(otpReady||passwordReady),recoveryConfigured:!provisioned&&passwordReady,passwordChangeConfigured:passwordReady,provisionedAccountsOnly:provisioned,captchaRequired:!provisioned||!!env.TURNSTILE_SITE_KEY,turnstileSiteKey:env.TURNSTILE_SITE_KEY||null});
+ }
  if(req.method!=='POST'){res.setHeader('Allow','GET, POST');throw new HttpError(405,'Method not allowed.');}
  const input=body(req,env,16384);
  if(input.action==='logout'){
   try{const {api,access}=await session(req,res,env,fetcher);await api('/auth/v1/logout?scope=local',{method:'POST',access});}catch{/* Local sign-out remains available when the provider cannot revoke its session. */}finally{clearSession(res);}
   return reply(res,200,{status:'signed-out'});
+ }
+ if(provisioned){
+  if(input.action!=='login-password')throw new HttpError(503,'Registration and email recovery are not enabled during this account test. Use your existing account to sign in.');
+  if(!passwordLoginConfigured(env))throw new HttpError(503,'Password sign-in is not connected in this deployment.');
+  const api=platform(env,fetcher),result=await signInProvisioned(email(input.email),input,api,env,res);
+  setSession(res,result);return reply(res,200,{status:'signed-in'});
  }
  const passwordActions=['login-password','signup-password','request-reset','verify-recovery','reset-password'];
  if(passwordActions.includes(input.action)&&!passwordReady)throw new HttpError(503,'Password sign-in has not been configured and tested yet.');
