@@ -1,0 +1,39 @@
+name: Account origin check
+on:
+  push:
+    branches: [fix/account-origin-20260922]
+    paths: ['.github/workflows/account-origin-check.yml']
+permissions:
+  contents: read
+jobs:
+  public-http:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Check only public readiness and disabled email endpoints
+        run: |
+          node --input-type=module <<'JS'
+          import {writeFile} from 'node:fs/promises';
+          const root='https://www.nutrition.fitness';
+          const readinessResponse=await fetch(root+'/api/auth',{signal:AbortSignal.timeout(15000)});
+          const ready=await readinessResponse.json();
+          if(ready.provisionedAccountsOnly!==true||ready.signupConfigured!==false||ready.recoveryConfigured!==false)throw new Error('Refusing email probes unless provisioned mode is confirmed');
+          const results=[{action:'readiness',status:readinessResponse.status,loginReady:ready.passwordConfigured,provisioned:ready.provisionedAccountsOnly}];
+          for(const origin of [root,'https://nutrition.fitness','https://example.invalid']){
+            for(const path of ['/api/auth','/api/auth/']){
+              const response=await fetch(root+path,{method:'POST',redirect:'manual',signal:AbortSignal.timeout(15000),headers:{Origin:origin,'Content-Type':'application/json'},body:JSON.stringify({action:'signup-password',email:'http-check@example.invalid',password:'Not a real credential'})});
+              const payload=await response.json().catch(()=>({}));
+              const location=response.headers.get('location');
+              const loc=location?new URL(location,root):null;
+              results.push({origin,path,status:response.status,setsCookie:response.headers.has('set-cookie'),location:loc?loc.origin+loc.pathname:null,error:typeof payload.error==='string'?payload.error.slice(0,250):null});
+            }
+          }
+          const report={noCredentialsUsed:true,noEmailsSent:true,results};
+          await writeFile('account-origin-check.json',JSON.stringify(report,null,2));
+          console.log(JSON.stringify(report,null,2));
+          JS
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: account-origin-check
+          path: account-origin-check.json
+          retention-days: 3
