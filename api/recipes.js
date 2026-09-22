@@ -3,8 +3,9 @@
  * See docs/RECIPE-ACCESS-PREPARATION.md before enabling or deploying the feature.
  */
 import {readFileSync} from 'node:fs';
-import {HttpError,reply,fail} from '../server/platform.mjs';
+import {HttpError,reply,fail,platform} from '../server/platform.mjs';
 import {authorizeRestrictedRecipes,PRIVATE_RECIPE_COUNT,readPrivateRows,validRecipeId} from '../server/recipe-access.mjs';
+import {applyRecipeOverlays,managementReady} from '../server/website-management.mjs';
 
 // Only the original free book is imported into this function's source bundle.
 const source=JSON.parse(readFileSync(new URL('../data/cookbooks/high-protein-kitchen.json',import.meta.url),'utf8'));
@@ -32,21 +33,30 @@ export function createRecipesHandler({env=process.env,fetcher=fetch,now=Date.now
         throw new HttpError(405,'Use GET to read recipes.');
       }
       const {id,scope}=query(req);
-      if (id && FREE_BY_ID.has(id)) return reply(res,200,{recipe:FREE_BY_ID.get(id),access:'free'});
-      if (!id && scope==='free') return reply(res,200,{recipes:FREE_RECIPES,access:'free'});
+      if ((id && FREE_BY_ID.has(id)) || (!id && scope==='free')) {
+        let recipes=id?[FREE_BY_ID.get(id)]:FREE_RECIPES;
+        if(managementReady(env)) recipes=await applyRecipeOverlays(platform(env,fetcher),recipes);
+        return reply(res,200,id?{recipe:recipes[0],access:'free'}:{recipes,access:'free'});
+      }
 
       // Identity and entitlement are checked before reading any private payload.
       const {api,evidence}=await authorizeRestrictedRecipes(req,res,{env,fetcher,now});
       const endpoint='/rest/v1/nufi_private_recipe_content?select=id,payload,publication_status'+
         (id?`&id=eq.${encodeURIComponent(id)}&limit=1`:'&order=id.asc&limit=1000');
       const rows=await api(endpoint,{service:true});
-      const recipes=readPrivateRows(rows,FREE_IDS,{expectedId:id,expectedCount:id?null:PRIVATE_RECIPE_COUNT});
+      let recipes=readPrivateRows(rows,FREE_IDS,{expectedId:id,expectedCount:id?null:PRIVATE_RECIPE_COUNT});
       if (id && !recipes.length) throw new HttpError(404,'That recipe was not found.');
+      let freeRecipes=FREE_RECIPES;
+      if(managementReady(env)) {
+        const merged=await applyRecipeOverlays(api,id?recipes:[...FREE_RECIPES,...recipes]);
+        if(id)recipes=merged;
+        else {freeRecipes=merged.filter(r=>FREE_IDS.has(r.id));recipes=merged.filter(r=>!FREE_IDS.has(r.id));}
+      }
       if (id && recipes[0].publicationStatus!=='published') {
         throw new HttpError(409,'This recipe is being checked and is not available to cook yet.');
       }
       return reply(res,200,id?{recipe:recipes[0],access:evidence}:
-        {recipes:[...FREE_RECIPES,...recipes.filter(recipe=>recipe.publicationStatus==='published')],
+        {recipes:[...freeRecipes,...recipes.filter(recipe=>recipe.publicationStatus==='published')],
           unavailable:recipes.filter(recipe=>recipe.publicationStatus==='held').map(recipe=>({id:recipe.id,name:recipe.name,reason:'source-review'})),
           access:evidence});
     } catch(error) {

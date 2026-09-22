@@ -1,6 +1,6 @@
 /** Server-only recipe authorization. No browser flag grants access. */
 import {LAUNCH} from '../public/launch-config.mjs';
-import {HttpError,platformConfigured,session} from './platform.mjs';
+import {HttpError,platformConfigured,passwordLoginConfigured,session} from './platform.mjs';
 
 export const RECIPE_ACCESS_MODES = Object.freeze(['registered','membership','membership-or-book']);
 export const PRIVATE_RECIPE_COUNT = 499;
@@ -15,9 +15,8 @@ export function recipeAccessMode(env) {
 
 function requireReady(env) {
   const mode=recipeAccessMode(env);
-  if (!platformConfigured(env) || env.NUFI_EMAIL_OTP_READY!=='true' ||
-      env.NUFI_AUTH_CAPTCHA_READY!=='true' || !env.TURNSTILE_SITE_KEY ||
-      !env.TURNSTILE_SECRET_KEY || env.NUFI_RECIPE_CONTENT_READY!=='true') {
+  const otpReady=env.NUFI_EMAIL_OTP_READY==='true'&&env.NUFI_AUTH_CAPTCHA_READY==='true'&&!!env.TURNSTILE_SITE_KEY&&!!env.TURNSTILE_SECRET_KEY;
+  if (!platformConfigured(env) || !(otpReady||passwordLoginConfigured(env)) || env.NUFI_RECIPE_CONTENT_READY!=='true') {
     throw new HttpError(503,'Account recipes are not connected yet. The original 100 recipes remain free.');
   }
   return mode;

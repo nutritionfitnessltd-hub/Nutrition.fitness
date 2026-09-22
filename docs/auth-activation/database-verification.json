@@ -1,0 +1,342 @@
+{
+  "checks": {
+    "original100Free": true,
+    "all15FunctionsExist": true,
+    "freeCatalogueReadOnly": true,
+    "launchGuardIsNovember": true,
+    "reviewedPrivateCounts": true,
+    "noFreePrivateIdOverlap": true,
+    "privateContentForcesRls": true,
+    "all13TablesExistAndUseRls": true,
+    "sixMigrationHistoryEntries": true,
+    "authColumnsAvailableToServer": true,
+    "privateStoredManifestMatches": true,
+    "serverOnlyTablesDenyBrowsers": true,
+    "managementFunctionsUseInvoker": true,
+    "protectedFunctionsDenyBrowsers": true
+  },
+  "counts": {
+    "accounts": 0,
+    "free_recipes": 100,
+    "active_admins": 0,
+    "private_recipes": 499,
+    "assigned_to_books": 499,
+    "unknown_nutrition": 39,
+    "held_private_recipes": 18,
+    "published_private_recipes": 481
+  },
+  "databaseTime": "2026-09-22T02:26:03.740523+00:00",
+  "tableSecurity": [
+    {
+      "name": "nufi_admin_audit",
+      "present": true,
+      "policies": 0,
+      "rls_forced": false,
+      "anon_select": false,
+      "rls_enabled": true,
+      "server_only": true,
+      "anon_mutation": false,
+      "authenticated_select": false,
+      "authenticated_mutation": false
+    },
+    {
+      "name": "nufi_content",
+      "present": true,
+      "policies": 0,
+      "rls_forced": true,
+      "anon_select": false,
+      "rls_enabled": true,
+      "server_only": true,
+      "anon_mutation": false,
+      "authenticated_select": false,
+      "authenticated_mutation": false
+    },
+    {
+      "name": "nufi_cookbooks",
+      "present": true,
+      "policies": 1,
+      "rls_forced": false,
+      "anon_select": true,
+      "rls_enabled": true,
+      "server_only": false,
+      "anon_mutation": false,
+      "authenticated_select": true,
+      "authenticated_mutation": false
+    },
+    {
+      "name": "nufi_crm_outbox",
+      "present": true,
+      "policies": 0,
+      "rls_forced": false,
+      "anon_select": false,
+      "rls_enabled": true,
+      "server_only": true,
+      "anon_mutation": false,
+      "authenticated_select": false,
+      "authenticated_mutation": false
+    },
+    {
+      "name": "nufi_entitlements",
+      "present": true,
+      "policies": 0,
+      "rls_forced": false,
+      "anon_select": false,
+      "rls_enabled": true,
+      "server_only": true,
+      "anon_mutation": false,
+      "authenticated_select": false,
+      "authenticated_mutation": false
+    },
+    {
+      "name": "nufi_management_audit",
+      "present": true,
+      "policies": 0,
+      "rls_forced": true,
+      "anon_select": false,
+      "rls_enabled": true,
+      "server_only": true,
+      "anon_mutation": false,
+      "authenticated_select": false,
+      "authenticated_mutation": false
+    },
+    {
+      "name": "nufi_members",
+      "present": true,
+      "policies": 0,
+      "rls_forced": false,
+      "anon_select": false,
+      "rls_enabled": true,
+      "server_only": true,
+      "anon_mutation": false,
+      "authenticated_select": false,
+      "authenticated_mutation": false
+    },
+    {
+      "name": "nufi_password_recoveries",
+      "present": true,
+      "policies": 0,
+      "rls_forced": false,
+      "anon_select": false,
+      "rls_enabled": true,
+      "server_only": true,
+      "anon_mutation": false,
+      "authenticated_select": false,
+      "authenticated_mutation": false
+    },
+    {
+      "name": "nufi_private_recipe_content",
+      "present": true,
+      "policies": 0,
+      "rls_forced": true,
+      "anon_select": false,
+      "rls_enabled": true,
+      "server_only": true,
+      "anon_mutation": false,
+      "authenticated_select": false,
+      "authenticated_mutation": false
+    },
+    {
+      "name": "nufi_recipe_catalogue",
+      "present": true,
+      "policies": 1,
+      "rls_forced": false,
+      "anon_select": true,
+      "rls_enabled": true,
+      "server_only": false,
+      "anon_mutation": false,
+      "authenticated_select": true,
+      "authenticated_mutation": false
+    },
+    {
+      "name": "nufi_reservations",
+      "present": true,
+      "policies": 0,
+      "rls_forced": false,
+      "anon_select": false,
+      "rls_enabled": true,
+      "server_only": true,
+      "anon_mutation": false,
+      "authenticated_select": false,
+      "authenticated_mutation": false
+    },
+    {
+      "name": "nufi_submissions",
+      "present": true,
+      "policies": 0,
+      "rls_forced": false,
+      "anon_select": false,
+      "rls_enabled": true,
+      "server_only": true,
+      "anon_mutation": false,
+      "authenticated_select": false,
+      "authenticated_mutation": false
+    },
+    {
+      "name": "nufi_workspaces",
+      "present": true,
+      "policies": 1,
+      "rls_forced": false,
+      "anon_select": false,
+      "rls_enabled": true,
+      "server_only": false,
+      "anon_mutation": false,
+      "authenticated_select": true,
+      "authenticated_mutation": false
+    }
+  ],
+  "functionSecurity": [
+    {
+      "present": true,
+      "signature": "public.nufi_activate_trial(uuid)",
+      "anon_execute": false,
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": false
+    },
+    {
+      "present": true,
+      "signature": "public.nufi_admin_workspaces()",
+      "anon_execute": false,
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": false
+    },
+    {
+      "present": true,
+      "signature": "public.nufi_claim_crm()",
+      "anon_execute": false,
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": false
+    },
+    {
+      "present": true,
+      "signature": "public.nufi_expire_trials()",
+      "anon_execute": false,
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": false
+    },
+    {
+      "present": true,
+      "signature": "public.nufi_finish_crm(uuid,uuid,boolean,text)",
+      "anon_execute": false,
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": false
+    },
+    {
+      "present": true,
+      "signature": "public.nufi_manage_audit(text,int,int)",
+      "anon_execute": false,
+      "service_execute": true,
+      "security_definer": false,
+      "authenticated_execute": false
+    },
+    {
+      "present": true,
+      "signature": "public.nufi_manage_members(text,int,int)",
+      "anon_execute": false,
+      "service_execute": true,
+      "security_definer": false,
+      "authenticated_execute": false
+    },
+    {
+      "present": true,
+      "signature": "public.nufi_manage_overview()",
+      "anon_execute": false,
+      "service_execute": true,
+      "security_definer": false,
+      "authenticated_execute": false
+    },
+    {
+      "present": true,
+      "signature": "public.nufi_manage_save_content(uuid,text,text,bigint,jsonb)",
+      "anon_execute": false,
+      "service_execute": true,
+      "security_definer": false,
+      "authenticated_execute": false
+    },
+    {
+      "present": true,
+      "signature": "public.nufi_manage_update_member(uuid,uuid,timestamptz,text,text,text,boolean)",
+      "anon_execute": false,
+      "service_execute": true,
+      "security_definer": false,
+      "authenticated_execute": false
+    },
+    {
+      "present": true,
+      "signature": "public.nufi_reserve(uuid,text,jsonb)",
+      "anon_execute": false,
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": false
+    },
+    {
+      "present": true,
+      "signature": "public.nufi_reset_onboarding(uuid,uuid,bigint)",
+      "anon_execute": false,
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": false
+    },
+    {
+      "present": true,
+      "signature": "public.nufi_save_workspace(uuid,bigint,jsonb)",
+      "anon_execute": false,
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": false
+    },
+    {
+      "present": true,
+      "signature": "public.nufi_trial_status(uuid)",
+      "anon_execute": false,
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": false
+    },
+    {
+      "present": true,
+      "signature": "public.nufi_verified_signup()",
+      "anon_execute": false,
+      "service_execute": true,
+      "security_definer": true,
+      "authenticated_execute": false
+    }
+  ],
+  "migrationHistory": [
+    {
+      "name": "nufi_launch",
+      "version": "20260921211528"
+    },
+    {
+      "name": "nufi_november_launch",
+      "version": "20260921211538"
+    },
+    {
+      "name": "recipe_catalogue",
+      "version": "20260921211549"
+    },
+    {
+      "name": "nufi_private_recipe_content",
+      "version": "20260921211559"
+    },
+    {
+      "name": "nufi_account_management",
+      "version": "20260921211611"
+    },
+    {
+      "name": "nufi_website_management",
+      "version": "20260921211623"
+    }
+  ],
+  "verificationNote": "Import transaction compares full JSONB payload equality before commit. This read-only follow-up checks stored per-record fingerprints and structural evidence; it does not recompute canonical JS payload hashes from PostgreSQL text.",
+  "intendedProjectRef": "fyzapcqcsfpknblsixku",
+  "privateImportIssues": {
+    "missingIds": [],
+    "conflictingMetadataIds": []
+  },
+  "expectedDatasetSha256": "81886c6f73364c1d8406d9b2a4e98ae257ffd7d23d68dd6f10dfee6730012f24"
+}

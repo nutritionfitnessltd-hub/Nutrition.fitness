@@ -1,0 +1,108 @@
+{
+  "verifiedAt": "2026-09-22T02:26:03.740523+00:00",
+  "project": {
+    "name": "Nutrition.Fitness",
+    "ref": "fyzapcqcsfpknblsixku",
+    "organizationName": "Nutrition dot fitness",
+    "organizationId": "fvsmsnvlfcmsnxljfbjm",
+    "region": "eu-west-2",
+    "status": "ACTIVE_HEALTHY",
+    "url": "https://fyzapcqcsfpknblsixku.supabase.co",
+    "confirmedCostQuote": {
+      "amount": 0,
+      "recurrence": "monthly"
+    }
+  },
+  "castleGrove": {
+    "ref": "bedcwnehhlygyuuvltbv",
+    "pauseExplicitlyAuthorized": true,
+    "verifiedStatus": "INACTIVE"
+  },
+  "migrations": [
+    {
+      "sourceFile": "202609160001_nufi_launch.sql",
+      "sourceSha256": "44ca743e2f9dd639093a9d701d0fa30b479bdbad73db0382e00cc58dee8b3724",
+      "installedName": "nufi_launch",
+      "installedVersion": "20260921211528"
+    },
+    {
+      "sourceFile": "202609160002_nufi_november_launch.sql",
+      "sourceSha256": "208672f38acebe77845e7de754e9bfef5a828206d2977e528b0199bfb8394238",
+      "installedName": "nufi_november_launch",
+      "installedVersion": "20260921211538"
+    },
+    {
+      "sourceFile": "202609160003_recipe_catalogue.sql",
+      "sourceSha256": "6c093c716d1d6571c95a5a237d3e703b6c938601a17595ac690b2ff4c29c0cff",
+      "installedName": "recipe_catalogue",
+      "installedVersion": "20260921211549"
+    },
+    {
+      "sourceFile": "20260921184558_nufi_private_recipe_content.sql",
+      "sourceSha256": "1bd893b1f526e5ae7d3c964c81aab2da7a457f32308ed25604e90ee61dbbc529",
+      "installedName": "nufi_private_recipe_content",
+      "installedVersion": "20260921211559"
+    },
+    {
+      "sourceFile": "20260921201951_nufi_account_management.sql",
+      "sourceSha256": "92382b8f8de5a84a6312a314038ff9fd0be432fbfc380e9b23f7ea501260e952",
+      "installedName": "nufi_account_management",
+      "installedVersion": "20260921211611"
+    },
+    {
+      "sourceFile": "20260921202107_nufi_website_management.sql",
+      "sourceSha256": "96d2859a1603f644346afff198409bb40d46c9eaa825712219125e20fd5d7791",
+      "installedName": "nufi_website_management",
+      "installedVersion": "20260921211623"
+    }
+  ],
+  "recipes": {
+    "accounts": 0,
+    "free_recipes": 100,
+    "active_admins": 0,
+    "private_recipes": 499,
+    "assigned_to_books": 499,
+    "unknown_nutrition": 39,
+    "held_private_recipes": 18,
+    "published_private_recipes": 481
+  },
+  "privateImport": {
+    "mode": "20 independently atomic verified batches",
+    "complete": true,
+    "storedManifestMatches": true,
+    "datasetSha256": "81886c6f73364c1d8406d9b2a4e98ae257ffd7d23d68dd6f10dfee6730012f24",
+    "masterSeedSha256": "310bf52ec70e590e307bbd4a53b7dae066a3f6bf148d63e57dfc6bac66f1e775",
+    "fullPayloadComparison": "Each batch required PostgreSQL JSONB equality plus canonical source/content hash equality before commit; existing rows were never overwritten."
+  },
+  "databaseChecks": {
+    "original100Free": true,
+    "all15FunctionsExist": true,
+    "freeCatalogueReadOnly": true,
+    "launchGuardIsNovember": true,
+    "reviewedPrivateCounts": true,
+    "noFreePrivateIdOverlap": true,
+    "privateContentForcesRls": true,
+    "all13TablesExistAndUseRls": true,
+    "sixMigrationHistoryEntries": true,
+    "authColumnsAvailableToServer": true,
+    "privateStoredManifestMatches": true,
+    "serverOnlyTablesDenyBrowsers": true,
+    "managementFunctionsUseInvoker": true,
+    "protectedFunctionsDenyBrowsers": true
+  },
+  "directRoleTests": {
+    "anonymousPrivateReadsDenied": true,
+    "authenticatedPrivateReadsDenied": true,
+    "freeCatalogueCountVerifiedUnderBothRoles": 100
+  },
+  "intendedFirstAdministrator": "james@nutrition.fitness",
+  "firstAdministratorAssigned": false,
+  "websiteAuthenticationActivated": false,
+  "pending": [
+    "Private Supabase Auth settings and compatible server API key",
+    "Vercel environment configuration through an approved supported access path",
+    "Real custom SMTP sender and Turnstile widget/secret configuration",
+    "Verified owner signup followed by protected administrator assignment",
+    "Actual hosted authentication, recovery and administrator smoke tests before public activation"
+  ]
+}

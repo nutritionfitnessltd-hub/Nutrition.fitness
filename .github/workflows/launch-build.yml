@@ -1,5 +1,6 @@
 name: Launch preview build
 on:
+  workflow_dispatch:
   push:
     branches: [launch/december-2026, main]
   pull_request:
@@ -45,6 +46,10 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/seeds/high-protein-kitchen.sql
           psql -v ON_ERROR_STOP=1 -f supabase/tests/catalogue.sql
           psql -v ON_ERROR_STOP=1 -f supabase/tests/private_recipe_content.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/account-management.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/website-management.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/provisioned-login.sql
+          python tests/provisioned-login-race.py
       - name: Install test browser
         run: |
           python -m pip install playwright==1.57.0
@@ -59,6 +64,8 @@ jobs:
           python tests/timer-browser.py
           python tests/sitewide-banner-browser.py
           python tests/form-modals-browser.py
+          python tests/account-admin-browser.py
+          python tests/provisioned-login-browser.py
           python tests/finder-character-browser.py
           python tests/finder-green-browser.py
           python tests/homepage-highlights-browser.py
@@ -67,6 +74,7 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           node scripts/check-production.mjs
+          node scripts/check-account-production.mjs
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/timer-browser.py
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/sitewide-banner-browser.py
           NUFI_TEST_BASE_URL=https://www.nutrition.fitness python tests/cookbook-browser.py

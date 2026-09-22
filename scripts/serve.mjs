@@ -7,7 +7,7 @@ http.createServer(async(req,res)=>{try{
  const url=new URL(req.url,'http://localhost');const pathname=decodeURIComponent(url.pathname);
  let file=path.resolve(root,'.'+pathname);
  if(file!==root&&!file.startsWith(root+path.sep)){res.writeHead(403);res.end('Forbidden');return;}
- if(pathname.startsWith('/api/')){res.writeHead(503,{'content-type':'application/json'});res.end(JSON.stringify({error:'The local static server does not run Vercel functions. Preview checkout still works locally.'}));return;}
+ if(pathname.startsWith('/api/')){res.writeHead(503,{'content-type':'application/json'});res.end(JSON.stringify({error:'This service is not connected in this preview. Please try again once it has been enabled.'}));return;}
  let status=200;
  try{const stat=await fs.stat(file);if(stat.isDirectory()){if(!pathname.endsWith('/')){res.writeHead(308,{location:url.pathname+'/'+url.search});res.end();return;}file=path.join(file,'index.html');}await fs.access(file);}catch{file=path.join(root,'404.html');status=404;}
  const data=await fs.readFile(file);res.writeHead(status,{'content-type':types[path.extname(file)]||'application/octet-stream','cache-control':'no-cache','x-content-type-options':'nosniff'});if(req.method==='HEAD')res.end();else res.end(data);

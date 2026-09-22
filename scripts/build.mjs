@@ -4,6 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { site,products,programmes,courses,recipes,journal } from '../src/data.mjs';
 import {buildExperience} from '../src/experience.mjs';
+import {buildAccountPages} from '../src/account-pages.mjs';
 import { money,cadenceName,unitPrice } from '../src/commerce.mjs';
 const membership=products.find(p=>p.id==='nufi-membership');
 const root=path.resolve(import.meta.dirname,'..'),out=path.join(root,'dist');
@@ -60,6 +61,7 @@ await page('/nufi/','Meet NUFI+',`<section class="mast-split nufi-mast"><div>${e
 
 // Account-aware recipes, planner, shopping, and the modular programme/course system.
 await buildExperience({page});
+await buildAccountPages({page});
 
 // Courses.
 

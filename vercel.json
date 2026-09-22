@@ -4,19 +4,72 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "trailingSlash": true,
-  "headers": [{ "source": "/(.*)", "headers": [
-    {"key":"X-Content-Type-Options","value":"nosniff"},
-    {"key":"Referrer-Policy","value":"strict-origin-when-cross-origin"},
-    {"key":"X-Frame-Options","value":"SAMEORIGIN"},
-    {"key":"X-Robots-Tag","value":"noindex, nofollow"},
-    {"key":"Permissions-Policy","value":"camera=(), microphone=(), geolocation=()"}
-  ]}],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
+      ]
+    }
+  ],
   "redirects": [
-    {"source":"/programs/:path*","destination":"/programmes/:path*","permanent":false},
-    {"source":"/academy/:path*","destination":"/courses/:path*","permanent":false},
-    {"source":"/membership","destination":"/nufi/#pricing","permanent":false},
-    {"source":"/shop/high-protein-smoothies/","destination":"/shop/blend-and-go/","permanent":true},
-    {"source":"/shop/high-protein-fakeaways/","destination":"/shop/big-night-in/","permanent":true},
-    {"source":"/shop/high-protein-snacks/","destination":"/shop/snack-happy/","permanent":true}
-  ]
+    {
+      "source": "/programs/:path*",
+      "destination": "/programmes/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/academy/:path*",
+      "destination": "/courses/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/membership",
+      "destination": "/nufi/#pricing",
+      "permanent": false
+    },
+    {
+      "source": "/shop/high-protein-smoothies/",
+      "destination": "/shop/blend-and-go/",
+      "permanent": true
+    },
+    {
+      "source": "/shop/high-protein-fakeaways/",
+      "destination": "/shop/big-night-in/",
+      "permanent": true
+    },
+    {
+      "source": "/shop/high-protein-snacks/",
+      "destination": "/shop/snack-happy/",
+      "permanent": true
+    }
+  ],
+  "env": {
+    "NUFI_AUTH_MODE": "provisioned",
+    "NUFI_ACCOUNT_MANAGEMENT_READY": "true",
+    "NUFI_PASSWORD_AUTH_READY": "false",
+    "NUFI_EMAIL_OTP_READY": "false",
+    "NUFI_RECIPE_CONTENT_READY": "true",
+    "NUFI_RECIPE_ACCESS_MODE": "registered",
+    "NUFI_APP_ACCESS_READY": "false"
+  }
 }

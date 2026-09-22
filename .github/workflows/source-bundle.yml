@@ -1,0 +1,41 @@
+name: Source release bundle
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Package tracked source without credentials or font binaries
+        run: |
+          python - <<'PY'
+          import pathlib, subprocess, zipfile
+          root=pathlib.Path('.')
+          files=subprocess.check_output(['git','ls-files','-z']).decode().split('\0')
+          with zipfile.ZipFile('nutrition-fitness-source.zip','w',zipfile.ZIP_DEFLATED) as archive:
+              for name in files:
+                  if not name:
+                      continue
+                  path=pathlib.Path(name)
+                  if path.is_symlink() or not path.is_file():
+                      continue
+                  if path.suffix.lower() in {'.woff','.woff2','.ttf','.otf','.eot'}:
+                      continue
+                  if path.name.startswith('.env') and path.name!='.env.example':
+                      continue
+                  if any(part in {'.git','.vercel','node_modules'} for part in path.parts):
+                      continue
+                  archive.write(path,name)
+          PY
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: nutrition-fitness-source
+          path: nutrition-fitness-source.zip
+          retention-days: 7

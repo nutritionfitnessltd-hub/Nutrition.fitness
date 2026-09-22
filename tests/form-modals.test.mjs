@@ -20,7 +20,8 @@ test('every form route keeps a real page and a meaningful modal title',()=>{
  }
  assert.equal(FORM_ROUTES['/get-started/'].remember,true);
  assert.equal(FORM_ROUTES['/contact/'].remember,true);
- assert.equal(FORM_ROUTES['/account/'].remember,undefined);
+ assert.equal(FORM_ROUTES['/account/'],undefined);
+ for(const route of ['/login/','/register/','/forgot-password/','/reset-password/','/account/','/admin/'])assert.equal(formRoute(route,base),null);
 });
 test('all shared page layouts load one modal controller and one stylesheet without changing the page content',()=>{
  const input='<head></head><body><div class="preview-bar">preview</div><header class="site-header">navigation</header><main id="main"><p>Approved page content</p></main></body>';

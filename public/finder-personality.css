@@ -73,7 +73,7 @@
  .nf-form-quiz.nf-form-remote{height:calc(100dvh - 32px);max-height:calc(100dvh - 32px)}
  .finder-branded .finder-welcome{padding:15px 19px}
  .finder-branded .finder-head h1{font-size:30px}
- .finder-branded .finder-perks{margin-bottom:18px}
+ .finder-branded .finder-perks{margin-bottom:10px}
 }
 @media(max-width:640px){
  .nf-form-quiz{width:100%;border-top:0}
