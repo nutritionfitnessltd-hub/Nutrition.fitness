@@ -1,0 +1,167 @@
+diff --git a/.github/workflows/launch-build.yml b/.github/workflows/launch-build.yml
+index 3ae8d9525b36a0067a3167997036fe87460da33a..ecdc4ada10551336d887b264c00378b721055ffd 100644
+--- a/.github/workflows/launch-build.yml
++++ b/.github/workflows/launch-build.yml
+@@ -2,0 +3 @@ on:
++  workflow_dispatch:
+@@ -49,0 +51,2 @@ jobs:
++          psql -v ON_ERROR_STOP=1 -f supabase/tests/provisioned-login.sql
++          python tests/provisioned-login-race.py
+@@ -64,0 +68 @@ jobs:
++          python tests/provisioned-login-browser.py
+@@ -72,0 +77 @@ jobs:
++          node scripts/check-account-production.mjs
+diff --git a/api/account.js b/api/account.js
+index 250aedb3fcb8b2836a5cc2c387884770595e6cf0..8ef51cf80e770da5286de1cb359997663309524c 100644
+--- a/api/account.js
++++ b/api/account.js
+@@ -1 +1 @@
+-import {body,reply,fail,session,accountManagementConfigured,passwordConfigured,password,clearSession,HttpError,text} from '../server/platform.mjs';
++import {body,reply,fail,session,accountManagementConfigured,passwordConfigured,passwordLoginConfigured,password,clearSession,HttpError,text} from '../server/platform.mjs';
+@@ -13 +13 @@ export function createAccountHandler({env=process.env,fetcher=fetch}={}){return
+-  const recipesReady=env.NUFI_RECIPE_CONTENT_READY==='true'&&(otpReady||passwordConfigured(env));
++  const recipesReady=env.NUFI_RECIPE_CONTENT_READY==='true'&&(otpReady||passwordLoginConfigured(env));
+@@ -15 +15 @@ export function createAccountHandler({env=process.env,fetcher=fetch}={}){return
+-  return reply(res,200,{user:{id:user.id,email:user.email,firstName:member.first_name,admin:member.role==='admin',status:member.status},profile:{firstName:member.first_name},workspace:{version:workspace?.version??0,updatedAt:workspace?.updated_at??null},access:{recipes},onboarding:workspace?.onboarding??null});
++  return reply(res,200,{user:{id:user.id,email:user.email,firstName:member.first_name,admin:member.role==='admin',status:member.status},profile:{firstName:member.first_name},capabilities:{passwordChange:passwordConfigured(env)},workspace:{version:workspace?.version??0,updatedAt:workspace?.updated_at??null},access:{recipes},onboarding:workspace?.onboarding??null});
+diff --git a/api/auth.js b/api/auth.js
+index 561ac355dba390e54aaea16805b60ccbb3ef683e..1a2811d73f89ddf71b933fc394e52dc917975b4d 100644
+--- a/api/auth.js
++++ b/api/auth.js
+@@ -0,0 +1 @@
++import {provisionedLoginAvailable,signInProvisioned} from '../server/provisioned-login.mjs';
+@@ -2 +3 @@ import {syncOne} from '../server/crm.mjs';
+-import {body,reply,fail,session,setSession,clearSession,platform,platformConfigured,passwordConfigured,password,verifiedUser,membership,setRecovery,consumeRecovery,verifyBot,email,text,HttpError} from '../server/platform.mjs';
++import {body,reply,fail,session,setSession,clearSession,platform,platformConfigured,passwordConfigured,passwordLoginConfigured,provisionedAccountsOnly,password,verifiedUser,membership,setRecovery,consumeRecovery,verifyBot,email,text,HttpError} from '../server/platform.mjs';
+@@ -11 +12,2 @@ export function createAuthHandler({env=process.env,fetcher=fetch}={}){return asy
+- const otpReady=platformConfigured(env)&&!!env.TURNSTILE_SECRET_KEY&&!!env.TURNSTILE_SITE_KEY&&env.NUFI_EMAIL_OTP_READY==='true'&&env.NUFI_AUTH_CAPTCHA_READY==='true';
++ const provisioned=provisionedAccountsOnly(env);
++ const otpReady=!provisioned&&platformConfigured(env)&&!!env.TURNSTILE_SECRET_KEY&&!!env.TURNSTILE_SITE_KEY&&env.NUFI_EMAIL_OTP_READY==='true'&&env.NUFI_AUTH_CAPTCHA_READY==='true';
+@@ -13 +15,8 @@ export function createAuthHandler({env=process.env,fetcher=fetch}={}){return asy
+- if(req.method==='GET')return reply(res,200,{configured:otpReady,passwordConfigured:passwordReady,turnstileSiteKey:env.TURNSTILE_SITE_KEY||null});
++ if(req.method==='GET'){
++  let loginReady=passwordLoginConfigured(env);
++  if(provisioned&&loginReady){
++   try{await provisionedLoginAvailable(platform(env,fetcher));}catch{loginReady=false;}
++   if((env.TURNSTILE_SITE_KEY||env.TURNSTILE_SECRET_KEY)&&!(env.TURNSTILE_SITE_KEY&&env.TURNSTILE_SECRET_KEY&&env.NUFI_AUTH_CAPTCHA_READY==='true'))loginReady=false;
++  }
++  return reply(res,200,{configured:otpReady,passwordConfigured:loginReady,signupConfigured:!provisioned&&(otpReady||passwordReady),recoveryConfigured:!provisioned&&passwordReady,passwordChangeConfigured:passwordReady,provisionedAccountsOnly:provisioned,captchaRequired:!provisioned||!!env.TURNSTILE_SITE_KEY,turnstileSiteKey:env.TURNSTILE_SITE_KEY||null});
++ }
+@@ -18,0 +28,6 @@ export function createAuthHandler({env=process.env,fetcher=fetch}={}){return asy
++ }
++ if(provisioned){
++  if(input.action!=='login-password')throw new HttpError(503,'Registration and email recovery are not enabled during this account test. Use your existing account to sign in.');
++  if(!passwordLoginConfigured(env))throw new HttpError(503,'Password sign-in is not connected in this deployment.');
++  const api=platform(env,fetcher),result=await signInProvisioned(email(input.email),input,api,env,res);
++  setSession(res,result);return reply(res,200,{status:'signed-in'});
+diff --git a/docs/auth-activation/PROVISIONED-LOGIN-TEST.md b/docs/auth-activation/PROVISIONED-LOGIN-TEST.md
+new file mode 100644
+index 0000000000000000000000000000000000000000..da906428da7e1467d18676887cfa30077eb214dd
+--- /dev/null
++++ b/docs/auth-activation/PROVISIONED-LOGIN-TEST.md
+@@ -0,0 +1,31 @@
++# Administrator-provisioned account test
++
++This rollout uses the existing Nutrition.Fitness Supabase project and the account created by the owner. It does not need SMTP. Public website registration, email-code sign-in, email recovery and password changes remain disabled.
++
++The deployment declares `NUFI_AUTH_MODE=provisioned` in `vercel.json`. Only nonsecret rollout switches are committed. The four private connection entries saved by the owner remain in Vercel Project Settings; no credential is read back, exported or committed.
++
++## Authentication and permissions
++
++Password credentials go from the same-origin website form to Supabase Auth through the server. A real provider password check and a confirmed, non-anonymous identity are required. The identity must already have an active row in the protected `nufi_members` table. This mode never creates a missing member row, even when editable metadata or an old bootstrap flag requests administrator access. The current protected role is re-read for every private request.
++
++Sessions use the existing Secure, HttpOnly, host-only cookies. Cross-origin mutations are rejected. Existing provider CAPTCHA settings are not disabled; when the deployment contains Turnstile keys, a correctly configured real challenge is required. No dummy token, password, magic login URL or authentication bypass exists.
++
++A new server-only database function applies atomic limits before password verification: ten attempts per normalized-account HMAC and 100 attempts globally per 15-minute window. Both successful and unsuccessful attempts count. A database failure denies sign-in rather than bypassing the limiter. The global budget is deliberately conservative for this controlled test, not sized for an unrestricted public launch. Expired per-account counters are removed after one day; no email address, IP, password or token is stored in these counters.
++
++## Recipe and management access
++
++The original 100 recipes remain free. The imported 499 private records are available only after server-side account verification; the 18 held recipes remain unavailable to cook until reviewed and explicitly published. Administrator access uses the protected member role. Existing page, product, recipe, onboarding, audit and profile rules are unchanged.
++
++A new migration, `20260922090943_nufi_provisioned_login.sql`, corresponds to hosted migration `nufi_provisioned_login` applied on 22 September 2026. Its hosted budget and browser-permission checks passed inside a rolled-back test transaction. The owner's password and Auth confirmation were not modified.
++
++## Verification
++
++`npm run check` includes provisioned-login API regression tests and existing tests. CI additionally runs PostgreSQL permission/budget assertions, a 20-connection race test that permits exactly ten attempts, and both existing account/admin and new provisioned-login browser fixtures. Fixture screenshots and simulated identities are not evidence of a real owner login.
++
++After the authorised production deployment, `scripts/check-account-production.mjs` checks the actual client hash, connected login readiness, account routes, guest denials, disabled email actions, cross-origin rejection and one non-existent-account password rejection. It uses no owner credentials and sends no email. It explicitly records that the owner's password login has not been exercised by automation.
++
++## Rollback and later public registration
++
++Restore the previous deployment to stop this rollout while preserving member data and recipes. The new limiter table can remain safely in place. Do not delete accounts, reset the owner's password, relax RLS or switch to another Supabase project during rollback.
++
++Before public registration, deliberately leave provisioned mode only after the email templates, sender, recovery encryption key and real CAPTCHA configuration have been tested. The older full-flow readiness requirements continue to apply outside provisioned mode. Do not turn all readiness switches on merely to make a screen appear enabled.
+diff --git a/public/account.mjs b/public/account.mjs
+index 5263b9d5d7383cb3244ef8d723e32fd83fa6e7aa..f47e1bd029fcf18c2c2092037e16083d75798859 100644
+--- a/public/account.mjs
++++ b/public/account.mjs
+@@ -81 +81 @@ async function initAuth(){
+-        const token=mode==='reset-password'?undefined:botToken();
++        const token=mode==='reset-password'||readiness.captchaRequired===false?undefined:botToken();
+@@ -111,2 +111,15 @@ async function initAuth(){
+-    if((needsPassword&&!readiness.passwordConfigured)||(!readiness.configured&&!readiness.passwordConfigured))throw new Error('Account sign-in is temporarily unavailable. Please try again later. You can still browse our recipes.');
+-    if(view!=='reset-password')await mountSecurity(readiness.turnstileSiteKey);
++    if((needsPassword&&!readiness.passwordConfigured&&!readiness.provisionedAccountsOnly)||(!readiness.configured&&!readiness.passwordConfigured))throw new Error('Account sign-in is temporarily unavailable. Please try again later. You can still browse our recipes.');
++    if(readiness.provisionedAccountsOnly){
++      if(view!=='login'){
++        heading.textContent=view==='register'?'Account testing is in progress.':'Email recovery is not enabled yet.';
++        intro.textContent='This test uses accounts created by the administrator. Sign in with your existing email and password.';
++        body.innerHTML='<a class="nf-btn nf-primary nf-wide" href="/login/">Back to sign in</a>';
++        if(toggle)toggle.hidden=true;
++        const bot=$('[data-portal-bot]');if(bot)bot.hidden=true;
++        return;
++      }
++      intro.textContent='Sign in with your existing account. Public registration and email recovery are not enabled during this test.';
++      $$('.nf-forgot,.nf-auth-switch').forEach(node=>node.hidden=true);
++    }
++    if(view!=='reset-password'&&readiness.captchaRequired!==false)await mountSecurity(readiness.turnstileSiteKey);
++    else {const bot=$('[data-portal-bot]');if(bot)bot.hidden=true;}
+@@ -135,0 +149 @@ async function initAccount(){
++    if(data.capabilities?.passwordChange!==false){
+@@ -137 +151 @@ async function initAccount(){
+-    details.addEventListener('toggle',async()=>{if(!details.open||loaded)return;loaded=true;try{const ready=await request('/api/auth');if(!ready.passwordConfigured)throw new Error('Password changes are temporarily unavailable. Please try again later.');await mountSecurity(ready.turnstileSiteKey);$('fieldset',form).disabled=false;}catch(error){loaded=false;message(errorMessage(error),'error');}});
++    details.addEventListener('toggle',async()=>{if(!details.open||loaded)return;loaded=true;try{const ready=await request('/api/auth');if(ready.passwordChangeConfigured===false||!ready.passwordConfigured)throw new Error(ready.provisionedAccountsOnly?'Password changes are not enabled during this account test. Your existing password has not changed.':'Password changes are temporarily unavailable. Please try again later.');await mountSecurity(ready.turnstileSiteKey);$('fieldset',form).disabled=false;}catch(error){loaded=false;message(errorMessage(error),'error');}});
+@@ -138,0 +153 @@ async function initAccount(){
++    }else{const details=$('[data-password-details]');details.outerHTML='<p class="nf-section-note">Password changes and email recovery are not enabled during this account test. Your existing password remains unchanged.</p>';}
+diff --git a/scripts/check-account-production.mjs b/scripts/check-account-production.mjs
+new file mode 100644
+index 0000000000000000000000000000000000000000..88eed42dcbd074268ef075d4beb5fe3d9166ca9c
+--- /dev/null
++++ b/scripts/check-account-production.mjs
+@@ -0,0 +1,36 @@
++/** Public deployment smoke checks only. Does not use James's credentials or send email. */
++import {readFile,mkdir,writeFile} from 'node:fs/promises';
++import {createHash,randomUUID} from 'node:crypto';
++const origin='https://www.nutrition.fitness';
++const hash=v=>createHash('sha256').update(v).digest('hex');
++const expected=hash(await readFile(new URL('../public/account.mjs',import.meta.url)));
++const get=path=>fetch(origin+path,{signal:AbortSignal.timeout(15000),headers:{'Cache-Control':'no-cache'}});
++let ready=false,last='Waiting for deployment';
++for(let i=0;i<18;i++){
++ try{
++  const script=await get('/account.mjs?release='+Date.now());
++  if(!script.ok||hash(await script.text())!==expected)throw new Error('Latest account client is not deployed yet');
++  const res=await get('/api/auth'),body=await res.json();
++  if(!res.ok||body.passwordConfigured!==true||body.provisionedAccountsOnly!==true||body.signupConfigured!==false||body.recoveryConfigured!==false||body.configured!==false)throw new Error('Provisioned password login or its database connection is not ready');
++  ready=true;break;
++ }catch(error){last=error.message;console.log(`Account deployment check ${i+1}/18: ${last}`);if(i<17)await new Promise(r=>setTimeout(r,10000));}
++}
++if(!ready)throw new Error(last);
++const checks=[];
++for(const path of ['/login/','/account/','/admin/','/admin/members/','/admin/recipes/','/admin/pages/','/admin/products/','/admin/settings/','/admin/audit/']){
++ const res=await get(path);if(!res.ok||!(await res.text()).includes('data-nf-portal'))throw new Error('Account route unavailable: '+path);checks.push({path,status:res.status});
++}
++for(const path of ['/api/account','/api/manage?section=overview','/api/recipes?scope=accessible']){
++ const res=await get(path),data=await res.json();if(![401,403].includes(res.status)||data.user||data.recipes||data.items||!res.headers.get('cache-control')?.includes('no-store'))throw new Error('Guest privacy check failed: '+path);checks.push({path,status:res.status});
++}
++const post=(payload,from=origin)=>fetch(origin+'/api/auth',{method:'POST',signal:AbortSignal.timeout(15000),headers:{Origin:from,'Content-Type':'application/json'},body:JSON.stringify(payload)});
++for(const action of ['signup-password','request-reset']){
++ const res=await post({action,email:'release-check@example.invalid',password:'Not a real credential'});if(res.status!==503||res.headers.has('set-cookie'))throw new Error('Email flow is unexpectedly enabled');checks.push({action,status:res.status});
++}
++const csrf=await post({action:'login-password',email:'release-check@example.invalid',password:'Not a real credential'},'https://example.invalid');
++if(csrf.status!==403||csrf.headers.has('set-cookie'))throw new Error('Cross-origin login was not denied');checks.push({action:'foreign-origin',status:csrf.status});
++// One non-existent account request verifies provider rejection; this does not sign anyone in.
++const incorrect=await post({action:'login-password',email:`release-${randomUUID()}@example.invalid`,password:'Not a real credential'});
++if(incorrect.status!==400||incorrect.headers.has('set-cookie'))throw new Error('Provider rejection was not confirmed; expected invalid-credentials response');checks.push({action:'nonexistent-account-login',status:incorrect.status});
++const report={status:'passed',origin,verifiedAt:new Date().toISOString(),sourceCommit:process.env.GITHUB_SHA||null,checks,ownerPasswordLoginTested:false,emailDeliveryTested:false};
++await mkdir('test-results',{recursive:true});await writeFile('test-results/account-production-smoke.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
