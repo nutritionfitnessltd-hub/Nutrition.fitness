@@ -1,4 +1,5 @@
-import {provisionedLoginAvailable,signInProvisioned} from '../server/provisioned-login.mjs';
+import {signInProvisioned} from '../server/provisioned-login.mjs';
+import {provisionedReadiness} from '../server/account-readiness.mjs';
 import {syncOne} from '../server/crm.mjs';
 import {body,reply,fail,session,setSession,clearSession,platform,platformConfigured,passwordConfigured,passwordLoginConfigured,provisionedAccountsOnly,password,verifiedUser,membership,setRecovery,consumeRecovery,verifyBot,email,text,HttpError} from '../server/platform.mjs';
 
@@ -14,11 +15,9 @@ export function createAuthHandler({env=process.env,fetcher=fetch}={}){return asy
  const passwordReady=passwordConfigured(env);
  if(req.method==='GET'){
   let loginReady=passwordLoginConfigured(env);
-  if(provisioned&&loginReady){
-   try{await provisionedLoginAvailable(platform(env,fetcher));}catch{loginReady=false;}
-   if((env.TURNSTILE_SITE_KEY||env.TURNSTILE_SECRET_KEY)&&!(env.TURNSTILE_SITE_KEY&&env.TURNSTILE_SECRET_KEY&&env.NUFI_AUTH_CAPTCHA_READY==='true'))loginReady=false;
-  }
-  return reply(res,200,{configured:otpReady,passwordConfigured:loginReady,signupConfigured:!provisioned&&(otpReady||passwordReady),recoveryConfigured:!provisioned&&passwordReady,passwordChangeConfigured:passwordReady,provisionedAccountsOnly:provisioned,captchaRequired:!provisioned||!!env.TURNSTILE_SITE_KEY,turnstileSiteKey:env.TURNSTILE_SITE_KEY||null});
+  const connection=provisioned?await provisionedReadiness(env,fetcher):null;
+  if(connection)loginReady=connection.ready;
+  return reply(res,200,{configured:otpReady,passwordConfigured:loginReady,signupConfigured:!provisioned&&(otpReady||passwordReady),recoveryConfigured:!provisioned&&passwordReady,passwordChangeConfigured:passwordReady,provisionedAccountsOnly:provisioned,captchaRequired:!provisioned||!!env.TURNSTILE_SITE_KEY,turnstileSiteKey:env.TURNSTILE_SITE_KEY||null,...(connection?{connection}: {})});
  }
  if(req.method!=='POST'){res.setHeader('Allow','GET, POST');throw new HttpError(405,'Method not allowed.');}
  const input=body(req,env,16384);

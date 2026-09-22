@@ -11,7 +11,13 @@ for(let i=0;i<18;i++){
   const script=await get('/account.mjs?release='+Date.now());
   if(!script.ok||hash(await script.text())!==expected)throw new Error('Latest account client is not deployed yet');
   const res=await get('/api/auth'),body=await res.json();
-  if(!res.ok||body.passwordConfigured!==true||body.provisionedAccountsOnly!==true||body.signupConfigured!==false||body.recoveryConfigured!==false||body.configured!==false)throw new Error('Provisioned password login or its database connection is not ready');
+  if(!res.ok||body.passwordConfigured!==true||body.provisionedAccountsOnly!==true||body.signupConfigured!==false||body.recoveryConfigured!==false||body.configured!==false){
+   const allowedStates=['missing-settings','invalid-settings','account-permissions-disabled','security-check-incomplete','server-access-denied','database-not-ready','connection-unavailable','ready'];
+   const state=allowedStates.includes(body.connection?.state)?body.connection.state:'not-reported';
+   const allowedNames=['SITE_URL','SUPABASE_URL','SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY'];
+   const missing=Array.isArray(body.connection?.missingSettings)?body.connection.missingSettings.filter(name=>allowedNames.includes(name)):[];
+   throw new Error(`Provisioned password login is not ready: ${state}${missing.length?' ('+missing.join(', ')+')':''}`);
+  }
   ready=true;break;
  }catch(error){last=error.message;console.log(`Account deployment check ${i+1}/18: ${last}`);if(i<17)await new Promise(r=>setTimeout(r,10000));}
 }
