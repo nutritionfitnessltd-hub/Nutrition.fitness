@@ -46,10 +46,18 @@ function backend({identity=user,profile={...member},override}={}){
 }
 async function auth(input,store=backend(),options={}){const res=response();await createAuthHandler({env:options.env||env,fetcher:store.fetcher})(request('POST',input,options.headers),res);return res;}
 
-for(const missing of ['NUFI_ACCOUNT_MANAGEMENT_READY','NUFI_PASSWORD_AUTH_READY','NUFI_AUTH_CAPTCHA_READY','NUFI_RECOVERY_ENCRYPTION_KEY','TURNSTILE_SITE_KEY'])test(`password readiness fails closed without ${missing}`,async()=>{
+for(const missing of ['NUFI_ACCOUNT_MANAGEMENT_READY','NUFI_PASSWORD_AUTH_READY'])test(`password readiness fails closed without ${missing}`,async()=>{
  const res=response();await createAuthHandler({env:{...env,[missing]:''}})(request(),res);assert.equal(res.data.passwordConfigured,false);
 });
+test('public password login can run without CAPTCHA or recovery email configuration',async()=>{
+ const res=response();await createAuthHandler({env:{...env,TURNSTILE_SITE_KEY:'',TURNSTILE_SECRET_KEY:'',NUFI_AUTH_CAPTCHA_READY:'false',NUFI_RECOVERY_ENCRYPTION_KEY:'',NUFI_PASSWORD_RECOVERY_READY:'false'}})(request(),res);
+ assert.equal(res.data.passwordConfigured,true);assert.equal(res.data.recoveryConfigured,false);assert.equal(res.data.captchaRequired,false);
+});
 test('password verification can be ready independently of legacy OTP sign-in',async()=>{const res=response();await createAuthHandler({env:{...env,NUFI_EMAIL_OTP_READY:'false'}})(request(),res);assert.equal(res.data.passwordConfigured,true);assert.equal(res.data.configured,false);});
+test('free account registration is exposed only when explicitly enabled',async()=>{
+ const open=response();await createAuthHandler({env:{...env,NUFI_AUTH_MODE:'public',NUFI_PUBLIC_SIGNUP_READY:'true'}})(request(),open);assert.equal(open.data.signupConfigured,true);
+ const closed=response();await createAuthHandler({env:{...env,NUFI_AUTH_MODE:'public',NUFI_PUBLIC_SIGNUP_READY:'false'}})(request(),closed);assert.equal(closed.data.signupConfigured,false);
+});
 test('password login delegates CAPTCHA once and returns only secure cookies',async()=>{
  const store=backend(),res=await auth({action:'login-password',...credentials},store);assert.equal(res.code,200);assert.equal(res.data.status,'signed-in');
  assert.equal(store.calls.filter(c=>c.url.includes('siteverify')).length,0);
