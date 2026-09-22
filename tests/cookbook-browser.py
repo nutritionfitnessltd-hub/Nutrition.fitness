@@ -35,8 +35,10 @@ with sync_playwright() as p:
     check('Cards do not advertise old source volumes','Volume ' not in page.locator('[data-recipe-grid]').inner_text())
     check('Free and complete collections are easy to find',page.locator('nav[aria-label="Recipe access"]').is_visible())
     page.locator('[data-access-free]').click()
+    page.wait_for_function("() => document.querySelectorAll('[data-recipe-grid] .food-card').length===100 && document.querySelector('[data-access-free]')?.getAttribute('aria-current')==='page'")
     check('Visible free-recipes navigation opens the original 100',page.locator('[data-recipe-grid] .food-card').count()==100 and page.locator('[data-access-free]').get_attribute('aria-current')=='page')
     page.locator('[data-access-all]').click()
+    page.wait_for_function("expected => document.querySelectorAll('[data-recipe-grid] .food-card').length===expected && document.querySelector('[data-access-all]')?.getAttribute('aria-current')==='page'", arg=MANIFEST['recipes'])
     check('Visible all-recipes navigation restores the full catalogue',page.locator('[data-recipe-grid] .food-card').count()==MANIFEST['recipes'] and page.locator('[data-access-all]').get_attribute('aria-current')=='page')
     for category,count in MANIFEST['categories'].items():
         page.locator('[data-recipe-category]').select_option(category)
