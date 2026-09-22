@@ -1,8 +1,7 @@
 name: Source release bundle
 on:
   push:
-    branches: [feature/accounts-admin-20260921]
-    paths: ['.github/workflows/source-bundle.yml']
+    branches: [main]
   workflow_dispatch:
 permissions:
   contents: read
