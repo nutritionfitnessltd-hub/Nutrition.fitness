@@ -44,7 +44,7 @@ test('recipe browsing uses food filters without publishing source-volume control
  for(const r of imported){
   const page=html.get(`/recipes/${r.id}/`);
   assert.doesNotMatch(page,/Also in these books|href="\/recipes\/\?book=DAG/);
-  assert.match(page,/Account access coming soon/);
+  assert.match(page,/Create a free account to unlock this recipe|We’re checking this recipe/);
   assert.doesNotMatch(page,/data-recipe-detail|data-ingredients|data-method|data-cook-mode/);
  }
 });

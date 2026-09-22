@@ -11,7 +11,7 @@ for(let i=0;i<18;i++){
   const script=await get('/account.mjs?release='+Date.now());
   if(!script.ok||hash(await script.text())!==expected)throw new Error('Latest account client is not deployed yet');
   const res=await get('/api/auth'),body=await res.json();
-  if(!res.ok||body.passwordConfigured!==true||body.provisionedAccountsOnly!==true||body.signupConfigured!==false||body.recoveryConfigured!==false||body.configured!==false){
+  if(!res.ok||body.passwordConfigured!==true||body.provisionedAccountsOnly!==false||body.signupConfigured!==true||body.recoveryConfigured!==false||body.configured!==false){
    const allowedStates=['missing-settings','invalid-settings','account-permissions-disabled','security-check-incomplete','server-access-denied','database-not-ready','connection-unavailable','ready'];
    const state=allowedStates.includes(body.connection?.state)?body.connection.state:'not-reported';
    const allowedNames=['SITE_URL','SUPABASE_URL','SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY'];
@@ -30,13 +30,11 @@ for(const path of ['/api/account','/api/manage?section=overview','/api/recipes?s
  const res=await get(path),data=await res.json();if(![401,403].includes(res.status)||data.user||data.recipes||data.items||!res.headers.get('cache-control')?.includes('no-store'))throw new Error('Guest privacy check failed: '+path);checks.push({path,status:res.status});
 }
 const post=(payload,from=origin)=>fetch(origin+'/api/auth',{method:'POST',signal:AbortSignal.timeout(15000),headers:{Origin:from,'Content-Type':'application/json'},body:JSON.stringify(payload)});
-for(const action of ['signup-password','request-reset']){
- const res=await post({action,email:'release-check@example.invalid',password:'Not a real credential'});if(res.status!==503||res.headers.has('set-cookie'))throw new Error('Email flow is unexpectedly enabled');checks.push({action,status:res.status});
-}
+const recovery=await post({action:'request-reset',email:'release-check@example.invalid'});if(recovery.status!==503||recovery.headers.has('set-cookie'))throw new Error('Password recovery is unexpectedly enabled');checks.push({action:'request-reset',status:recovery.status});
 const csrf=await post({action:'login-password',email:'release-check@example.invalid',password:'Not a real credential'},'https://example.invalid');
 if(csrf.status!==403||csrf.headers.has('set-cookie'))throw new Error('Cross-origin login was not denied');checks.push({action:'foreign-origin',status:csrf.status});
 // One non-existent account request verifies provider rejection; this does not sign anyone in.
 const incorrect=await post({action:'login-password',email:`release-${randomUUID()}@example.invalid`,password:'Not a real credential'});
 if(incorrect.status!==400||incorrect.headers.has('set-cookie'))throw new Error('Provider rejection was not confirmed; expected invalid-credentials response');checks.push({action:'nonexistent-account-login',status:incorrect.status});
-const report={status:'passed',origin,verifiedAt:new Date().toISOString(),sourceCommit:process.env.GITHUB_SHA||null,checks,ownerPasswordLoginTested:false,emailDeliveryTested:false};
+const report={status:'passed',origin,verifiedAt:new Date().toISOString(),sourceCommit:process.env.GITHUB_SHA||null,checks,ownerPasswordLoginTested:false,emailDeliveryTested:false,freeSignupAdvertised:true};
 await mkdir('test-results',{recursive:true});await writeFile('test-results/account-production-smoke.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));

@@ -64,12 +64,15 @@
     }
   ],
   "env": {
-    "NUFI_AUTH_MODE": "provisioned",
+    "NUFI_AUTH_MODE": "public",
     "NUFI_ACCOUNT_MANAGEMENT_READY": "true",
-    "NUFI_PASSWORD_AUTH_READY": "false",
+    "NUFI_PASSWORD_AUTH_READY": "true",
     "NUFI_EMAIL_OTP_READY": "false",
     "NUFI_RECIPE_CONTENT_READY": "true",
     "NUFI_RECIPE_ACCESS_MODE": "registered",
-    "NUFI_APP_ACCESS_READY": "false"
+    "NUFI_APP_ACCESS_READY": "false",
+    "NUFI_PUBLIC_SIGNUP_READY": "true",
+    "NUFI_PASSWORD_RECOVERY_READY": "false",
+    "NUFI_AUTH_CAPTCHA_READY": "false"
   }
 }

@@ -22,8 +22,13 @@ export function setSession(res,next){
 export function clearSession(res){appendCookies(res,[ACCESS,REFRESH,RECOVERY].map(k=>cookie(k,'',0)));}
 export function accountManagementConfigured(env){return platformConfigured(env)&&env.NUFI_ACCOUNT_MANAGEMENT_READY==='true';}
 export function provisionedAccountsOnly(env){return env.NUFI_AUTH_MODE==='provisioned';}
-export function passwordLoginConfigured(env){return provisionedAccountsOnly(env)?accountManagementConfigured(env):passwordConfigured(env);}
-export function passwordConfigured(env){return !provisionedAccountsOnly(env)&&accountManagementConfigured(env)&&env.NUFI_PASSWORD_AUTH_READY==='true'&&env.NUFI_AUTH_CAPTCHA_READY==='true'&&!!env.TURNSTILE_SITE_KEY&&!!env.TURNSTILE_SECRET_KEY&&recoveryKey(env,false)!==null;}
+function passwordCaptchaConfigured(env){
+ const site=!!env.TURNSTILE_SITE_KEY,secret=!!env.TURNSTILE_SECRET_KEY;
+ return !site&&!secret || (site&&secret&&env.NUFI_AUTH_CAPTCHA_READY==='true');
+}
+export function passwordLoginConfigured(env){return provisionedAccountsOnly(env)?accountManagementConfigured(env):accountManagementConfigured(env)&&env.NUFI_PASSWORD_AUTH_READY==='true'&&passwordCaptchaConfigured(env);}
+export function publicSignupConfigured(env){return !provisionedAccountsOnly(env)&&passwordLoginConfigured(env)&&env.NUFI_PUBLIC_SIGNUP_READY==='true';}
+export function passwordConfigured(env){return !provisionedAccountsOnly(env)&&passwordLoginConfigured(env)&&env.NUFI_PASSWORD_RECOVERY_READY==='true'&&recoveryKey(env,false)!==null;}
 export function password(value,{existing=false}={}){if(typeof value!=='string'||value.length<(existing?1:12)||value.length>128||/[\x00]/.test(value))throw new HttpError(400,existing?'Enter your current password.':'Use a password with 12 to 128 characters.');return value;}
 export function verifiedUser(user){if(!user?.id||!user.email_confirmed_at||!user.email||user.is_anonymous===true)throw new HttpError(401,'Verify your email before using this account.');return user;}
 export async function membership(user,api,env){
