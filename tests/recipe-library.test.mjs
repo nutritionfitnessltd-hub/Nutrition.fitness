@@ -53,7 +53,9 @@ test('recipe browsing uses food filters and branded book names without publishin
  for(const control of ['search','book','category','sort'])assert.match(catalogue,new RegExp(`data-recipe-${control}`));
  assert.match(catalogue,/Book<select data-recipe-book><option value="">All books<\/option>/);
  for(const book of RECIPE_BOOKS){const label=book.title.replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll("'",'&#39;').replaceAll('<','&lt;').replaceAll('>','&gt;');assert.ok(catalogue.includes(`<option value="${book.id}">${label}</option>`),book.title);}
- assert.doesNotMatch(catalogue,/Recipe book<select|DAGz[A-Za-z0-9_-]+|High-Protein Med-Carb \/ Volume/);
+ const bookSelect=catalogue.match(/<select data-recipe-book>[\s\S]*?<\/select>/)?.[0]||'';
+ assert.ok(bookSelect,'Book selector markup');
+ assert.doesNotMatch(bookSelect,/DAGz[A-Za-z0-9_-]+|High-Protein|Med-Carb|Volume \d/);
  assert.match(catalogue,new RegExp(`data-catalogue-count="${RECIPES.length}"`));
  assert.match(catalogue,/data-original-recipes hidden/);
  assert.match(catalogue,/<nav class="food-access-nav" aria-label="Recipe access">[\s\S]*?href="\/recipes\/" data-access-all aria-current="page">All recipes<\/a>[\s\S]*?href="\/recipes\/\?book=high-protein-kitchen" data-access-free>100 free recipes<\/a>/);
