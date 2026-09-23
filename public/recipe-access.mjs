@@ -34,7 +34,7 @@ export async function loadAccountRecipes({fetcher=globalThis.fetch?.bind(globalT
           for(const value of freeData.recipes){
             const source=RECIPE_BY_ID[value?.id];
             if(!source||source.access==='account'||!isRecipeAvailable(value)||next.has(value.id))throw new Error('Invalid free catalogue');
-            next.set(value.id,{...value,collectionBookId:source.collectionBookId,access:'free',locked:false});
+            next.set(value.id,{...value,collectionBookId:source.collectionBookId||'high-protein-kitchen',access:'free',locked:false});
           }
           if(next.size===100)accountRecipes=next;
         }
@@ -49,7 +49,7 @@ export async function loadAccountRecipes({fetcher=globalThis.fetch?.bind(globalT
       if(!preview||seen.has(value.id))return {available:0,status:'unavailable'};
       seen.add(value.id);
       if(!isRecipeAvailable(value))return {available:0,status:'unavailable'};
-      if(preview.access!=='account'){next.set(value.id,{...value,collectionBookId:preview.collectionBookId,access:'free',locked:false});continue;}
+      if(preview.access!=='account'){next.set(value.id,{...value,collectionBookId:preview.collectionBookId||'high-protein-kitchen',access:'free',locked:false});continue;}
       if(value.publicationStatus!=='published')return {available:0,status:'unavailable'};
       if(preview.publicationStatus==='held'&&(!Number.isSafeInteger(value.contentVersion)||value.contentVersion<1))return {available:0,status:'unavailable'};
       // A reviewed publication from the protected API can release a source hold.
