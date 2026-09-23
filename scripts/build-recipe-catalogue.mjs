@@ -51,7 +51,7 @@ const previews=library.recipes.map(recipe=>({
  collectionBookId:collection.assignments[recipe.id],
  access:'account',locked:true,publicationStatus:heldIds.has(recipe.id)?'held':'published',
 }));
-const publicRecipes=[...data.recipes.map(recipe=>({...recipe,collectionBookId:'high-protein-kitchen'})),...previews];
+const publicRecipes=[...data.recipes,...previews];
 const json=JSON.stringify(data.recipes);
 const mirror='/** Generated from supplied cookbook datasets; do not edit this mirror by hand. */\nexport const COOKBOOK_SOURCE = '+JSON.stringify(data.source)+';\nexport const RECIPE_LIBRARY_SOURCE = '+JSON.stringify(library.source)+';\nexport const COOKBOOKS = '+JSON.stringify(books)+';\nexport const RECIPE_BOOKS = '+JSON.stringify(collectionBooks)+';\nexport const RECIPES = '+JSON.stringify(publicRecipes)+';\nexport const RECIPE_BY_ID = Object.fromEntries(RECIPES.map(r=>[r.id,r]));\n';
 await writeFile(new URL('public/recipes-data.mjs',root),mirror);
