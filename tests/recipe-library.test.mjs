@@ -52,7 +52,7 @@ test('recipe browsing uses food filters and branded book names without publishin
  const catalogue=html.get('/recipes/');
  for(const control of ['search','book','category','sort'])assert.match(catalogue,new RegExp(`data-recipe-${control}`));
  assert.match(catalogue,/Book<select data-recipe-book><option value="">All books<\/option>/);
- for(const book of RECIPE_BOOKS)assert.ok(catalogue.includes(`<option value="${book.id}">${book.title}</option>`),book.title);
+ for(const book of RECIPE_BOOKS){const label=book.title.replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll("'",'&#39;').replaceAll('<','&lt;').replaceAll('>','&gt;');assert.ok(catalogue.includes(`<option value="${book.id}">${label}</option>`),book.title);}
  assert.doesNotMatch(catalogue,/Recipe book<select|DAGz[A-Za-z0-9_-]+|High-Protein Med-Carb \/ Volume/);
  assert.match(catalogue,new RegExp(`data-catalogue-count="${RECIPES.length}"`));
  assert.match(catalogue,/data-original-recipes hidden/);
@@ -127,7 +127,7 @@ test('the original book opens only its own 100 recipes and category totals',()=>
 test('the public catalogue carries exactly 100 full records and 499 metadata-only account previews',()=>{
  assert.equal(RECIPES.filter(C.isRecipeAvailable).length,100);
  assert.equal(RECIPES.filter(r=>r.access==='account').length,499);
- const allowed=new Set(['id','name','category','image','servings','servingLabel','prepMinutes','cookMinutes','waitMinutes','nutrition','nutritionStatus','access','locked','publicationStatus']);
+ const allowed=new Set(['id','name','category','image','servings','servingLabel','prepMinutes','cookMinutes','waitMinutes','nutrition','nutritionStatus','collectionBookId','access','locked','publicationStatus']);
  for(const source of imported){
   const preview=RECIPE_BY_ID[source.id];
   assert.ok(Object.keys(preview).every(key=>allowed.has(key)),source.id);
