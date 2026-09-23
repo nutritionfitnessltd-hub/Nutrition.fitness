@@ -36,7 +36,7 @@ function library(){
  if(['default','protein','name'].includes(query.get('sort')))sort.value=query.get('sort');
  function render(){
   const q=search.value.trim().toLowerCase(),c=category.value,b=book.value;
-  let rs=C.allRecipes(store.state).filter(r=>(!c||r.category===c)&&(!b||r.collectionBookId===b)&&(!q||[r.name,...(r.ingredients||[]).map(i=>i.name)].join(' ').toLowerCase().includes(q)));
+  let rs=C.allRecipes(store.state).filter(r=>(!c||r.category===c)&&(!b||(r.collectionBookId||(originalRecipe(r)?'high-protein-kitchen':''))===b)&&(!q||[r.name,...(r.ingredients||[]).map(i=>i.name)].join(' ').toLowerCase().includes(q)));
   if(sort.value==='protein')rs.sort((a,b)=>(b.nutritionStatus!=='review-needed'?b.nutrition?.protein??-1:-1)-(a.nutritionStatus!=='review-needed'?a.nutrition?.protein??-1:-1));
   if(sort.value==='name')rs.sort((a,b)=>a.name.localeCompare(b.name));
   grid.innerHTML=rs.map(card).join('');
