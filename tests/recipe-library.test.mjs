@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile,stat} from 'node:fs/promises';
-import {RECIPES,RECIPE_BY_ID,COOKBOOKS} from '../public/recipes-data.mjs';
+import {RECIPES,RECIPE_BY_ID,COOKBOOKS,RECIPE_BOOKS} from '../public/recipes-data.mjs';
 import {buildExperience,recipeCard,recipeSources} from '../src/experience.mjs';
 import {bookPage} from '../src/cookbook-pages.mjs';
 import * as C from '../public/meal-core.mjs';
@@ -13,6 +13,7 @@ try{library=JSON.parse(await readFile(new URL('../data/cookbooks/recipe-library.
 catch(error){if(error.code!=='ENOENT')throw error;}
 const imported=library.recipes;
 const publication=JSON.parse(await readFile(new URL('../data/cookbooks/recipe-publication-status.json',import.meta.url),'utf8'));
+const collection=JSON.parse(await readFile(new URL('../data/cookbooks/collection-assignments.json',import.meta.url),'utf8'));
 const html=new Map();
 await buildExperience({page:async(url,title,body)=>{if(url.startsWith('/recipes/'))html.set(url,body);}});
 
@@ -32,10 +33,29 @@ test('source provenance still counts recipes once in every original book',()=>{
  assert.equal(COOKBOOKS.find(b=>b.id==='high-protein-kitchen').recipeCount,100);
 });
 
-test('recipe browsing uses food filters without publishing source-volume controls or labels',()=>{
+test('principal recipe book assignments match the finished collection without changing source provenance',()=>{
+ assert.deepEqual(RECIPE_BOOKS.map(book=>book.title),['The High Protein Kitchen','Breakfast, Sorted','Proper Everyday Food','The Big Night In','Air Fryer Favourites','Snack Happy','Blend & Go','More Plants, Please']);
+ assert.equal(Object.keys(collection.assignments).length,imported.length);
+ for(const recipe of imported)assert.equal(RECIPE_BY_ID[recipe.id].collectionBookId,collection.assignments[recipe.id],recipe.id);
+ for(const recipe of original.recipes)assert.equal(RECIPE_BY_ID[recipe.id].collectionBookId,undefined,recipe.id);
+ const held=new Set(publication.heldRecipeIds);
+ for(const book of RECIPE_BOOKS.slice(1)){
+  const ids=imported.filter(recipe=>collection.assignments[recipe.id]===book.id).map(recipe=>recipe.id);
+  assert.equal(book.recipeCount,ids.length,book.title);
+  assert.equal(book.heldRecipeCount,ids.filter(id=>held.has(id)).length,book.title);
+  assert.equal(book.publishedRecipeCount,collection.publishedCounts[book.id],book.title);
+ }
+ assert.equal(RECIPE_BOOKS[0].recipeCount,100);
+});
+
+test('recipe browsing uses food filters and branded book names without publishing source-volume controls',()=>{
  const catalogue=html.get('/recipes/');
- for(const control of ['search','category','sort'])assert.match(catalogue,new RegExp(`data-recipe-${control}`));
- assert.doesNotMatch(catalogue,/data-recipe-book|All books|recipes from \d+ books|Recipe book<select/);
+ for(const control of ['search','book','category','sort'])assert.match(catalogue,new RegExp(`data-recipe-${control}`));
+ assert.match(catalogue,/Book<select data-recipe-book><option value="">All books<\/option>/);
+ for(const book of RECIPE_BOOKS){const label=book.title.replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll("'",'&#39;').replaceAll('<','&lt;').replaceAll('>','&gt;');assert.ok(catalogue.includes(`<option value="${book.id}">${label}</option>`),book.title);}
+ const bookSelect=catalogue.match(/<select data-recipe-book>[\s\S]*?<\/select>/)?.[0]||'';
+ assert.ok(bookSelect,'Book selector markup');
+ assert.doesNotMatch(bookSelect,/DAGz[A-Za-z0-9_-]+|High-Protein|Med-Carb|Volume \d/);
  assert.match(catalogue,new RegExp(`data-catalogue-count="${RECIPES.length}"`));
  assert.match(catalogue,/data-original-recipes hidden/);
  assert.match(catalogue,/<nav class="food-access-nav" aria-label="Recipe access">[\s\S]*?href="\/recipes\/" data-access-all aria-current="page">All recipes<\/a>[\s\S]*?href="\/recipes\/\?book=high-protein-kitchen" data-access-free>100 free recipes<\/a>/);
@@ -109,7 +129,7 @@ test('the original book opens only its own 100 recipes and category totals',()=>
 test('the public catalogue carries exactly 100 full records and 499 metadata-only account previews',()=>{
  assert.equal(RECIPES.filter(C.isRecipeAvailable).length,100);
  assert.equal(RECIPES.filter(r=>r.access==='account').length,499);
- const allowed=new Set(['id','name','category','image','servings','servingLabel','prepMinutes','cookMinutes','waitMinutes','nutrition','nutritionStatus','access','locked','publicationStatus']);
+ const allowed=new Set(['id','name','category','image','servings','servingLabel','prepMinutes','cookMinutes','waitMinutes','nutrition','nutritionStatus','collectionBookId','access','locked','publicationStatus']);
  for(const source of imported){
   const preview=RECIPE_BY_ID[source.id];
   assert.ok(Object.keys(preview).every(key=>allowed.has(key)),source.id);

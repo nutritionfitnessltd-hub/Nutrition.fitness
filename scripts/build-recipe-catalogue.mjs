@@ -25,15 +25,35 @@ const books=rawBooks.map(b=>({id:b.id,title:b.title,pages:b.pages??b.pageCount??
 const publication=JSON.parse(await readFile(new URL('data/cookbooks/recipe-publication-status.json',root),'utf8'));
 const heldIds=new Set(publication.heldRecipeIds),nutritionReviewIds=new Set(publication.nutritionReviewRecipeIds);
 if([...heldIds,...nutritionReviewIds].some(id=>!library.recipes.some(recipe=>recipe.id===id)))throw new Error('An unavailable recipe identifier is missing from the catalogue.');
+const collection=JSON.parse(await readFile(new URL('data/cookbooks/collection-assignments.json',root),'utf8'));
+if(collection.schemaVersion!==1||!Array.isArray(collection.books)||!collection.assignments||typeof collection.assignments!=='object')throw new Error('Recipe collection book assignments are invalid.');
+const collectionBookIds=new Set(collection.books.map(book=>book.id));
+if(collectionBookIds.size!==collection.books.length||[...collectionBookIds].some(id=>!id||id==='high-protein-kitchen'))throw new Error('Recipe collection book identifiers must be unique.');
+if(Object.keys(collection.assignments).length!==library.recipes.length)throw new Error('Every imported recipe must have one principal collection book.');
+for(const recipe of library.recipes){
+ const collectionBookId=collection.assignments[recipe.id];
+ if(!collectionBookIds.has(collectionBookId))throw new Error('Missing or unknown collection book for '+recipe.id);
+}
+for(const id of Object.keys(collection.assignments))if(!library.recipes.some(recipe=>recipe.id===id))throw new Error('Collection assignment references an unknown recipe: '+id);
+const collectionBooks=[
+ {id:'high-protein-kitchen',title:'The High Protein Kitchen',recipeCount:data.recipes.length,publishedRecipeCount:data.recipes.length,heldRecipeCount:0},
+ ...collection.books.map(book=>{
+  const ids=library.recipes.filter(recipe=>collection.assignments[recipe.id]===book.id).map(recipe=>recipe.id);
+  const heldRecipeCount=ids.filter(id=>heldIds.has(id)).length,publishedRecipeCount=ids.length-heldRecipeCount;
+  if(collection.publishedCounts?.[book.id]!==publishedRecipeCount||collection.heldCounts?.[book.id]!==heldRecipeCount)throw new Error('Collection counts do not match the finished edition for '+book.id);
+  return {...book,recipeCount:ids.length,publishedRecipeCount,heldRecipeCount};
+ })
+];
 const previewKeys=['id','name','category','image','servings','servingLabel','prepMinutes','cookMinutes','waitMinutes','nutrition','nutritionStatus'];
 const previews=library.recipes.map(recipe=>({
  ...Object.fromEntries(previewKeys.filter(key=>Object.hasOwn(recipe,key)).map(key=>[key,recipe[key]])),
  ...(heldIds.has(recipe.id)||nutritionReviewIds.has(recipe.id)?{nutrition:null,nutritionStatus:'review-needed'}:{}),
+ collectionBookId:collection.assignments[recipe.id],
  access:'account',locked:true,publicationStatus:heldIds.has(recipe.id)?'held':'published',
 }));
 const publicRecipes=[...data.recipes,...previews];
 const json=JSON.stringify(data.recipes);
-const mirror='/** Generated from supplied cookbook datasets; do not edit this mirror by hand. */\nexport const COOKBOOK_SOURCE = '+JSON.stringify(data.source)+';\nexport const RECIPE_LIBRARY_SOURCE = '+JSON.stringify(library.source)+';\nexport const COOKBOOKS = '+JSON.stringify(books)+';\nexport const RECIPES = '+JSON.stringify(publicRecipes)+';\nexport const RECIPE_BY_ID = Object.fromEntries(RECIPES.map(r=>[r.id,r]));\n';
+const mirror='/** Generated from supplied cookbook datasets; do not edit this mirror by hand. */\nexport const COOKBOOK_SOURCE = '+JSON.stringify(data.source)+';\nexport const RECIPE_LIBRARY_SOURCE = '+JSON.stringify(library.source)+';\nexport const COOKBOOKS = '+JSON.stringify(books)+';\nexport const RECIPE_BOOKS = '+JSON.stringify(collectionBooks)+';\nexport const RECIPES = '+JSON.stringify(publicRecipes)+';\nexport const RECIPE_BY_ID = Object.fromEntries(RECIPES.map(r=>[r.id,r]));\n';
 await writeFile(new URL('public/recipes-data.mjs',root),mirror);
 await mkdir(new URL('supabase/seeds/',root),{recursive:true});
 const quoted=s=>"'"+s.replaceAll("'","''")+"'";
@@ -58,6 +78,6 @@ await writeFile(new URL('supabase/seeds/high-protein-kitchen.sql',root),seed);
 const counts=Object.fromEntries(['Breakfast','Lunch','Dinner','Snacks','Drinks'].map(c=>[c,data.recipes.filter(r=>r.category===c).length]));
 const manifest={bookId:'high-protein-kitchen',source:data.source,datasetSha256:createHash('sha256').update(json).digest('hex'),recipes:100,categories:counts,ingredients:data.recipes.reduce((n,r)=>n+r.ingredients.length,0),methodSteps:data.recipes.reduce((n,r)=>n+r.steps.length,0),photos:data.recipes.filter(r=>r.image).length,missingPhotos:data.recipes.filter(r=>!r.image).map(r=>({id:r.id,page:r.sourcePage})),preservedSourceNotes:data.recipes.filter(r=>r.sourceWarnings?.length).map(r=>({id:r.id,page:r.sourcePage,notes:r.sourceWarnings}))};
 await writeFile(new URL('data/cookbooks/catalogue-manifest.json',root),JSON.stringify(manifest,null,2)+'\n');
-const websiteManifest={recipes:recipes.length,freeRecipes:data.recipes.length,restrictedPreviews:previews.length,heldRecipes:heldIds.size,importedNutritionForReview:[...nutritionReviewIds],originalRecipes:data.recipes.length,importedRecipes:library.recipes.length,books,categories:Object.fromEntries(['Breakfast','Lunch','Dinner','Snacks','Drinks'].map(c=>[c,recipes.filter(r=>r.category===c).length])),photos:recipes.filter(r=>r.image).length,nutritionForReview:recipes.filter(r=>!r.nutrition||r.nutritionStatus==='review-needed').map(r=>r.id),datasetSha256:createHash('sha256').update(JSON.stringify(recipes)).digest('hex')};
+const websiteManifest={recipes:recipes.length,freeRecipes:data.recipes.length,restrictedPreviews:previews.length,heldRecipes:heldIds.size,importedNutritionForReview:[...nutritionReviewIds],originalRecipes:data.recipes.length,importedRecipes:library.recipes.length,books,recipeBooks:collectionBooks,categories:Object.fromEntries(['Breakfast','Lunch','Dinner','Snacks','Drinks'].map(c=>[c,recipes.filter(r=>r.category===c).length])),photos:recipes.filter(r=>r.image).length,nutritionForReview:recipes.filter(r=>!r.nutrition||r.nutritionStatus==='review-needed').map(r=>r.id),datasetSha256:createHash('sha256').update(JSON.stringify(recipes)).digest('hex')};
 await writeFile(new URL('data/cookbooks/website-catalogue-manifest.json',root),JSON.stringify(websiteManifest,null,2)+'\n');
 console.log(`Recipe catalogue: ${recipes.length} recipes from ${books.length} books, ${websiteManifest.photos} original photographs. ${data.recipes.length} full free recipes; ${previews.length} account previews only.`);
