@@ -52,8 +52,7 @@ test('recipe browsing uses food filters and branded book names without publishin
  const catalogue=html.get('/recipes/');
  for(const control of ['search','book','category','sort'])assert.match(catalogue,new RegExp(`data-recipe-${control}`));
  assert.match(catalogue,/Book<select data-recipe-book><option value="">All books<\/option>/);
- for(const book of RECIPE_BOOKS)assert.match(catalogue,new RegExp(`<option value="${book.id}">${book.title.replace(/[.*+?^${}()|[\\]\\]/g,'\\for(const control of ['search','category','sort'])assert.match(catalogue,new RegExp(`data-recipe-${control}`));
- assert.doesNotMatch(catalogue,/data-recipe-book|All books|recipes from \d+ books|Recipe book<select/);')}<\\/option>`));
+ for(const book of RECIPE_BOOKS)assert.ok(catalogue.includes(`<option value="${book.id}">${book.title}</option>`),book.title);
  assert.doesNotMatch(catalogue,/Recipe book<select|DAGz[A-Za-z0-9_-]+|High-Protein Med-Carb \/ Volume/);
  assert.match(catalogue,new RegExp(`data-catalogue-count="${RECIPES.length}"`));
  assert.match(catalogue,/data-original-recipes hidden/);
