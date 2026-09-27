@@ -2,7 +2,7 @@
  * No protection bypass, account requests, credentials or customer data are used. */
 import {readFile,writeFile,mkdir} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
-import {RECIPES,COOKBOOKS} from '../public/recipes-data.mjs';
+import {RECIPES,COOKBOOKS,RECIPE_BOOKS} from '../public/recipes-data.mjs';
 import {collectionBooks} from '../src/collection-books.mjs';
 // The published www hostname is verified; the separate apex certificate issue is unchanged.
 const origin='https://www.nutrition.fitness';
@@ -30,8 +30,10 @@ for(let attempt=1;attempt<=18;attempt++){
   const quiz=await get('get-started/');
   if(!quiz.includes('finder-branded')||!quiz.includes('finder-free-note'))throw new Error('Quiz personality is not published yet.');
   const recipes=await get('recipes/');
-  if(!recipes.includes(`data-catalogue-count="${RECIPES.length}"`)||recipes.includes('data-recipe-book'))throw new Error('Simplified recipe browsing not updated yet.');
-  for(const control of ['search','category','sort'])if(!recipes.includes(`data-recipe-${control}`))throw new Error('Recipe browsing control is missing: '+control);
+  if(!recipes.includes(`data-catalogue-count="${RECIPES.length}"`))throw new Error('Recipe catalogue count is not updated yet.');
+  for(const control of ['search','book','category','sort'])if(!recipes.includes(`data-recipe-${control}`))throw new Error('Recipe browsing control is missing: '+control);
+  for(const book of RECIPE_BOOKS)if(!recipes.includes(`<option value="${book.id}">${book.title}</option>`))throw new Error('Recipe book filter is missing '+book.title);
+  for(const source of COOKBOOKS.filter(book=>book.id!=='high-protein-kitchen'))if(recipes.includes(`<option value="${source.id}">`))throw new Error('A raw source volume leaked into the recipe book filter.');
   const imported=RECIPES.find(r=>r.access==='account');
   if(imported){const detail=await get(`recipes/${imported.id}/`);if(!detail.includes(`data-recipe-locked="${imported.id}"`)||!(/Create a free account to unlock this recipe|We’re checking this recipe/.test(detail))||/data-recipe-detail|data-method|recipeInstructions|recipeIngredient/.test(detail))throw new Error('Restricted recipe preview is missing or leaks cooking content.');if(imported.image){const photo=await fetch(`${origin}${imported.image}?verify=${stamp}`,{signal:AbortSignal.timeout(15000)});if(!photo.ok||digest(Buffer.from(await photo.arrayBuffer()))!==digest(await readFile(new URL('../public'+imported.image,import.meta.url))))throw new Error('Imported recipe photograph does not match the tested asset.');}}
   const freeResponse=await fetch(`${origin}/api/recipes`,{signal:AbortSignal.timeout(15000),headers:{'Cache-Control':'no-cache'}});
@@ -51,7 +53,7 @@ for(let attempt=1;attempt<=18;attempt++){
    const cover=await fetch(`${origin}${edition.image}?verify=${stamp}`,{signal:AbortSignal.timeout(15000),headers:{'Cache-Control':'no-cache'}});
    if(!cover.ok||digest(Buffer.from(await cover.arrayBuffer()))!==digest(await readFile(new URL('../public'+edition.image,import.meta.url))))throw new Error('Published book cover does not match the finished edition: '+edition.title);
   }
-  const report={status:'passed',url:origin,verifiedAt:new Date().toISOString(),sourceCommit:process.env.GITHUB_SHA||null,assets:expected,cookbookPhoto,recipes:RECIPES.length,freeRecipes:100,restrictedPreviews:RECIPES.filter(r=>r.locked).length,sourceBooks:COOKBOOKS.length,bookListings:collectionBooks.length+1};
+  const report={status:'passed',url:origin,verifiedAt:new Date().toISOString(),sourceCommit:process.env.GITHUB_SHA||null,assets:expected,cookbookPhoto,recipes:RECIPES.length,freeRecipes:100,restrictedPreviews:RECIPES.filter(r=>r.locked).length,sourceBooks:COOKBOOKS.length,bookListings:collectionBooks.length+1,recipeFilters:RECIPE_BOOKS.map(book=>book.title)};
   await mkdir('test-results',{recursive:true});await writeFile('test-results/production-smoke.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));process.exit(0);
  }catch(error){last=error.message;console.log(`Production check ${attempt}/18: ${last}`);if(attempt<18)await new Promise(resolve=>setTimeout(resolve,10000));}
 }

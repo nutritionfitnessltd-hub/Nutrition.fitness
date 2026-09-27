@@ -59,7 +59,13 @@ with sync_playwright() as w:
  manifest=json.loads((R/'data/cookbooks/website-catalogue-manifest.json').read_text())
  expected_recipes=manifest['recipes']
  ok('Complete source-backed recipe catalogue loads',p.locator('[data-recipe-grid] .food-card').count()==expected_recipes)
- ok('Recipe browsing has no source-book selector',p.locator('[data-recipe-book]').count()==0)
+ book_options=p.locator('[data-recipe-book] option').all_text_contents()
+ expected_book_options=['All books']+[book['title'] for book in manifest['recipeBooks']]
+ ok('Recipe browsing uses approved branded book names',p.locator('[data-recipe-book]').count()==1 and book_options==expected_book_options)
+ breakfast_book=next(book for book in manifest['recipeBooks'] if book['id']=='breakfast-sorted')
+ p.locator('[data-recipe-book]').select_option('breakfast-sorted')
+ ok('Book filter works',p.locator('[data-recipe-grid] .food-card').count()==breakfast_book['recipeCount'])
+ p.locator('[data-recipe-book]').select_option('')
  p.locator('[data-recipe-search]').fill('tropical overnight');ok('Recipe search filters',p.locator('[data-recipe-grid] .food-card').count()==1)
  p.locator('[data-recipe-search]').fill('');p.locator('[data-recipe-category]').select_option('Dinner');ok('Meal filter works',p.locator('[data-recipe-grid] .food-card').count()==manifest['categories']['Dinner'])
  p.locator('[data-recipe-category]').select_option('');snap('recipes-desktop.png',full_page=False)

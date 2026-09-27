@@ -26,36 +26,37 @@ const originalRecipe=r=>{const source=RECIPE_BY_ID[r.id];return source&&(source.
 function card(r){return `<article class="food-card"><a href="${href(r.id)}" class="food-card-photo">${photo(r)}${r.nutrition&&r.nutritionStatus!=='review-needed'?`<span class="food-protein">${fmt(r.nutrition.protein)}g protein<span> / ${esc(r.servingLabel)}</span></span>`:''}</a><div class="food-card-body"><p class="eyebrow">${esc(r.category)} · ${timeLabel(r)}</p><h2><a href="${href(r.id)}">${esc(r.name)}</a></h2>${!C.isRecipeAvailable(r)?'<p class="food-access-badge">Free account recipe</p>':r.quote?`<p>${esc(r.quote)}</p>`:''}<div class="food-card-foot">${C.isRecipeAvailable(r)?button('Plan this meal',`/meal-planner/add/?recipe=${r.id}`,'food-link'):button('Preview recipe',href(r.id),'food-link')}<button class="food-icon" data-favourite="${r.id}" aria-label="Save ${esc(r.name)}" aria-pressed="${store.state.favourites.includes(r.id)}">${store.state.favourites.includes(r.id)?'♥':'♡'}</button></div></div></article>`;}
 function bindFavourites(scope=document){$$('[data-favourite]',scope).forEach(b=>{b.setAttribute('aria-pressed',String(store.state.favourites.includes(b.dataset.favourite)));b.addEventListener('click',()=>{if(act(s=>{const id=b.dataset.favourite;s.favourites=s.favourites.includes(id)?s.favourites.filter(x=>x!==id):[...s.favourites,id];C.audit(s,'Updated a saved recipe.');},false)){b.setAttribute('aria-pressed',String(store.state.favourites.includes(b.dataset.favourite)));b.innerHTML=store.state.favourites.includes(b.dataset.favourite)?'♥ Saved':'♡ Save';message(store.state.favourites.includes(b.dataset.favourite)?'Recipe saved. Find it in Saved recipes.':'Recipe removed from favourites.');}});});}
 function library(){
- const search=$('[data-recipe-search]'),category=$('[data-recipe-category]'),sort=$('[data-recipe-sort]'),grid=$('[data-recipe-grid]');
+ const search=$('[data-recipe-search]'),book=$('[data-recipe-book]'),category=$('[data-recipe-category]'),sort=$('[data-recipe-sort]'),grid=$('[data-recipe-grid]');
  if(!grid)return;
- // Keep links from the flagship book useful without making source volumes a browse control.
- let originalOnly=query.get('book')==='high-protein-kitchen';
  const originalView=$('[data-original-recipes]'),allRecipes=$('[data-all-recipes]'),accessAll=$('[data-access-all]'),accessFree=$('[data-access-free]');
+ const knownBooks=new Set([...book.options].map(option=>option.value).filter(Boolean));
+ if(knownBooks.has(query.get('book')))book.value=query.get('book');
  if(C.SLOTS.includes(query.get('category')))category.value=query.get('category');
  if(query.has('q'))search.value=query.get('q');
  if(['default','protein','name'].includes(query.get('sort')))sort.value=query.get('sort');
  function render(){
-  const q=search.value.trim().toLowerCase(),c=category.value;
-  let rs=C.allRecipes(store.state).filter(r=>(!c||r.category===c)&&(!originalOnly||originalRecipe(r))&&(!q||[r.name,...(r.ingredients||[]).map(i=>i.name)].join(' ').toLowerCase().includes(q)));
+  const q=search.value.trim().toLowerCase(),c=category.value,b=book.value;
+  let rs=C.allRecipes(store.state).filter(r=>(!c||r.category===c)&&(!b||(r.collectionBookId||(originalRecipe(r)?'high-protein-kitchen':''))===b)&&(!q||[r.name,...(r.ingredients||[]).map(i=>i.name)].join(' ').toLowerCase().includes(q)));
   if(sort.value==='protein')rs.sort((a,b)=>(b.nutritionStatus!=='review-needed'?b.nutrition?.protein??-1:-1)-(a.nutritionStatus!=='review-needed'?a.nutrition?.protein??-1:-1));
   if(sort.value==='name')rs.sort((a,b)=>a.name.localeCompare(b.name));
   grid.innerHTML=rs.map(card).join('');
   $('[data-results-count]').textContent=`${rs.length} recipe${rs.length===1?'':'s'} · Nutrition is per serving, not a personal target.`;
+  const originalOnly=b==='high-protein-kitchen';
   originalView.hidden=!originalOnly;
-  for(const [link,current]of [[accessAll,!originalOnly],[accessFree,originalOnly]]){if(current)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');}
+  for(const [link,current]of [[accessAll,!b],[accessFree,originalOnly]]){if(current)link.setAttribute('aria-current','page');else link.removeAttribute('aria-current');}
   const fullCatalogue=new URL(location.href);fullCatalogue.searchParams.delete('book');allRecipes.href=fullCatalogue.pathname+fullCatalogue.search;accessAll.href=allRecipes.href;fullCatalogue.searchParams.set('book','high-protein-kitchen');accessFree.href=fullCatalogue.pathname+fullCatalogue.search;
   $('[data-no-recipes]').hidden=rs.length>0;
   bindFavourites(grid);
  }
  function update(){
   const url=new URL(location.href);
-  for(const [key,value]of [['q',search.value.trim()],['category',category.value],['book',originalOnly?'high-protein-kitchen':''],['sort',sort.value==='default'?'':sort.value]]){if(value)url.searchParams.set(key,value);else url.searchParams.delete(key);}
+  for(const [key,value]of [['q',search.value.trim()],['book',book.value],['category',category.value],['sort',sort.value==='default'?'':sort.value]]){if(value)url.searchParams.set(key,value);else url.searchParams.delete(key);}
   history.replaceState(history.state,'',url);
   render();
  }
- for(const link of [allRecipes,accessAll])link.addEventListener('click',e=>{e.preventDefault();originalOnly=false;update();});
- accessFree.addEventListener('click',e=>{e.preventDefault();originalOnly=true;update();});
- search.addEventListener('input',update);category.addEventListener('change',update);sort.addEventListener('change',update);update();
+ for(const link of [allRecipes,accessAll])link.addEventListener('click',e=>{e.preventDefault();book.value='';update();});
+ accessFree.addEventListener('click',e=>{e.preventDefault();book.value='high-protein-kitchen';update();});
+ search.addEventListener('input',update);book.addEventListener('change',update);category.addEventListener('change',update);sort.addEventListener('change',update);update();
 }
 function renderRecipe(){const locked=$('[data-recipe-locked]');if(locked){const available=C.findRecipe(store.state,locked.dataset.recipeLocked);if(C.isRecipeAvailable(available))locked.closest('[data-recipe-page]').innerHTML=recipeMarkup(available);}const detail=$('[data-recipe-detail]');if(!detail)return;const r=C.findRecipe(store.state,detail.dataset.recipeDetail);if(!C.isRecipeAvailable(r))return;const input=$('[data-recipe-yield]',detail);input.value=r.servings;const hero=$('.food-recipe-hero');if(hero){$('h1',hero).textContent=r.name;const n=$('.food-nutrition',hero);if(n){n.innerHTML=r.nutrition&&r.nutritionStatus!=='review-needed'?`<strong>${fmt(r.nutrition.protein)}g<span>Protein / ${esc(r.servingLabel)}</span></strong>${['calories','carbs','fat'].map(k=>`<div>${fmt(r.nutrition[k])}${k==='calories'?'':'g'}<span>${k==='calories'?'kcal':k}</span></div>`).join('')}`:`<strong>Review needed<span>${store.state.overrides.some(x=>x.id===r.id)?'Confirm nutrition for your saved version.':'The source does not confirm per-serving values.'}</span></strong>`;}}
  const rebuild=()=>{try{const count=C.number(Number(input.value),'recipe yield',0.01,1000);let group='';$('[data-ingredients]',detail).innerHTML=C.scaledIngredients(r,count).map((i,index)=>{const h=i.group!==group?`<h4>${esc(i.group)}</h4>`:'';group=i.group;return `${h}<label class="ingredient-row"><input type="checkbox" data-ingredient="${index}"><span>${esc(ingredientText(i))}${sourceHint(i)?`<small>${esc(sourceHint(i))}</small>`:''}</span></label>`;}).join('');$('[data-method]',detail).innerHTML=r.steps.map(s=>`<li>${esc(s)}</li>`).join('');$('[data-version-status]',detail).textContent=`${store.state.overrides.some(x=>x.id===r.id)?'Your saved version '+r.version:'Original recipe'}. Amounts shown for ${count} ${r.servingLabel}(s). Nutrition above stays per ${r.servingLabel}.`;}
