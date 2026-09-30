@@ -53,7 +53,7 @@ test('recipe browsing uses the finished book names without publishing old source
  const catalogue=html.get('/recipes/');
  for(const control of ['search','category','book','sort'])assert.match(catalogue,new RegExp(`data-recipe-${control}`));
  assert.match(catalogue,/<label>Book<select data-recipe-book><option value="">All books<\/option>/);
- for(const book of collectionBooks)assert.ok(catalogue.includes('<option value="'+book.id+'">'+book.title+'</option>'),book.title);
+ for(const book of collectionBooks){const label=book.title.replaceAll('&','&amp;');assert.ok(catalogue.includes('<option value="'+book.id+'">'+label+'</option>'),book.title);}
  assert.doesNotMatch(catalogue,/Recipe book<select|value="DAGz|Volume \d/);
  assert.match(catalogue,new RegExp(`data-catalogue-count="${RECIPES.length}"`));
  assert.match(catalogue,/data-original-recipes hidden/);
