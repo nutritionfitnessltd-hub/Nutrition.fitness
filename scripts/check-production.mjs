@@ -30,8 +30,9 @@ for(let attempt=1;attempt<=18;attempt++){
   const quiz=await get('get-started/');
   if(!quiz.includes('finder-branded')||!quiz.includes('finder-free-note'))throw new Error('Quiz personality is not published yet.');
   const recipes=await get('recipes/');
-  if(!recipes.includes(`data-catalogue-count="${RECIPES.length}"`)||recipes.includes('data-recipe-book'))throw new Error('Simplified recipe browsing not updated yet.');
-  for(const control of ['search','category','sort'])if(!recipes.includes(`data-recipe-${control}`))throw new Error('Recipe browsing control is missing: '+control);
+  if(!recipes.includes(`data-catalogue-count="${RECIPES.length}"`))throw new Error('Recipe browsing catalogue count is not updated yet.');
+  for(const control of ['search','category','book','sort'])if(!recipes.includes(`data-recipe-${control}`))throw new Error('Recipe browsing control is missing: '+control);
+  for(const edition of collectionBooks)if(!recipes.includes(`<option value="${edition.id}">${edition.title}</option>`))throw new Error('Recipe book filter is missing '+edition.title);
   const imported=RECIPES.find(r=>r.access==='account');
   if(imported){const detail=await get(`recipes/${imported.id}/`);if(!detail.includes(`data-recipe-locked="${imported.id}"`)||!(/Create a free account to unlock this recipe|We’re checking this recipe/.test(detail))||/data-recipe-detail|data-method|recipeInstructions|recipeIngredient/.test(detail))throw new Error('Restricted recipe preview is missing or leaks cooking content.');if(imported.image){const photo=await fetch(`${origin}${imported.image}?verify=${stamp}`,{signal:AbortSignal.timeout(15000)});if(!photo.ok||digest(Buffer.from(await photo.arrayBuffer()))!==digest(await readFile(new URL('../public'+imported.image,import.meta.url))))throw new Error('Imported recipe photograph does not match the tested asset.');}}
   const freeResponse=await fetch(`${origin}/api/recipes`,{signal:AbortSignal.timeout(15000),headers:{'Cache-Control':'no-cache'}});
