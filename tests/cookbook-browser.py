@@ -29,7 +29,8 @@ with sync_playwright() as p:
     visit('/recipes/')
     page.wait_for_function("expected => document.querySelectorAll('[data-recipe-grid] .food-card').length===expected", arg=MANIFEST['recipes'])
     check('Complete catalogue includes free recipes and account previews', page.locator('[data-recipe-grid] .food-card').count()==MANIFEST['recipes'])
-    check('Source book selector is removed',page.locator('[data-recipe-book]').count()==0)
+    check('Finished book selector is visible',page.locator('[data-recipe-book]').count()==1)
+    check('Finished book selector uses the seven new names',page.locator('[data-recipe-book] option').all_text_contents()==['All books']+[book['title'] for book in COLLECTION])
     check('Ordinary browsing has no original-collection restriction',page.locator('[data-original-recipes]').is_hidden())
     check('Catalogue heading is about food, not source volumes','books' not in page.locator('.food-intro .lead').inner_text())
     check('Cards do not advertise old source volumes','Volume ' not in page.locator('[data-recipe-grid]').inner_text())
@@ -40,6 +41,13 @@ with sync_playwright() as p:
     page.locator('[data-access-all]').click()
     page.wait_for_function("expected => document.querySelectorAll('[data-recipe-grid] .food-card').length===expected && document.querySelector('[data-access-all]')?.getAttribute('aria-current')==='page'", arg=MANIFEST['recipes'])
     check('Visible all-recipes navigation restores the full catalogue',page.locator('[data-recipe-grid] .food-card').count()==MANIFEST['recipes'] and page.locator('[data-access-all]').get_attribute('aria-current')=='page')
+    for book in COLLECTION:
+        page.locator('[data-recipe-book]').select_option(book['id'])
+        page.wait_for_function("expected => document.querySelectorAll('[data-recipe-grid] .food-card').length===expected", arg=book['recipeCount'])
+        check(book['title']+' filter matches its published recipes',page.locator('[data-recipe-grid] .food-card').count()==book['recipeCount'])
+        check(book['title']+' filter persists in URL','book='+book['id'] in page.url)
+    page.locator('[data-recipe-book]').select_option('')
+    page.wait_for_function("expected => document.querySelectorAll('[data-recipe-grid] .food-card').length===expected", arg=MANIFEST['recipes'])
     for category,count in MANIFEST['categories'].items():
         page.locator('[data-recipe-category]').select_option(category)
         check(category+' filter matches catalogue', page.locator('[data-recipe-grid] .food-card').count()==count)
