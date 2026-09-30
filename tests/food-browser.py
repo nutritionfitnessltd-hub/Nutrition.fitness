@@ -59,7 +59,9 @@ with sync_playwright() as w:
  manifest=json.loads((R/'data/cookbooks/website-catalogue-manifest.json').read_text())
  expected_recipes=manifest['recipes']
  ok('Complete source-backed recipe catalogue loads',p.locator('[data-recipe-grid] .food-card').count()==expected_recipes)
- ok('Recipe browsing has no source-book selector',p.locator('[data-recipe-book]').count()==0)
+ expected_books=['Breakfast, Sorted','Proper Everyday Food','The Big Night In','Air Fryer Favourites','Snack Happy','Blend & Go','More Plants, Please']
+ ok('Recipe browsing shows one finished-book selector',p.locator('[data-recipe-book]').count()==1)
+ ok('Recipe browsing uses finished book names',p.locator('[data-recipe-book] option').all_text_contents()==['All books']+expected_books)
  p.locator('[data-recipe-search]').fill('tropical overnight');ok('Recipe search filters',p.locator('[data-recipe-grid] .food-card').count()==1)
  p.locator('[data-recipe-search]').fill('');p.locator('[data-recipe-category]').select_option('Dinner');ok('Meal filter works',p.locator('[data-recipe-grid] .food-card').count()==manifest['categories']['Dinner'])
  p.locator('[data-recipe-category]').select_option('');snap('recipes-desktop.png',full_page=False)
