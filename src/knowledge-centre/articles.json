@@ -2449,7 +2449,11 @@
       "chatReply": "Strength training can improve the mechanical properties of healthy tendons as well as muscles. This explains what changes, what “tendon stiffness” actually means and where the evidence stops: https://nutrition-fitness-website-2.vercel.app/knowledge-centre/can-strength-training-make-your-tendons-stronger/. If you already have tendon pain or an injury, that needs a different conversation.",
       "nextStep": "Establish whether the person is discussing healthy training or an existing injury. Use the training programme for the former; recommend appropriate clinical or physiotherapy assessment for unresolved pain or suspected injury."
     },
-    "marginNote": "Muscles get the selfies. Tendons do the paperwork."
+    "marginNote": "Muscles get the selfies. Tendons do the paperwork.",
+    "image": "https://images.unsplash.com/photo-1772450014674-5b2035852e39?auto=format&fit=crop&w=1200&q=80",
+    "imageAlt": "A man lifting weights in a gym during a strength-training session",
+    "imageCredit": "Rodrigo Rodrigues | WOLF Λ R T / Unsplash",
+    "imageCreditUrl": "https://unsplash.com/photos/man-lifting-weights-in-a-gym-q3UaiuSg5g0"
   },
   {
     "id": 52,
@@ -2500,6 +2504,10 @@
       "chatReply": "GLP-1 medicines do not automatically mean you need supplements, but substantial weight loss and a big drop in food intake can make nutrition more important. This explains the current evidence and UK guidance without the scare stories: https://nutrition-fitness-website-2.vercel.app/knowledge-centre/do-weight-loss-injections-increase-vitamin-deficiency-risk/. If you are already taking medication, discuss any concerns or supplements with your prescriber.",
       "nextStep": "Establish how much food intake and variety have changed and whether clinical follow-up is in place. Do not use the article as a reason to sell supplements; direct medication-specific or suspected-deficiency concerns back to the appropriate clinician or dietitian."
     },
-    "marginNote": "Smaller appetite. Same need for actual nutrients."
+    "marginNote": "Smaller appetite. Same need for actual nutrients.",
+    "image": "https://images.unsplash.com/photo-1771573042838-8b3adf17562e?auto=format&fit=crop&w=1200&q=80",
+    "imageAlt": "A plate of cooked green vegetables as an example of nutrient-dense food",
+    "imageCredit": "Daily Food Shot / Unsplash",
+    "imageCreditUrl": "https://unsplash.com/photos/a-plate-of-cooked-green-vegetables-with-garlic-Rrnz4gDBo3s"
   }
 ]
