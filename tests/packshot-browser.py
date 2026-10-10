@@ -30,14 +30,14 @@ with sync_playwright() as p:
   })()""")
   assert artwork,f'Full original campaign images must not be cropped at {width}px'
   assert page.locator('#supplement-range .product-photo').count()==10
-  assert page.locator('#supplement-range .product-photo img[src*="/full-"]').count()==10
+  assert page.locator('#supplement-range .product-photo img[src*="/full-"]').count()==0 and page.locator('#supplement-range .product-photo img[src*="/products/"]').count()==10
   assert page.locator('#flavour-range .product-photo img[src*="/shot-"]').count()==10
   assert page.locator('#flavour-range .product-photo').count()==10
   actual=page.locator('#supplement-range .shop-range-grid').evaluate('(g)=>getComputedStyle(g).gridTemplateColumns.split(" ").length')
   assert actual==columns, f'Expected {columns} product columns, got {actual} at {width}px'
   assert page.evaluate('document.documentElement.scrollWidth<=innerWidth'),f'Horizontal overflow at {width}px'
   product_fit=page.locator('#supplement-range .product-photo img').first.evaluate('(i)=>({fit:getComputedStyle(i).objectFit,src:i.currentSrc})')
-  assert product_fit['fit']=='contain' and '/full-' in product_fit['src'],f'Full portrait packshot not safely contained at {width}px'
+  assert product_fit['fit']=='contain' and '/full-' not in product_fit['src'] and '/products/' in product_fit['src'],f'Expected standalone product-only packshot at {width}px'
   inside=page.evaluate('''(()=>{
    const hero=document.querySelector('.shop-hero-v2-media').getBoundingClientRect();
    const detail=document.querySelector('.shop-hero-shot-detail').getBoundingClientRect();
