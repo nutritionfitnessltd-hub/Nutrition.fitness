@@ -50,11 +50,11 @@ export const products = [
   ...collectionProducts,
   {id:'nufi-membership',name:'NUFI+ membership',short:'NUFI+',category:'membership',price:1499,annualPrice:9900,type:'digital',recurring:true,color:'aqua',art:'membership',label:'NUFI+',quip:'Less figuring out. More getting on with it.',description:'Programmes, meal planning, shopping lists, courses and progress. The useful bits, brought together.',caution:'Example pricing for review. No membership or real account is activated in this preview.'}
 ];
-// Restored product photography, recovered from the original chat-generated packs.
+// Original standalone product packshots recovered from prior chat-generated product-only artwork.
 // These are branded visualisations, not proof of manufactured stock or final labels.
 for (const product of products) {
   if (['powders','supplements','shots'].includes(product.category)) {
-    product.image = '/assets/products/' + (product.category==='shots' ? product.id : 'full-'+product.id) + '.webp';
+    product.image = '/assets/products/' + product.id + '.webp';
   }
 }
 const kitchen = products.find(p=>p.id==='high-protein-kitchen');
