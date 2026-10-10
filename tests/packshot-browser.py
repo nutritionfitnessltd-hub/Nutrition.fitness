@@ -16,6 +16,19 @@ with sync_playwright() as p:
   assert page.locator('.shop-hero-v2-photo').count()==1
   assert page.locator('.shop-hero-shot-detail img').count()==1
   assert page.locator('.shop-story-photo-wrap img').count()==1
+  artwork=page.evaluate("""(() => {
+    const names=['.shop-hero-v2-photo','.shop-story-photo-wrap img'];
+    return names.every(sel=>{
+      const image=document.querySelector(sel);
+      if(!image||!image.complete||!image.naturalWidth)return false;
+      const frame=image.getBoundingClientRect();
+      const displayedRatio=frame.width/frame.height;
+      const realRatio=image.naturalWidth/image.naturalHeight;
+      const fit=getComputedStyle(image).objectFit;
+      return Math.abs(displayedRatio-realRatio)<0.035 && fit==='contain';
+    });
+  })()""")
+  assert artwork,f'Full original campaign images must not be cropped at {width}px'
   assert page.locator('#supplement-range .product-photo').count()==10
   assert page.locator('#flavour-range .product-photo').count()==10
   actual=page.locator('#supplement-range .shop-range-grid').evaluate('(g)=>getComputedStyle(g).gridTemplateColumns.split(" ").length')
