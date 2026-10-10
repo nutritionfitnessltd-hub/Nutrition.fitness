@@ -157,3 +157,7 @@
  .shop-page .shop-range-grid .product-card-copy{padding-top:10px}
  .shop-page .shop-story-photo-wrap{height:235px}
 }
+
+/* Image composition: crop off the ad's preprinted headline without clipping the pack. */
+.shop-page .shop-hero-v2-photo{position:absolute;inset:auto 0 0 0;width:100%;height:auto;max-width:none;object-fit:unset;object-position:initial;display:block}
+@media(max-width:760px){.shop-page .shop-hero-v2-photo{width:110%;left:-5%;right:auto;bottom:0}}
