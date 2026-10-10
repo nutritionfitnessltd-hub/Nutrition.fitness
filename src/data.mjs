@@ -54,7 +54,7 @@ export const products = [
 // These are branded visualisations, not proof of manufactured stock or final labels.
 for (const product of products) {
   if (['powders','supplements','shots'].includes(product.category)) {
-    product.image = '/assets/products/' + product.id + '.webp';
+    product.image = '/assets/products/' + (product.category==='shots' ? product.id : 'full-'+product.id) + '.webp';
   }
 }
 const kitchen = products.find(p=>p.id==='high-protein-kitchen');
