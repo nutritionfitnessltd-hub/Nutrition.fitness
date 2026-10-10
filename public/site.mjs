@@ -48,20 +48,39 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!mobile?.hidden){cl
 document.addEventListener('click',e=>{if(!mobile?.hidden&&!mobile.contains(e.target)&&!menu.contains(e.target))closeMenu();});
 $$('[data-clear-preview]').forEach(b=>b.addEventListener('click',()=>{try{localStorage.removeItem(KEY);}catch{}state=defaults();updateBag();notify('Preview data cleared. Fresh start, no pep talk.');setTimeout(()=>location.reload(),600);}));
 
-// Catalogue filters and sorting.
-const grid=$('[data-filter-grid]');
-if(grid){
- const cards=[...grid.children],query=$('[data-catalogue-search]'),sort=$('[data-sort]'),params=new URLSearchParams(location.search);
+// Catalogue filtering and sorting. Supports one catalogue or separate editorial ranges.
+const grids=$$('[data-filter-grid]');
+if(grids.length){
+ const original=new Map(grids.map(g=>[g,[...g.children]]));
+ const cards=[...original.values()].flat(),query=$('[data-catalogue-search]'),sort=$('[data-sort]'),params=new URLSearchParams(location.search);
  const validFilters=$$('[data-filter]').map(b=>b.dataset.filter);
  let filter=validFilters.includes(params.get('category'))?params.get('category'):'all';
  const apply=()=>{
-  const text=(query?.value||'').toLowerCase().trim();let count=0;
-  const sorted=[...cards];if(sort?.value==='price-low')sorted.sort((a,b)=>Number(a.dataset.price)-Number(b.dataset.price));else if(sort?.value==='price-high')sorted.sort((a,b)=>Number(b.dataset.price)-Number(a.dataset.price));else if(sort?.value==='name')sorted.sort((a,b)=>a.dataset.search.localeCompare(b.dataset.search));
-  sorted.forEach(c=>{c.hidden=!((filter==='all'||c.dataset.category.split('|').includes(filter))&&c.dataset.search.includes(text));if(!c.hidden)count++;grid.appendChild(c);});
+  const term=(query?.value||'').toLowerCase().trim();let count=0;
+  for(const grid of grids){
+   const sorted=[...(original.get(grid)||[])];
+   if(sort?.value==='price-low')sorted.sort((a,b)=>Number(a.dataset.price)-Number(b.dataset.price));
+   else if(sort?.value==='price-high')sorted.sort((a,b)=>Number(b.dataset.price)-Number(a.dataset.price));
+   else if(sort?.value==='name')sorted.sort((a,b)=>a.dataset.search.localeCompare(b.dataset.search));
+   for(const card of sorted){
+    card.hidden=!((filter==='all'||card.dataset.category.split('|').includes(filter))&&card.dataset.search.includes(term));
+    if(!card.hidden)count++;
+    grid.appendChild(card);
+   }
+  }
+  $$('[data-shop-range]').forEach(section=>{
+   section.hidden=![...section.querySelectorAll('.product-card')].some(card=>!card.hidden);
+  });
+  $$('[data-shop-editorial]').forEach(panel=>{panel.hidden=filter!=='all'||Boolean(term);});
+  $$('[data-shop-book-feature]').forEach(panel=>{panel.hidden=!(filter==='all'||filter==='books')||Boolean(term);});
   $$('[data-filter]').forEach(b=>{b.classList.toggle('active',b.dataset.filter===filter);b.setAttribute('aria-pressed',String(b.dataset.filter===filter));});
-  $('.filter-status').textContent=count?`${count} ${count===1?'result':'results'}`:'Nothing quite matches that. Try another word or clear the filter.';
+  const status=$('.filter-status');
+  if(status)status.textContent=count?`${count} ${count===1?'result':'results'}`:'Nothing quite matches that. Try another word or clear the filter.';
  };
- $$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter;const u=new URL(location.href);if(filter==='all')u.searchParams.delete('category');else u.searchParams.set('category',filter);history.replaceState({},'',u);apply();}));query?.addEventListener('input',apply);sort?.addEventListener('change',apply);apply();
+ $$('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter;const u=new URL(location.href);if(filter==='all')u.searchParams.delete('category');else u.searchParams.set('category',filter);history.replaceState({},'',u);apply();}));
+ query?.addEventListener('input',apply);
+ sort?.addEventListener('change',apply);
+ apply();
 }
 
 // One-off is the default; added shots remain explicitly one-off.
