@@ -358,3 +358,34 @@
     max-height:100%;
   }
 }
+
+/* Standalone product-only photography: original 900px square transparent packshots.
+   Size from frame HEIGHT, not card width: the product is centered inside its image
+   and the original transparent margins are preserved without lifestyle background. */
+.shop-page .shop-range-grid .product-photo.tub-art,
+.product-gallery .product-photo.tub-art.large-art{
+  background:#f8f8f6;
+  padding:0;
+  align-items:center;
+  justify-content:center;
+}
+.shop-page .shop-range-grid .product-photo.tub-art img,
+.product-gallery .product-photo.tub-art.large-art img{
+  display:block;
+  flex:none;
+  height:100%;
+  width:auto;
+  max-height:100%;
+  max-width:none;
+  object-fit:contain;
+  object-position:center;
+}
+@media(max-width:760px){
+  .shop-page .shop-range-grid .product-photo.tub-art img,
+  .product-gallery .product-photo.tub-art.large-art img{
+    height:100%;
+    width:auto;
+    max-width:none;
+    max-height:100%;
+  }
+}
