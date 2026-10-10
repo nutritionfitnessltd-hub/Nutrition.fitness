@@ -50,3 +50,16 @@
 .card-name-row>strong{font-size:20px!important;color:#122f44;font-weight:850;letter-spacing:-.6px}
 .product-card .product-meta>span{color:#586772;font-size:12px}
 @media(max-width:600px){.nufi-tub{transform:scale(.9) rotate(-3deg)}.nufi-shot{transform:scale(.9) rotate(3deg)}.card-name-row>strong{font-size:18px!important}}
+
+/* Authentic restored NUFI product artwork: tubs retain alpha; flavour bottles have clean white imagery. */
+.product-photo{background:#fafaf8;min-width:0;width:100%;padding:20px}
+.product-photo img{display:block;max-width:100%;max-height:100%;width:100%;height:100%;object-fit:contain;object-position:center}
+.product-photo.shot-art{background:#fff;padding:12px}
+.product-photo.tub-art{background:linear-gradient(145deg,#f8f7f4,#efefed)}
+.product-gallery .product-photo.large-art{padding:35px}
+.product-gallery .product-photo.shot-art.large-art{padding:18px}
+.shop-arrangement .product-photo{background:transparent;padding:0}
+.hero-pack.product-photo img,.hero-shot-one.product-photo img,.hero-shot-two.product-photo img{object-fit:contain}
+.mini-product .product-photo{padding:3px}
+.base-choice .product-photo{padding:8px}
+@media(max-width:600px){.product-photo{padding:10px}.product-gallery .product-photo.large-art{padding:12px}.product-gallery .product-photo.shot-art.large-art{padding:8px}}
