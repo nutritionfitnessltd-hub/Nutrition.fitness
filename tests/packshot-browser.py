@@ -31,6 +31,8 @@ with sync_playwright() as p:
   assert artwork,f'Full original campaign images must not be cropped at {width}px'
   assert page.locator('#supplement-range .product-photo').count()==10
   assert page.locator('#supplement-range .product-photo img[src*="/full-"]').count()==0 and page.locator('#supplement-range .product-photo img[src*="/products/"]').count()==10
+  packshot_dimensions=page.locator('#supplement-range .product-photo img').evaluate_all('(images)=>images.map(i=>[i.naturalWidth,i.naturalHeight])')
+  assert len(packshot_dimensions)==10 and all(p==[760,760] for p in packshot_dimensions),f'Expected 10 restored 760px isolated tub packshots, received {packshot_dimensions}'
   assert page.locator('#flavour-range .product-photo img[src*="/shot-"]').count()==10
   assert page.locator('#flavour-range .product-photo').count()==10
   actual=page.locator('#supplement-range .shop-range-grid').evaluate('(g)=>getComputedStyle(g).gridTemplateColumns.split(" ").length')
