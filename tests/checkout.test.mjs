@@ -25,7 +25,7 @@ test('test adapter rejects today/renewal delivery mismatch',async()=>assert.equa
 test('test adapter constructs checkout from server prices, not client prices',async()=>{
  let payload;
  const r=await invoke({body:{items:[{...single,price:1}]},fakeFetch:async(url,opts)=>{assert.equal(url,'https://api.stripe.com/v1/checkout/sessions');payload=opts.body;return {ok:true,json:async()=>({url:'https://checkout.stripe.com/test-placeholder',id:'cs_test_placeholder'})};}});
- assert.equal(r.code,200);assert.equal(payload.get('line_items[0][price_data][unit_amount]'),'2900');assert.equal(payload.get('line_items[1][price_data][unit_amount]'),'395');assert.equal(payload.get('mode'),'payment');assert.equal(r.body.test,true);
+ assert.equal(r.code,200);assert.equal(payload.get('line_items[0][price_data][unit_amount]'),'5499');assert.equal(payload.get('line_items[1][price_data][unit_amount]'),null);assert.equal(payload.get('mode'),'payment');assert.equal(r.body.test,true);
 });
 test('test adapter retains four-week rather than monthly cadence',async()=>{
  let payload;
