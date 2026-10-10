@@ -115,7 +115,7 @@ with sync_playwright() as w:
   if route.startswith('/meal-planner/'):snap('planner-mobile.png')
   if route=='/shop/':snap('shop-mobile.png')
  goto('/programmes/',1440);snap('programmes-desktop.png')
- goto('/shop/');ok('Twenty individually labelled product previews rendered',p.locator('.product-image-link .nufi-pack-preview, .product-image-link .nufi-shot-preview').count()>=20);ok('Indicative GBP prices are visible for every supplement and flavour',p.locator('.product-card[data-category="supplements"] .card-name-row>strong').count()==9 and p.locator('.product-card[data-category="shots"] .card-name-row>strong').count()==10);snap('shop-desktop.png')
+ goto('/shop/');ok('Twenty recovered original product photos rendered',p.locator('.product-image-link .product-photo').count()>=20);ok('Indicative GBP prices are visible for every supplement and flavour',p.locator('.product-card[data-category="supplements"] .card-name-row>strong').count()==9 and p.locator('.product-card[data-category="shots"] .card-name-row>strong').count()==10);snap('shop-desktop.png')
  goto('/login/');ok('Unconfigured login cannot fake registration',p.locator('[data-auth-form] button[type=submit]').is_disabled())
  ok('No unhandled JavaScript errors',not errors)
  b.close()
