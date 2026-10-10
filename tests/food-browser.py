@@ -119,6 +119,7 @@ with sync_playwright() as w:
  ok('Original NUFI lifestyle hero on shop',p.locator('.shop-hero-v2-photo[src*="protein-campaign"]').count()==1)
  ok('Middle lifestyle section features an actual flavour shot',p.locator('.shop-story-photo-wrap img[src*="banana-campaign"]').count()==1)
  ok('Desktop shop uses four spacious product columns',p.locator('#supplement-range .shop-range-grid').evaluate('(grid)=>getComputedStyle(grid).gridTemplateColumns.split(" ").length')==4)
+ page.evaluate('Promise.all([...document.images].map(i=>{i.loading="eager";return i.decode().catch(()=>null)}))')
  snap('shop-desktop.png')
  p.locator('[data-filter="shots"]').click()
  ok('Flavour filter shows only the flavour range',p.locator('#flavour-range').is_visible() and not p.locator('#supplement-range').is_visible())
