@@ -15,3 +15,38 @@
 /* Intrinsic artwork width must not stretch a two-column mobile catalogue. */
 .catalogue-grid > *{min-width:0}
 .catalogue-grid .product-art{min-width:0;width:100%}
+
+/* October 2026 catalogue: clearly labelled *illustrative* artwork until the final source images are supplied. */
+.nufi-pack-preview,.nufi-shot-preview{--pack-accent:#637c70;background:#f7f6f2!important;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.nufi-pack-preview.aqua,.nufi-shot-preview.aqua{--pack-accent:#427f91}
+.nufi-pack-preview.plum,.nufi-shot-preview.plum{--pack-accent:#8f637d}
+.nufi-pack-preview.peach,.nufi-shot-preview.peach{--pack-accent:#bb8a68}
+.nufi-pack-preview.sage,.nufi-shot-preview.sage{--pack-accent:#6e876c}
+.nufi-pack-preview.blush,.nufi-shot-preview.blush{--pack-accent:#aa6e77}
+.nufi-pack-preview.cream,.nufi-shot-preview.cream{--pack-accent:#a18463}
+.nufi-tub{width:185px;height:254px;position:relative;filter:drop-shadow(8px 15px 9px #0f283722);transform:rotate(-3deg);transition:transform .2s;flex:none}
+.nufi-lid{height:35px;position:absolute;left:7px;right:7px;top:0;border-radius:13px 13px 3px 3px;background:linear-gradient(90deg,#e1e2df,#fafaf8 24%,#f5f5f3 76%,#d0d3d3);border-bottom:3px solid #d6dbd9;z-index:1}
+.nufi-tub-face{position:absolute;top:32px;bottom:0;left:0;right:0;border-radius:7px 7px 20px 20px;background:linear-gradient(90deg,#e5e7e5 0,#fff 13%,#fff 82%,#eaebea 100%);border:1px solid #dadfdd;padding:31px 16px 22px;display:flex;flex-direction:column;overflow:hidden;color:#142c3e}
+.nufi-tub-face:after{content:"";position:absolute;left:-25px;bottom:-40px;width:250px;height:85px;border-radius:100% 45% 0 0;background:var(--pack-accent);opacity:.23;transform:rotate(-8deg)}
+.nufi-brand{font-size:15px;letter-spacing:-.8px;white-space:nowrap;font-weight:350;position:relative;z-index:1}
+.nufi-brand b{font-weight:850}.nufi-brand sup,.nufi-shot-label sup{font-size:6px;vertical-align:super}
+.nufi-product-title{position:relative;z-index:1;margin-top:36px;display:flex;align-items:baseline;gap:3px;color:#142c3e}
+.nufi-product-title i{height:9px;width:9px;background:var(--pack-accent);border-radius:50%;flex:none}
+.nufi-product-title strong{font-size:22px;letter-spacing:-1.3px;line-height:1;overflow-wrap:anywhere}
+.nufi-product-descriptor{position:relative;z-index:1;text-transform:uppercase;font-size:8px;letter-spacing:1.2px;line-height:1.5;margin-top:12px;font-weight:700}
+.nufi-tub-face em{font-family:Kalam,cursive;font-size:11px;font-style:normal;line-height:1.2;margin-top:auto;z-index:1;max-width:145px}
+.nufi-tub-face>small{font-size:9px;margin-top:8px;z-index:1}
+.nufi-shot{width:122px;height:260px;position:relative;flex:none;transform:rotate(3deg);filter:drop-shadow(6px 13px 8px #0f28372b);transition:transform .2s}
+.nufi-dropper{position:absolute;top:0;left:39px;width:45px;height:55px;border-radius:22px 22px 5px 5px;background:linear-gradient(90deg,#171f25,#384047 45%,#171f25);z-index:2}
+.nufi-neck{position:absolute;top:42px;left:33px;width:57px;height:24px;border-radius:6px;background:repeating-linear-gradient(90deg,#27343c 0 4px,#3d4851 4px 7px);z-index:3}
+.nufi-shot-body{position:absolute;top:54px;left:13px;right:13px;bottom:0;background:linear-gradient(90deg,#5a4439,#816456 23%,#76584b 76%,#543f34);border-radius:17px 17px 12px 12px;padding:34px 3px 15px}
+.nufi-shot-label{height:155px;background:#fffdfa;display:flex;flex-direction:column;text-align:center;justify-content:center;align-items:center;gap:12px;padding:8px 5px;box-shadow:inset -7px 0 7px #10212f12;border-top:3px solid var(--pack-accent)}
+.nufi-shot-label>span{font-size:9px;white-space:nowrap;letter-spacing:-.5px;color:#142c3e}.nufi-shot-label b{font-weight:850}
+.nufi-shot-label strong{font-size:17px;line-height:1;letter-spacing:-.8px;color:#142c3e;overflow-wrap:anywhere}
+.nufi-shot-label strong i{font-style:normal;color:var(--pack-accent)}
+.nufi-shot-label small{font-size:9px;font-weight:700;color:#142c3e}
+.nufi-shot-label em{font-size:10px;line-height:1.15;color:#425c64;font-family:Kalam,cursive;font-style:normal}
+.product-image-link:hover .nufi-tub,.product-image-link:hover .nufi-shot{transform:translateY(-5px) rotate(0deg)}
+.card-name-row>strong{font-size:20px!important;color:#122f44;font-weight:850;letter-spacing:-.6px}
+.product-card .product-meta>span{color:#586772;font-size:12px}
+@media(max-width:600px){.nufi-tub{transform:scale(.9) rotate(-3deg)}.nufi-shot{transform:scale(.9) rotate(3deg)}.card-name-row>strong{font-size:18px!important}}
