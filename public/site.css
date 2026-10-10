@@ -267,3 +267,46 @@
   .shop-page .shop-hero-shot-detail img{width:54px;max-width:54px;height:72px}
   .shop-page .shop-hero-shot-detail span{font-size:15px}
 }
+
+/* Complete product portraits — keep the whole tub or flavour bottle visible. */
+.shop-page .shop-range-grid .product-photo,
+.product-gallery .product-photo.large-art{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  background:#faf9f7;
+}
+.shop-page .shop-range-grid .product-photo img,
+.shop-page .shop-range-grid .product-photo.shot-art img{
+  display:block;
+  flex:none;
+  width:auto;
+  height:auto;
+  max-width:83%;
+  max-height:83%;
+  min-width:0;
+  object-fit:contain;
+  object-position:center;
+}
+.shop-page .shop-range-grid .product-photo.shot-art img{
+  max-width:76%;
+  max-height:79%;
+}
+.product-gallery .product-photo.large-art img{
+  width:auto;
+  height:auto;
+  max-width:88%;
+  max-height:88%;
+  object-fit:contain;
+  object-position:center;
+}
+.product-gallery .product-photo.shot-art.large-art img{
+  max-width:80%;
+  max-height:84%;
+}
+@media(max-width:760px){
+ .shop-page .shop-range-grid .product-photo img,
+ .shop-page .shop-range-grid .product-photo.shot-art img{max-width:80%;max-height:80%}
+ .product-gallery .product-photo.large-art img{max-width:86%;max-height:86%}
+}
