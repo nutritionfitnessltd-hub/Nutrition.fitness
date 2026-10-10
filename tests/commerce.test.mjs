@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import {quoteCart,validateLine,addLine,safeStoredCart,unitPrice} from '../src/commerce.mjs';
 const one={id:'plain-whey',qty:1,mode:'once',cadence:null};
 const sub={...one,mode:'subscription',cadence:'4w'};
-test('one-off total and delivery are computed from the catalogue',()=>{const q=quoteCart([one]);assert.equal(q.total,3295);assert.equal(q.recurring.length,0);});
-test('subscription discount is rounded in integer pence',()=>{assert.equal(unitPrice(sub),2610);assert.equal(unitPrice({id:'shot-vanilla',qty:1,mode:'subscription',cadence:'4w'}),626);});
-test('one-off extras do not repeat',()=>{const q=quoteCart([sub,{id:'shot-vanilla',qty:1,mode:'once',cadence:null}]);assert.equal(q.total,3700);assert.equal(q.recurring[0].total,3005);});
-test('shipping threshold uses physical items only',()=>{const q=quoteCart([one,{id:'nufi-membership',qty:1,mode:'subscription',cadence:'year'}]);assert.equal(q.delivery,395);assert.equal(q.recurring[0].delivery,0);});
+test('one-off total and delivery are computed from the catalogue',()=>{const q=quoteCart([one]);assert.equal(q.total,5499);assert.equal(q.recurring.length,0);});
+test('subscription discount is rounded in integer pence',()=>{assert.equal(unitPrice(sub),4949);assert.equal(unitPrice({id:'shot-vanilla',qty:1,mode:'subscription',cadence:'4w'}),1169);});
+test('one-off extras do not repeat',()=>{const q=quoteCart([sub,{id:'shot-vanilla',qty:1,mode:'once',cadence:null}]);assert.equal(q.total,6248);assert.equal(q.recurring[0].total,5344);});
+test('shipping threshold uses physical items only',()=>{const q=quoteCart([one,{id:'nufi-membership',qty:1,mode:'subscription',cadence:'year'}]);assert.equal(q.delivery,0);assert.equal(q.recurring[0].delivery,0);});
 test('free shipping for enough physical merchandise',()=>assert.equal(quoteCart([{...one,qty:2}]).delivery,0));
 test('digital-only baskets have no delivery',()=>assert.equal(quoteCart([{id:'nufi-membership',qty:1,mode:'subscription',cadence:'month'}]).delivery,0));
 test('different renewal cadences remain separate',()=>{const q=quoteCart([sub,{id:'shot-chocolate',qty:2,mode:'subscription',cadence:'8w'},{id:'nufi-membership',qty:1,mode:'subscription',cadence:'month'}]);assert.deepEqual(q.recurring.map(r=>r.cadence),['4w','8w','month']);});
@@ -17,7 +17,7 @@ test('no implicit subscription or cadence',()=>{assert.throws(()=>validateLine({
 test('books cannot silently become subscriptions',()=>assert.throws(()=>validateLine({...sub,id:'high-protein-kitchen'})));
 test('coming-soon recipe books cannot enter checkout before pricing is approved',()=>{for(const id of ['breakfast-sorted','proper-everyday-food','big-night-in','air-fryer-favourites','snack-happy','blend-and-go','more-plants-please'])assert.throws(()=>validateLine({id,qty:1,mode:'once',cadence:null}),/not yet priced/);});
 test('only one member per membership line',()=>assert.throws(()=>validateLine({id:'nufi-membership',qty:2,mode:'subscription',cadence:'month'})));
-test('client price tampering is ignored',()=>assert.equal(quoteCart([{...one,price:1,total:1}]).subtotal,2900));
+test('client price tampering is ignored',()=>assert.equal(quoteCart([{...one,price:1,total:1}]).subtotal,5499));
 test('invalid persisted cart entries are dropped',()=>assert.deepEqual(safeStoredCart([one,{id:'old-stock',qty:99},null]),[one]));
 test('duplicate overflow is rejected',()=>assert.throws(()=>addLine([{...one,qty:20}],one)));
 test('empty quote is truly zero',()=>{const q=quoteCart([]);assert.equal(q.total,0);assert.equal(q.delivery,0);});
@@ -26,3 +26,5 @@ test('monthly and annual memberships cannot be added together',()=>assert.throws
 test('quote rejects direct multiple membership injection',()=>assert.throws(()=>quoteCart([{id:'nufi-membership',qty:1,mode:'subscription',cadence:'month'},{id:'nufi-membership',qty:1,mode:'subscription',cadence:'year'}])));
 test('raw duplicates do not bypass quantity limits',()=>assert.throws(()=>quoteCart([one,one])));
 test('stored conflicting membership is sanitised',()=>assert.equal(safeStoredCart([{id:'nufi-membership',qty:1,mode:'subscription',cadence:'month'},{id:'nufi-membership',qty:1,mode:'subscription',cadence:'year'}]).length,1));
+
+test('complete October launch range has ten supplements and ten 50 ml shots',async()=>{const {products}=await import('../src/data.mjs');const list=products.filter(p=>p.category==='powders'||p.category==='supplements');const shots=products.filter(p=>p.category==='shots');assert.equal(list.length,10);assert.equal(shots.length,10);assert.ok(shots.every(p=>p.size==='50 ml'&&p.price===1299));assert.equal(list.find(p=>p.id==='plain-whey').price,5499);assert.ok(list.filter(p=>p.id!=='plain-whey').every(p=>p.price===1999));});
