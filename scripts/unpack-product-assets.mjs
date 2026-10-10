@@ -1,6 +1,6 @@
 /** Restore the user-created NUFI packaging and lifestyle campaign assets from archival ZIPs.
  * These are design mock-ups, not photographs of final manufactured products.
- * Both archives are committed in assets/ so deployments stay reproducible.
+ * The archived sources are committed in assets/ so deployments stay reproducible.
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -9,7 +9,9 @@ const root=path.resolve(import.meta.dirname,'..');
 const catalogue=['plain-whey','creatine','electrolytes','magnesium','d3','collagen','omega3','fibre','vitaminc','zinc','shot-vanilla','shot-salted-caramel','shot-chocolate','shot-banana','shot-toffee','shot-strawberry','shot-raspberry','shot-cherry','shot-apple','shot-tropical'];
 const archives=[
   ['product-packshots-2026.zip',catalogue.map(id=>'public/assets/products/'+id+'.webp')],
-  ['shop-campaign-photos-2026.zip',['protein-campaign','creatine-campaign','banana-campaign','strawberry-campaign'].map(id=>'public/assets/shop-story/'+id+'.webp')]
+  ['shop-campaign-photos-2026.zip',['protein-campaign','creatine-campaign','banana-campaign','strawberry-campaign'].map(id=>'public/assets/shop-story/'+id+'.webp')],
+  // Original transparent tub cutouts had missing sides; these full-product photos are recovered from the original adverts.
+  ['full-uncropped-product-photos-2026.zip',catalogue.filter(id=>!id.startsWith('shot-')).map(id=>'public/assets/products/full-'+id+'.webp')]
 ];
 async function restore(archiveName,expectedPaths){
  const bytes=await fs.readFile(path.join(root,'assets',archiveName));
