@@ -7,18 +7,45 @@ export const site = {
   links: { app: '', login: '', support: '', customerPortal: '' },
   strapline: 'Real food. Real progress. A fitter, happier you.'
 };
+// Indicative prices agreed for launch planning, not approved payment/fulfilment terms.
+// Do not infer pack weights, ingredients, nutrition or claims from visual concepts.
+const pending = 'Final supplier pack size, ingredients, allergens, usage instructions and label wording are awaiting approval. This is a preview; no live checkout.';
+const supplement = (id,name,descriptor,quip,color) => ({
+  id,name,short:name,category:'supplements',price:1999,priceStatus:'indicative',
+  size:'Pack size TBC',type:'physical',recurring:true,color,art:'tub',
+  label:name,quip,description:descriptor,
+  details:['Part of the simple Nutrition.Fitness essentials range.','See the indicative price before choosing one-off or subscription.','Pack specification and final label are still being reviewed.'],
+  caution:pending
+});
+const shot = (id,name,color,quip) => ({
+  id:'shot-'+id,name:name+' flavour shot',short:name,category:'shots',price:1299,
+  priceStatus:'indicative',size:'50 ml',type:'physical',recurring:true,color,art:'bottle',
+  label:name.toLowerCase(),quip,
+  description:'A separate '+name.toLowerCase()+' flavour shot for our plain-protein system. Choose your flavour without changing your base powder.',
+  details:['50 ml flavour-shot bottle concept.','Sold separately from plain whey protein.','Ingredients, allergens and usage instructions will follow the approved supplier label.'],
+  caution:pending
+});
 export const products = [
-  { id:'plain-whey', name:'Plain whey protein', short:'Plain whey.', category:'powders', price:2900, size:'1 kg', type:'physical', recurring:true, color:'cream', art:'pouch', label:'whey\nprotein.', quip:'Plain on purpose. You bring the flavour.', description:'One neutral base. A different flavour when you fancy it. Keep your protein simple and choose a flavour shot separately.', details:['Unflavoured base, designed for the separate flavour-shot system.','Choose one-off purchase or a regular delivery.','No shot is included unless you add one.'], caution:'Proposed whey product. Contains milk. Full ingredients, nutrition, serving instructions and other allergen information must be confirmed from the final supplier specification.' },
-  { id:'plant-protein', name:'Plain plant protein', short:'Plain plant.', category:'powders', price:3200, size:'1 kg', type:'physical', recurring:true, color:'sage', art:'pouch', label:'plant\nprotein.', quip:'The plant-based one. Still not a houseplant.', description:'A plain plant-protein option for your cupboard, with flavour kept in a separate bottle. Pick the base that suits you. Then make it your own.', details:['An unflavoured plant-protein option.','Flavour shots are separate, so you choose the combination.','Final blend and supplier details are being confirmed.'], caution:'Proposed product. Plant-based does not mean allergen-free. Final ingredients, allergens, nutrition and suitability need supplier confirmation.' },
-  { id:'creatine', name:'Plain creatine powder', short:'Plain creatine.', category:'powders', price:1600, size:'250 g', type:'physical', recurring:true, color:'aqua', art:'pouch', label:'creatine\npowder.', quip:'No dramatic name. Just the powder.', description:'A straightforward, unflavoured addition to the range. No superhero branding. No thirty-seven-word performance promises.', details:['A separate product, not an ingredient silently added to your protein.','Buy once or choose a delivery interval that suits your usage.','Always follow the final label directions.'], caution:'Concept product. Composition, serving directions, age restrictions, suitability and label information require approval before sale. No dosage is prescribed in this preview.' },
-  ...[
-    ['vanilla','Vanilla','cream','A classic. Without the commitment.'],
-    ['chocolate','Chocolate','plum','For the days that clearly require chocolate.'],
-    ['salted-caramel','Salted caramel','peach','A little sweet. A little salty. Relatable.'],
-    ['strawberry','Strawberry','blush','Your protein has a fruity side.'],
-    ['banana','Banana','sage','Going bananas. In a very organised way.'],
-    ['hazelnut','Hazelnut','aqua','Another flavour. Not another kilo of powder.']
-  ].map(([slug,name,color,quip])=>({id:`shot-${slug}`,name:`${name} flavour shot`,short:name,category:'shots',price:695,size:'30 ml · concept size',type:'physical',recurring:true,color,art:'bottle',label:name.toLowerCase(),quip,description:`Add ${name.toLowerCase()} flavour separately to your plain protein. Keep the powder. Change your mind about the flavour. That is allowed.`,details:['Pipette-style flavour shot, not a ready-to-drink shake.','Sold separately from the protein powder.','Choose one flavour or mix a selection in your box.'],caution:'Proposed flavour and pack size. Ingredients, allergens, sweeteners, serving instructions and compatibility must be verified before sale. A flavour name does not establish whether an allergen is present.'})),
+  {id:'plain-whey',name:'.protein — Unflavoured Whey 80%',short:'.protein',category:'powders',price:5499,priceStatus:'indicative',size:'1 kg',type:'physical',recurring:true,color:'cream',art:'tub',label:'.protein',quip:'Plain on purpose. You bring the flavour.',description:'One unflavoured whey base, plenty of ways to make it yours. Add a separate flavour shot whenever the mood takes you.',details:['Unflavoured whey protein 80% concept.','1 kg working pack size, pending supplier confirmation.','Flavour shots are sold separately.'],caution:'Contains milk. Final manufacturer specification, nutritional composition, allergens and label directions must be approved before sale.'},
+  supplement('creatine','.creatine','Creatine monohydrate. Straightforward by design.','No dramatic name. Just the essentials.','aqua'),
+  supplement('electrolytes','.electrolytes','Electrolyte powder for a straightforward hydration routine.','More sip. Less faff.','sage'),
+  supplement('magnesium','.magnesium','Magnesium supplement in the Nutrition.Fitness essentials range.','Keep the routine simple.','plum'),
+  supplement('d3','.d3','Vitamin D3 supplement in the Nutrition.Fitness essentials range.','The little things add up.','peach'),
+  supplement('collagen','.collagen','Collagen peptides in the Nutrition.Fitness essentials range.','Nothing fancy. Just the plan.','aqua'),
+  supplement('omega3','.omega3','Omega-3 supplement in the Nutrition.Fitness essentials range.','No twelve-step cupboard routine.','sage'),
+  supplement('fibre','.fibre','Inulin fibre in the Nutrition.Fitness essentials range.','Your cupboard called. It likes simple.','peach'),
+  supplement('vitaminc','.vitaminc','Vitamin C supplement in the Nutrition.Fitness essentials range.','One useful thing at a time.','plum'),
+  supplement('zinc','.zinc','Zinc supplement in the Nutrition.Fitness essentials range.','No superhero cape required.','aqua'),
+  shot('vanilla','Vanilla','cream','A classic. Without the commitment.'),
+  shot('salted-caramel','Salted caramel','peach','A little sweet. A little salty. Relatable.'),
+  shot('chocolate','Chocolate','plum','Some days simply require chocolate.'),
+  shot('banana','Banana','sage','Going bananas. In a very organised way.'),
+  shot('toffee','Toffee','cream','Your usual shake, a rather nice plot twist.'),
+  shot('strawberry','Strawberry','blush','The fruity side of your protein.'),
+  shot('raspberry','Raspberry','plum','A little zing. No big commitment.'),
+  shot('cherry','Cherry','blush','A small bottle with main-character energy.'),
+  shot('apple','Apple','sage','A crisp change of direction.'),
+  shot('tropical','Tropical','aqua','Holiday vibes. Ordinary Tuesday.'),
   {id:'high-protein-kitchen',category:'books',type:'digital',recurring:false,color:'sage',label:'High Protein Kitchen'},
   ...collectionProducts,
   {id:'nufi-membership',name:'NUFI+ membership',short:'NUFI+',category:'membership',price:1499,annualPrice:9900,type:'digital',recurring:true,color:'aqua',art:'membership',label:'NUFI+',quip:'Less figuring out. More getting on with it.',description:'Programmes, meal planning, shopping lists, courses and progress. The useful bits, brought together.',caution:'Example pricing for review. No membership or real account is activated in this preview.'}
