@@ -161,3 +161,109 @@
 /* Image composition: crop off the ad's preprinted headline without clipping the pack. */
 .shop-page .shop-hero-v2-photo{position:absolute;inset:auto 0 0 0;width:100%;height:auto;max-width:none;object-fit:unset;object-position:initial;display:block}
 @media(max-width:760px){.shop-page .shop-hero-v2-photo{width:110%;left:-5%;right:auto;bottom:0}}
+
+/* 10 Oct 2026: preserve the ENTIRE approved campaign artwork, on every viewport.
+   Original portraits are 1122 × 1402; banana landscape is 1300 × 867.
+   Do not fill a fixed-height crop, zoom or hide preprinted artwork. */
+.shop-page .shop-hero-v2-media{
+  width:100%;
+  max-width:520px;
+  height:auto;
+  aspect-ratio:auto;
+  justify-self:end;
+  display:flex;
+  flex-direction:column;
+  align-items:stretch;
+  overflow:hidden;
+  background:#fff;
+}
+.shop-page .shop-hero-v2-photo,
+.shop-page .shop-hero-v2-media>.shop-hero-v2-photo{
+  position:static;
+  inset:auto;
+  left:auto;
+  right:auto;
+  bottom:auto;
+  display:block;
+  flex:none;
+  width:100%;
+  max-width:100%;
+  height:auto;
+  max-height:none;
+  object-fit:contain;
+  object-position:center;
+  aspect-ratio:1122 / 1402;
+}
+.shop-page .shop-hero-shot-detail{
+  position:static;
+  left:auto;
+  right:auto;
+  bottom:auto;
+  flex:none;
+  width:100%;
+  max-width:none;
+  height:auto;
+  min-height:92px;
+  padding:10px 24px;
+  box-shadow:none;
+  border-radius:0;
+  background:#f7f5f0;
+  backdrop-filter:none;
+}
+.shop-page .shop-hero-shot-detail img{
+  width:60px;
+  max-width:60px;
+  height:85px;
+  max-height:85px;
+  object-fit:contain;
+}
+.shop-page .shop-hero-shot-detail span{
+  font-size:17px;
+  transform:rotate(-1deg);
+}
+.shop-page .shop-story-panel{
+  min-height:0;
+  align-items:stretch;
+}
+.shop-page .shop-story-photo-wrap{
+  min-height:0;
+  height:auto;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:visible;
+}
+.shop-page .shop-story-photo-wrap img{
+  display:block;
+  width:100%;
+  height:auto;
+  max-width:100%;
+  min-height:0;
+  max-height:none;
+  object-fit:contain;
+  object-position:center;
+  aspect-ratio:1300 / 867;
+}
+@media(max-width:760px){
+  .shop-page .shop-hero-v2-media{
+    max-width:460px;
+    height:auto;
+    justify-self:center;
+  }
+  .shop-page .shop-hero-v2-photo,
+  .shop-page .shop-hero-v2-media>.shop-hero-v2-photo{
+    width:100%;
+    left:auto;
+    right:auto;
+    bottom:auto;
+  }
+  .shop-page .shop-story-photo-wrap{height:auto;min-height:0}
+  .shop-page .shop-story-photo-wrap img{height:auto;min-height:0}
+}
+@media(max-width:450px){
+  .shop-page .shop-hero-v2-media{height:auto}
+  .shop-page .shop-story-photo-wrap{height:auto}
+  .shop-page .shop-hero-shot-detail{padding:6px 12px;min-height:82px}
+  .shop-page .shop-hero-shot-detail img{width:54px;max-width:54px;height:72px}
+  .shop-page .shop-hero-shot-detail span{font-size:15px}
+}
