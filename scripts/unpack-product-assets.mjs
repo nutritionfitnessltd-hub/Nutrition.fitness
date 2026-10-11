@@ -1,6 +1,7 @@
 /** Restore the user-created NUFI packaging and lifestyle campaign assets from archival ZIPs.
  * These are design mock-ups, not photographs of final manufactured products.
- * The archived sources are committed in assets/ so deployments stay reproducible.
+ * Standalone tubs come from the user's *original unchanged* 1400px PNG archive.
+ * Lifestyle photos are used only for editorial shop sections, never product tiles.
  */
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -9,9 +10,7 @@ const root=path.resolve(import.meta.dirname,'..');
 const catalogue=['plain-whey','creatine','electrolytes','magnesium','d3','collagen','omega3','fibre','vitaminc','zinc','shot-vanilla','shot-salted-caramel','shot-chocolate','shot-banana','shot-toffee','shot-strawberry','shot-raspberry','shot-cherry','shot-apple','shot-tropical'];
 const archives=[
   ['product-packshots-2026.zip',catalogue.map(id=>'public/assets/products/'+id+'.webp')],
-  ['shop-campaign-photos-2026.zip',['protein-campaign','creatine-campaign','banana-campaign','strawberry-campaign'].map(id=>'public/assets/shop-story/'+id+'.webp')],
-  // Original transparent tub cutouts had missing sides; these full-product photos are recovered from the original adverts.
-  ['full-uncropped-product-photos-2026.zip',catalogue.filter(id=>!id.startsWith('shot-')).map(id=>'public/assets/products/full-'+id+'.webp')]
+  ['shop-campaign-photos-2026.zip',['protein-campaign','creatine-campaign','banana-campaign','strawberry-campaign'].map(id=>'public/assets/shop-story/'+id+'.webp')]
 ];
 async function restore(archiveName,expectedPaths){
  const bytes=await fs.readFile(path.join(root,'assets',archiveName));
@@ -40,3 +39,50 @@ async function restore(archiveName,expectedPaths){
  console.log('Restored '+seen.size+' NUFI assets from '+archiveName);
 }
 for(const [archive,names] of archives)await restore(archive,names);
+
+/**
+ * Restore the exact original PNG bytes from the first product-only ZIP created in chat.
+ * Because of upstream upload-size limits, its base64 encoding is stored as 12
+ * numbered text parts. This is transport segmentation, NOT image editing.
+ * Source: Nutrition.Fitness_10_Transparent_Packshots.zip.
+ * Some source renderings already have hard edges; don't disguise or repaint them.
+ */
+import {createHash} from 'node:crypto';
+const originalIds=['plain-whey','creatine','electrolytes','magnesium','d3','collagen','omega3','fibre','vitaminc','zinc'];
+const pngPrefix=Buffer.from([137,80,78,71,13,10,26,10]);
+const parts=await Promise.all(Array.from({length:12},(_,i)=>fs.readFile(path.join(root,'assets','original-standalone-png-chunks','part-'+String(i+1).padStart(2,'0')+'.b64'),'utf8')));
+const archive=Buffer.from(parts.join(''),'base64');
+const archiveDigest=createHash('sha256').update(archive).digest('hex');
+if(archiveDigest!=='90118fec485b5d561716efd30614848d1196f8783f6adbd80d866d370164785c'){
+  throw new Error('Exact original product-only archive checksum mismatch');
+}
+const imagePaths=new Set(originalIds.map(id=>'public/assets/products/original-'+id+'.png'));
+const restored=new Set();
+let offset=0;
+while(offset+30<=archive.length){
+ const signature=archive.readUInt32LE(offset);
+ if(signature===0x02014b50||signature===0x06054b50)break;
+ if(signature!==0x04034b50)throw new Error('Bad original archive ZIP entry at '+offset);
+ const flags=archive.readUInt16LE(offset+6);
+ const method=archive.readUInt16LE(offset+8);
+ const packed=archive.readUInt32LE(offset+18),unpacked=archive.readUInt32LE(offset+22);
+ const namelen=archive.readUInt16LE(offset+26),extralen=archive.readUInt16LE(offset+28);
+ if(flags&8)throw new Error('Unsupported original archive data descriptor');
+ const name=archive.subarray(offset+30,offset+30+namelen).toString('utf8');
+ const start=offset+30+namelen+extralen;
+ if(start+packed>archive.length)throw new Error('Truncated original '+name);
+ const compressed=archive.subarray(start,start+packed);
+ const data=method===8?inflateRawSync(compressed):method===0?compressed:null;
+ if(!data||data.length!==unpacked)throw new Error('Invalid original PNG: '+name);
+ if(imagePaths.has(name)){
+  if(restored.has(name)||!data.subarray(0,8).equals(pngPrefix)||data.readUInt32BE(16)!==1400||data.readUInt32BE(20)!==1400)
+   throw new Error('Unexpected original product PNG: '+name);
+  const output=path.join(root,name);
+  await fs.mkdir(path.dirname(output),{recursive:true});
+  await fs.writeFile(output,data);
+  restored.add(name);
+ }else if(name!=='source-manifest.json')throw new Error('Unexpected file in original PNG archive: '+name);
+ offset=start+packed;
+}
+if(restored.size!==10)throw new Error('Missing original product-only PNGs: '+[...imagePaths].filter(n=>!restored.has(n)).join(', '));
+console.log('Restored 10 original, unchanged standalone PNG packshots from chat archive.');
