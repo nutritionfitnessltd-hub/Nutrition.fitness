@@ -14,10 +14,10 @@ function write(res,status,body,section,actor,meta){
 }
 function planPreview(f,data){
   const {project}=projectDraft(f,data);
-  return heading('Your proposed project',project.name+' · '+project.weeks+' weeks')+
+  return heading('Your plan',project.name+' · '+project.weeks+' weeks')+
     '<p>'+esc(project.brief)+'</p>'+form('project-create',Object.entries(f).filter(([k])=>k!=='action').map(([k,v])=>hidden(k,v)).join('')+
-      '<div class="panel"><h2>Content and production plan</h2>'+list(project.entries,e=>'<div><strong>'+esc(e.title)+'</strong><small>'+(e.week?'Week '+e.week:'Preparation')+' · '+esc(e.notes)+'</small></div>')+'</div>',
-      {section:'create'},'Create this project');
+      '<div class="panel"><p>Creator: '+esc(data.people.find(p=>p.id===project.creator_id)?.name||'Assigned creator')+' · '+project.entries.length+' tasks</p><details><summary>See the steps</summary>'+list(project.entries,e=>'<div><strong>'+esc(e.title)+'</strong><small>'+(e.week?'Week '+e.week:'Preparation')+' · '+esc(e.notes)+'</small></div>')+'</details></div>',
+      {section:'create'},'Start this work');
 }
 function standardsPage(data,env){
   const r=data.byId.get('studio:standards');
@@ -94,7 +94,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env}){
     }
     let body;
     switch(section){
-      case 'home':body=home(data);break;
+      case 'home':body=home(data,meta);break;
       case 'library':case 'exercises':body=library(params,data,meta||{});break;
       case 'create':body=createPage(params,data);break;
       case 'projects':body=projectList(params,data);break;
@@ -115,12 +115,12 @@ export async function handleStudio(req,res,{params,actor,api,load,env}){
       case 'project-from':{
         if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
         const r=data.byId.get(params.get('id'));if(!r)throw new HttpError(404,'Content unavailable.');
-        body=heading('Create a project around '+r.title,'Plan the work needed to develop and release this content.')+
+        body=heading('Assign work: '+r.title,'Choose a creator and tell them what needs doing.')+
           form('plan-preview',hidden('id',randomUUID())+hidden('rootId',r.id)+hidden('template',Object.hasOwn(templates,r.kind)?r.kind:'custom')+
-            input('name','Project name','Finish '+r.title)+textarea('brief','What needs doing?')+input('audience','Audience',r.fields.audience||'')+
-            input('outcome','Outcome',r.fields.outcome||'')+(r.kind==='programme'?hidden('weeks',r.fields.weeks)+'<p>Programme length: '+esc(r.fields.weeks)+' weeks</p>':input('weeks','Number of weeks',Math.min(52,Number(r.fields.weeks)||6),'number','min="1" max="52" required'))+
+            hidden('name','Finish '+r.title)+textarea('brief','What needs doing?')+hidden('audience',r.fields.audience||'')+
+            hidden('outcome',r.fields.outcome||'')+(r.kind==='programme'?hidden('weeks',r.fields.weeks)+'<p>Programme length: '+esc(r.fields.weeks)+' weeks</p>':input('weeks','Number of weeks',Math.min(52,Number(r.fields.weeks)||6),'number','min="1" max="52" required'))+
             select('creator','Creator',Object.fromEntries(data.people.map(p=>[p.id,p.name])))+input('launch','Target launch date','','date'),
-            {section:'create'},'Preview project plan');break;
+            {section:'create'},'Show the plan');break;
       }
       default:throw new HttpError(404,'This studio page is unavailable.');
     }
@@ -131,7 +131,8 @@ export async function handleStudio(req,res,{params,actor,api,load,env}){
       try{
         const original=data.byId.get(params.get('id'));
         data.byId.set(original.id,{...original,title:f.title,fields:JSON.parse(f.fields),revision:Number(f.revision)});
-        body+='<p>Your unsaved edits are shown below. For a version conflict, open the latest saved copy in another tab before combining changes.</p>'+itemPage(params,data);
+        const editParams=new URLSearchParams(params);editParams.set('tab','edit');
+        body+='<p>Your unsaved edits are shown below. For a version conflict, open the latest saved copy in another tab before combining changes.</p>'+itemPage(editParams,data);
       }catch{body+='<details><summary>Unsaved content</summary><pre class="source-text">'+esc(f.fields||'')+'</pre></details>';}
     }else if(req.method==='POST'&&f.action==='plan-preview'&&data){
       body+=createPage(new URLSearchParams({template:f.template}),data,f);
