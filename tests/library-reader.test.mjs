@@ -21,6 +21,7 @@ const post=(body,origin=base.replace('http:','https:'))=>fetch(base+'/content-li
 test('shared password controls the catalogue, detail pages and direct downloads',async()=>{
   for(const suffix of ['','?item=training%3Asample','?file='+fileId,'?q=Fixture','?view=library']){
     const response=await fetch(base+'/content-library/'+suffix);
+    assert.equal(response.headers.get('referrer-policy'),'same-origin');
     assert.equal(response.status,401);assert.match(response.headers.get('cache-control'),/no-store/);
     const html=await response.text();assert.ok(!html.includes(item.title));assert.ok(!html.includes('Private bytes'));
   }

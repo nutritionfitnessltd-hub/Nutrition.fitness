@@ -70,7 +70,8 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
     res.setHeader('Vary', 'Cookie');
-    res.setHeader('Referrer-Policy', 'no-referrer');
+    // Same-site forms need their origin on POST. Keep referrers private across sites.
+    res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'self'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
