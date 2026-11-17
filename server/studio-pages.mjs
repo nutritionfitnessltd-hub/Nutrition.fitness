@@ -10,7 +10,7 @@ const personOptions=d=>Object.fromEntries(d.people.map(p=>[p.id,p.name]));
 const projectChoices=d=>({'':'Library only',...Object.fromEntries(d.projects.filter(p=>p.status!=='Complete').map(p=>[p.id,p.name]))});
 const contentRow=r=>'<div>'+itemLink(r)+'<small>'+esc(kinds[r.kind]||r.kind)+'</small></div>'+badge(r.status);
 const collections={
-  programme:['Training programmes','Complete training pathways and their stages.','Dumbbell'],
+  programme:['Training programmes','Standalone level programmes, each with a clear duration.','Dumbbell'],
   recipe:['Recipes','Ingredients, methods and nutrition information.','Utensils'],
   mealplan:['Meal plans','Weekly menus and recipe collections.','Utensils'],
   exercise:['Exercises','Reusable instructions and demonstrations.','Dumbbell'],
@@ -56,15 +56,20 @@ export function library(params,data,meta={}){
         return '<a class="studio-card studio-type-card" href="'+url('library',{kind:id})+'"><div class="studio-type-icon" aria-hidden="true">'+icons[icon]+'</div><h2>'+title+'</h2><p>'+description+'</p><div class="studio-type-count">'+count.toLocaleString('en-GB')+' '+(count===1?'item':'items')+'</div><span aria-hidden="true">→</span></a>';
       }).join('')+'</nav>';
   }
-  let rows=data.items.filter(r=>r.kind!=='settings'&&(exercise?['exercise','activity'].includes(r.kind)&&(!kind||r.kind===kind):!kind||r.kind===kind)&&(!state?r.status!=='Archived':r.status===state));
+  let rows=data.items.filter(r=>!['settings','programme-family'].includes(r.kind)&&(exercise?['exercise','activity'].includes(r.kind)&&(!kind||r.kind===kind):!kind||r.kind===kind)&&(!state?r.status!=='Archived':r.status===state));
+  if(kind==='programme'){
+    const families=['stronger','build','fitter','run','swim','ride','back-to-it','nufi365'];
+    const rank=r=>{const id=(r.parent||r.id).replace(/^training:/,'');const n=families.indexOf(id);return n<0?99:n;};
+    rows.sort((a,b)=>rank(a)-rank(b)||['start','progress','develop','own-it'].indexOf(a.fields.level)-['start','progress','develop','own-it'].indexOf(b.fields.level));
+  }
   const words=value=>Array.isArray(value)?value.join(' '):String(value||'');
   rows=rows.filter(r=>(r.title+' '+words(r.fields.aliases)+' '+words(r.fields.equipment)+' '+words(r.fields.muscles)).toLowerCase().includes(q));
   const filter='<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio',exercise?'exercises':'library')+hidden('view','all')+input('q','Search',params.get('q')||'','search')+select('kind','Content type',{'':'All types',...Object.fromEntries(Object.entries(kinds).filter(([k])=>!exercise||['exercise','activity'].includes(k)))},kind)+select('state','Progress',{'':'Active content',Draft:'Draft','In review':'In review','Changes requested':'Changes requested',Approved:'Approved',Archived:'Archived'},state)+'<button>Search</button></form>';
   return (!exercise?'<a class="back" href="'+url('library')+'">← Content types</a>':'')+heading(exercise?'Exercises & drills':collections[kind]?.[0]||'All content',exercise?'Find instructions, coaching cues and demonstrations.':collections[kind]?.[1]||'Your working Nutrition.fitness content.',button(kind?'Create '+(kinds[kind]||'content').toLowerCase():'Create content',url('new',{kind:kind||(exercise?'exercise':'article')}),true))+filter+
     (!rows.length?'<p class="studio-empty">'+(q||state?'No content matches these filters.':'Nothing here yet. Create the first item or import a starting point from the archive.')+'</p>':'')+
     pages(params,rows,rs=>'<div class="studio-content-grid">'+rs.map(r=>{
-      const preview=meta.training?.[r.id]||meta.assets?.[r.id]?.preview;
-      return '<a class="studio-content-card" href="'+url('item',{id:r.id})+'">'+(preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+badge(r.status)+'</div></a>';
+      const preview=meta.training?.[r.id]||meta.assets?.[r.id]?.preview||meta.training?.[r.parent];
+      return '<a class="studio-content-card" href="'+url('item',{id:r.id})+'">'+(preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks · '+(r.id==='training:nufi365'?'Year-round programme':'Standalone programme')+'</p>':'')+badge(r.status)+'</div></a>';
     }).join('')+'</div>');
 }
 export function createPage(params,data,values={}){
@@ -79,7 +84,7 @@ export function createPage(params,data,values={}){
       input('name','Project name',values.name||'','text','required maxlength="160"')+
       textarea('brief','What do you have in mind?',values.brief||'',4)+input('audience','Who is this for?',values.audience||'')+
       input('outcome','What should they achieve?',values.outcome||'')+
-      '<div class="studio-columns">'+input('weeks','Number of weeks',values.weeks||(choice==='programme'?12:6),'number','min="1" max="52" required')+
+      '<div class="studio-columns">'+(choice==='programme'?select('weeks','Programme length',{4:'4 weeks',6:'6 weeks',8:'8 weeks',12:'12 weeks'},values.weeks||12):input('weeks','Number of weeks',values.weeks||6,'number','min="1" max="52" required'))+
       select('creator','Creator',personOptions(data),values.creator||data.people[0]?.id)+'</div>'+
       input('launch','Target launch date (optional)',values.launch||'','date')+
       (data.aiReady?'<label class="check"><input type="checkbox" name="assist" value="yes" checked> Use AI to tailor the production plan to this brief</label>':'<p class="meta">AI drafting will be available when the account connection is complete.</p>'),
@@ -137,11 +142,17 @@ function readable(value,data){
 }
 export function itemPage(params,data){
   const r=data.byId.get(params.get('id'));if(!r)return heading('Content unavailable');
+  if(r.kind==='programme-family'){
+    const programmes=data.items.filter(x=>x.parent===r.id&&x.kind==='programme'&&x.status!=='Archived');
+    return heading(r.title,'Choose a standalone level programme. You do not need to complete all four in sequence.')+
+      '<div class="studio-cards">'+programmes.map(p=>card(p.title,p.fields.weeks+' weeks · '+(p.fields.audience||''),url('item',{id:p.id}))).join('')+'</div>'+
+      '<section class="panel"><h2>Shared content & assets</h2>'+list(data.items.filter(x=>x.parent===r.id&&x.kind!=='programme'&&x.status!=='Archived'),contentRow)+'</section>';
+  }
   const admin=data.actor.role==='admin',canEdit=admin||data.assigned.has(r.id),state={section:'item',id:r.id};
-  const children=data.items.filter(x=>x.parent===r.id),refs=references(r,data.byId).map(id=>data.byId.get(id));
+  const children=data.items.filter(x=>(x.parent===r.id||(r.fields.sharedContentIds||[]).includes(x.id))&&x.status!=='Archived'),refs=references(r,data.byId).map(id=>data.byId.get(id));
   const parents=data.items.filter(x=>x.id!==r.id&&(x.id===r.parent||references(x,data.byId).includes(r.id)));
   const checks=issues(r,data.items),preview=params.get('tab')==='preview',schedule=r.kind==='structure'&&params.get('tab')!=='edit'&&!preview;
-  let out=heading(r.title,kinds[r.kind]||r.kind,button(preview||schedule?'Edit content':'Member preview',url('item',{id:r.id,tab:preview||schedule?'edit':'preview'}))+(admin?button('Create a project',url('project-from',{id:r.id})):''))+
+  let out=heading(r.title,(kinds[r.kind]||r.kind)+(r.kind==='programme'?' · '+r.fields.weeks+' weeks':''),button(preview||schedule?'Edit content':'Member preview',url('item',{id:r.id,tab:preview||schedule?'edit':'preview'}))+(admin?button('Create a project',url('project-from',{id:r.id})):''))+
     '<p>'+badge(r.status)+' <span class="meta">Version '+(r.revision||1)+(r.updatedAt?' · Saved '+esc(new Date(r.updatedAt).toLocaleDateString('en-GB')):'')+'</span></p>';
   if(children.length){
     const grouped=new Map();for(const child of children){if(!grouped.has(child.kind))grouped.set(child.kind,[]);grouped.get(child.kind).push(child);}

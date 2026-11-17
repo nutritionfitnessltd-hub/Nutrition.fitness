@@ -20,6 +20,8 @@ export function projectDraft(f,data){
   if(!name)throw new HttpError(400,'Give the project a name.');
   if(!data.people.some(p=>p.id===f.creator))throw new HttpError(400,'Choose a creator.');
   const existing=f.rootId&&data.byId.get(f.rootId);
+  if(template.kind==='programme'&&!([4,6,8,12].includes(weeks)||(existing?.id==='training:nufi365'&&weeks===52)))throw new HttpError(400,'Choose 4, 6, 8 or 12 weeks. NUFI365 remains 52 weeks.');
+  if(existing?.kind==='programme'&&weeks!==existing.fields.weeks)throw new HttpError(400,'Keep the project duration aligned with the selected programme.');
   const root=existing||{id:'studio:'+uuid(f.id),kind:template.kind,title:name,status:'Draft',fields:{...blankFields(template.kind),audience:cleanText(f.audience||'',500),outcome:cleanText(f.outcome||'',1000),weeks},parent:null,comments:[]};
   let entries=makeProjectPlan(f.template,weeks);
   if(f.outline){

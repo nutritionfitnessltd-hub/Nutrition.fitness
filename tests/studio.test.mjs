@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import { canonical, descendants, issues } from '../server/studio-model.mjs';
-import { studioData } from '../server/studio-store.mjs';
+import { studioData, mergeStudioRecord } from '../server/studio-store.mjs';
 import { projectDraft, changeStudio } from '../server/studio-actions.mjs';
 import { extractDrafts } from '../server/studio-import.mjs';
 import { handleStudio } from '../server/studio.mjs';
@@ -21,6 +21,24 @@ test('training references retain session-specific dose and reusable exercise ins
   assert.deepEqual([...descendants([session.id],[session,exercise])].sort(),[exercise.id,session.id].sort());
   assert.equal(issues(session,[session,exercise]).length,0);
   assert.match(issues(exercise,[exercise]).join(' '),/demonstration/);
+});
+test('programme revisions preserve source workout doses and later full edits replace the revision',()=>{
+  const base=canonical(session);
+  const revised=mergeStudioRecord(base,{id:base.id,_basePatch:true,title:'Week 12 review',fields:{coaching:'Review the programme'},removedFields:['obsolete']});
+  assert.deepEqual(revised.fields.blocks,base.fields.blocks);
+  assert.deepEqual(revised.fields.warmup,base.fields.warmup);
+  assert.deepEqual(revised.fields.cooldown,base.fields.cooldown);
+  assert.equal(revised._basePatch,undefined);
+  const full={...revised,fields:{warmup:['New preparation'],blocks:[],cooldown:['Walk']}};
+  assert.deepEqual(mergeStudioRecord(base,full),full);
+  assert.equal(base.title,session.title);
+});
+test('programme projects accept standard durations and reserve the year-long exception for NUFI365',()=>{
+  const d=fixture(),input={template:'programme',id:randomUUID(),name:'Programme',creator:staff.id};
+  for(const weeks of [4,6,8,12])assert.equal(projectDraft({...input,weeks},d).project.weeks,weeks);
+  for(const weeks of [13,26,52])assert.throws(()=>projectDraft({...input,weeks},d),/Choose 4/);
+  d.byId.set('training:nufi365',{id:'training:nufi365',kind:'programme',fields:{weeks:52}});
+  assert.equal(projectDraft({...input,weeks:52,rootId:'training:nufi365'},d).project.weeks,52);
 });
 test('recipe extraction preserves source evidence and leaves missing nutrition and servings for review',()=>{
   const text='Vegetable bowl\nIngredients\n100 g beans\nMethod\nWarm the beans.';
