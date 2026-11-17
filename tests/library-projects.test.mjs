@@ -30,6 +30,13 @@ test('six-week project carries weekly library items and new workflow briefs for 
   assert.equal(saved.entries[1].week,3);
   await changeProject(p,{action:'project-entry-remove',revision:4,entry:saved.entries[1].id,week:3},creator,api,load);
   assert.equal(saved.entries.length,1);
+  assert.equal(saved.entries[0].assignedAsset,true);
+  await changeProject(p,{action:'project-attach',revision:5,record:record.id,week:4,assignedAsset:true},creator,api,load);
+  assert.equal(saved.entries[1].assignedAsset,false);
+  const grant={action:'project-allow-asset',revision:6,week:4,entry:saved.entries[1].id};
+  await assert.rejects(changeProject(p,grant,creator,api,load),/valid project action/);
+  await changeProject(p,grant,admin,api,load);
+  assert.equal(saved.entries[1].assignedAsset,true);
 });
 test('one course card leads to ordered lessons and supporting resources',()=>{
   const base={group:'Courses',status:'reference',fields:{},files:[]};
