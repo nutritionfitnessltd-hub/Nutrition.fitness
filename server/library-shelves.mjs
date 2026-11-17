@@ -49,9 +49,18 @@ export function shelfView(index,params,meta={}) {
   const all=shelf==='All content',sources=shelf==='Source collections',training=shelf==='Training';
   const rows=index.records.filter(r=>all || (sources?r.id.startsWith('catalogue:'):training?r.kind==='programme':displayName(r.group)===shelf));
   const groups=new Map(), loose=[];
+  const courseNames=new Map();
+  if(shelf==='Courses'){
+    for(const [name,c] of Object.entries(meta.courses||{})){
+      for(const id of [...c.members,'course:'+name]){
+        if(!courseNames.has(id))courseNames.set(id,[]);
+        courseNames.get(id).push(name);
+      }
+    }
+  }
   for (const r of rows) {
     const m=meta.assets?.[r.id];
-    const names=sources?(m?.sources||[r.fields.collection].filter(Boolean)):all||training?[]:[m?.shelf].filter(Boolean);
+    const names=courseNames.get(r.id)||(sources?(m?.sources||[r.fields.collection].filter(Boolean)):all||training?[]:[m?.shelf].filter(Boolean));
     if (!names.length) loose.push(r);
     for(const name of names){if(!groups.has(name))groups.set(name,[]);groups.get(name).push(r);}
   }
@@ -59,7 +68,30 @@ export function shelfView(index,params,meta={}) {
   let cards=folder?(groups.get(folder)||[]).map(r=>recordCard(r,meta)):[
     ...groupedCards(rows,groups,meta,shelf,mode).filter(c=>c.records.some(matchesMode)),
     ...loose.filter(matchesMode).sort((a,b)=>all||training?0:a.title.localeCompare(b.title,'en')).map(r=>recordCard(r,meta))];
+  const sourceShelf=sources?'collections':shelf==='Needs sorting'?'Unsorted':shelf;
+  const original=meta.originalShelves;
+  const order=original?.order?.[sourceShelf]?.[shelf==='Recipes'?mode:'books'];
+  if(order && !(params.has('group')&&q&&!params.has('tab'))){
+    const byId=new Map(index.records.map(r=>[r.id,r]));
+    const members=name=>(original.groups[sourceShelf]?.[name]||[]).map(id=>byId.get(id)).filter(Boolean);
+    if(folder)cards=members(folder).map(r=>recordCard(r,meta));
+    else cards=order.flatMap(c=>{
+      if(c.id)return byId.has(c.id)?[recordCard(byId.get(c.id),meta)]:[];
+      const records=members(c.folder);
+      return records.length?groupedCards(rows,new Map([[c.folder,records]]),meta,shelf,mode):[];
+    });
+  }
   const choices=[...new Set(rows.flatMap(r=>meta.assets?.[r.id]?.sources||[r.fields.collection]).filter(Boolean))].sort();
+  if(shelf==='Courses'&&!folder){
+    for(const card of cards){
+      const course=meta.courses?.[card.title];
+      if(!course)continue;
+      card.to={item:'course:'+card.title};
+      const lessons=course.sections.reduce((total,s)=>total+s.entries.filter(e=>e.id).length,0);
+      card.summary=lessons?lessons+' lesson files':'Lesson order needs checking';
+      card.preview=meta.collections?.[card.title]||card.preview;
+    }
+  }
   const statuses=[...new Set(rows.map(r=>r.status).filter(Boolean))].sort();
   cards=cards.filter(c=>c.records.some(r=>(!progress||r.status===progress)&&(!source||(meta.assets?.[r.id]?.sources||[r.fields.collection]).includes(source)))&&(!q||[c.title,...c.records.map(r=>r.title+' '+r.kind+' '+(r.fields.collection||''))].join(' ').toLowerCase().includes(q.toLowerCase())));
   const count=Math.max(1,Math.ceil(cards.length/24)), page=Math.min(count,Math.max(1,parseInt(params.get('page'))||1));

@@ -2,6 +2,7 @@ import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from
 import { platform, membership, verifiedUser, cookies, email, uuid, HttpError, session } from './platform.mjs';
 import { signInProvisioned } from './provisioned-login.mjs';
 import { esc, frame, link } from './library-shelves.mjs';
+import { projectScreen, changeProject } from './library-projects.mjs';
 
 const cookieName='__Host-nufi-library-work';
 const route='/content-library/?work=1';
@@ -32,8 +33,8 @@ function issue(res,key,claims) {
   const payload=Buffer.from(JSON.stringify({...claims,expires})).toString('base64url');
   setWorkCookie(res,payload+'.'+sign(key,payload),3600);
 }
-function signInPage(item) {
-  const target=link({work:'1',item});
+function signInPage(item,projectParams={}) {
+  const target=link({work:'1',item,...projectParams});
   const credentials='<label>Email<input type="email" name="email" maxlength="254" autocomplete="username" required></label>';
   return '<h1>Work assignments</h1><div class="work-login"><section class="panel"><h2>Administrator</h2>'+form('admin-login',credentials+'<label>Website account password<input type="password" name="password" autocomplete="current-password" required></label><button class="primary">Open admin screen</button>',target)+'</section><section class="panel"><h2>My assignments</h2>'+form('staff-login',credentials+'<label>Personal work code<input type="password" name="code" maxlength="128" autocomplete="current-password" required></label><button>Open my queue</button>',target)+'</section></div>';
 }
@@ -104,6 +105,7 @@ async function dashboard(params,api,actor,load) {
   const filter=(admin?(person?'&staff_id=eq.'+person:''):'&staff_id=eq.'+actor.id)+(status?'&status=eq.'+encodeURIComponent(status):'');
   const rows=await api(tasksTable+'?select=id,title,instructions,staff_id,record_id,record_title,due_date,status,revision&order=due_date.asc.nullslast,created_at.desc,id.asc&limit=31&offset='+((page-1)*30)+filter,service);
   let out='<div class="workbar"><h1>'+esc(admin?'Work assignments':actor.name+'’s assignments')+'</h1>'+form('work-logout','<button>Leave work screen</button>')+'</div><div class="panels">';
+  out+='<section class="panel"><h2>Projects</h2><a class="btn" href="'+link({work:'1',projects:'1'})+'">'+(admin?'Create and manage projects':'Open my projects')+'</a></section>';
   if(admin){
     const q=(params.get('find')||'').trim().slice(0,160);
     const item=params.get('item');
@@ -145,6 +147,8 @@ async function change(actor,f,api,load) {
 }
 export async function handleLibraryWork(req,res,{env,load,params,apiFactory=platform}) {
   const item=params.get('item')||'';
+  const projects=params.get('projects')==='1';
+  const destination=projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
   try {
     if(!['GET','POST'].includes(req.method))throw new HttpError(405,'Use the work screen to continue.');
     const key=env.NUFI_LIBRARY_CATALOGUE_KEY;
@@ -153,9 +157,18 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
     const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
     if(req.method==='POST'&&f.action==='work-logout'){setWorkCookie(res,'',0);return redirect(res);}
     const api=apiFactory(env);
-    if(req.method==='POST'&&['admin-login','staff-login'].includes(f.action)){await login(f,res,api,env,key);return redirect(res,item);}
+    if(req.method==='POST'&&['admin-login','staff-login'].includes(f.action)){
+      await login(f,res,api,env,key);
+      if(projects){res.statusCode=303;res.setHeader('Location',route+'&'+new URLSearchParams(destination));return res.end();}
+      return redirect(res,item);
+    }
     const actor=await readActor(req,res,api,env,key);
-    if(!actor)return writePage(res,401,signInPage(item));
+    if(!actor)return writePage(res,401,signInPage(item,destination));
+    if(projects){
+      if(req.method==='GET')return writePage(res,200,await projectScreen(params,actor,api,load));
+      const next=await changeProject(params,f,actor,api,load);
+      res.statusCode=303;res.setHeader('Location',route+'&projects=1&'+new URLSearchParams(next));return res.end();
+    }
     if(req.method==='POST'){
       const message=await change(actor,f,api,load);
       return message?writePage(res,200,message):redirect(res);
@@ -163,6 +176,6 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
     return writePage(res,200,await dashboard(params,api,actor,load));
   }catch(e){
     const status=e instanceof HttpError?e.status:503;
-    return writePage(res,status,'<p role="alert">'+esc(e instanceof HttpError?e.message:'The work screen could not be loaded. Please try again shortly.')+'</p>'+(status===401?signInPage(item):'<a href="'+route+'">Return to work assignments</a>'));
+    return writePage(res,status,'<p role="alert">'+esc(e instanceof HttpError?e.message:'The work screen could not be loaded. Please try again shortly.')+'</p>'+(status===401?signInPage(item,destination):'<a href="'+link({work:'1',...destination})+'">Return to '+(projects?'projects':'work assignments')+'</a>'));
   }
 }
