@@ -18,7 +18,7 @@ export const templates={
 };
 export function blankFields(kind){
   const fields={
-    programme:{purpose:'',audience:'',outcome:'',weeks:12,stageIds:[]},
+    programme:{purpose:'',audience:'',outcome:'',weeks:12,scheduleIds:[]},
     stage:{description:'',entryCriteria:'',exitCriteria:'',weeks:12,frequencies:[3,4,5],equipment:[],stageNotes:''},
     structure:{frequency:3,spacing:'',restRules:'',weeks:[{number:1,title:'',message:'',progression:'',sessionIds:[]}],busyWeek:{explanation:'',sessionIds:[]}},
     session:{introduction:'',duration:45,warmup:[''],blocks:[{type:'exercise',referenceId:'',sets:3,repMin:8,repMax:12,restSeconds:90,effortType:'RIR',effortValue:3,notes:''}],cooldown:['']},
@@ -102,6 +102,7 @@ export function issues(record,records){
     communication:['channel','trigger','timing','body'],campaign:['body'],workflow:['trigger','steps'],asset:['brief']
   };
   for(const key of required[record.kind]||[])if(!present(d[key]))out.push('Add '+key.replace(/([A-Z])/g,' $1').toLowerCase()+'.');
+  if(record.kind==='programme'&&!((record.id==='training:nufi365'&&d.weeks===52)||[4,6,8,12].includes(d.weeks)))out.push('Choose a programme length of 4, 6, 8 or 12 weeks. NUFI365 remains 52 weeks.');
   if(record.kind==='exercise'&&!d.media?.videoUrl)out.push('Add a demonstration video.');
   if(record.kind==='recipe'&&!(Number(d.servings)>0))out.push('Confirm servings.');
   if(record.kind==='session'){
