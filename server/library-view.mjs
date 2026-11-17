@@ -1,4 +1,5 @@
 import { frame, activeShelf, shelfView, link } from './library-shelves.mjs';
+import { assetButton } from './library-assets.mjs';
 const path = '/content-library/';
 const escape = value => String(value ?? '').replace(/[<>&"']/g, c => ({ '<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;', "'":'&#39;' })[c]);
 const href = values => path + '?' + escape(new URLSearchParams(values).toString());
@@ -46,11 +47,11 @@ function contents(index, params, meta) {
     const course=current.kind==='Course outline' && meta.courses?.[current.title];
     if(course){
       const tab=params.get('tab')||(course.sections.length?'lessons':'support');
-      const row=(id,title)=>byId.has(id)?'<a href="'+href({item:id,from:current.id})+'">'+escape(byId.get(id).title)+'</a>':'<span>'+escape(title||'File unavailable')+'</span>';
+      const row=(id,title)=>byId.has(id)?'<a href="'+href({item:id,from:current.id})+'">'+escape(byId.get(id).title)+'</a> '+assetButton(id):'<span>'+escape(title||'File unavailable')+'</span>';
       const modules=course.sections.map(s=>'<section><h2>'+escape(s.title)+'</h2><ol>'+s.entries.map(e=>'<li>'+row(e.id,e.title)+'</li>').join('')+'</ol></section>').join('');
       const roles=[...new Set(course.support.map(s=>s.role))];
       const resources=roles.map(role=>'<section><h2>'+escape(role)+'</h2><ul>'+course.support.filter(s=>s.role===role).map(s=>'<li>'+row(s.id)+'</li>').join('')+'</ul></section>').join('');
-      return '<a class="back" href="'+href({shelf:'Courses'})+'">← Courses</a><article><a class="assign-link" href="'+href({work:'1',item:current.id})+'">Assign work</a><h1>'+escape(current.title)+'</h1><p>'+escape(({confirmed:'Course order confirmed',partial:'Course order partly confirmed',unconfirmed:'Lesson order needs checking'})[course.order]||'Lesson order needs checking')+'</p><nav class="tabs">'+[['lessons','Lessons'],['support','Supporting files']].map(([t,name])=>'<a href="'+href({item:current.id,tab:t})+'"'+(t===tab?' aria-current="page"':'')+'>'+name+'</a>').join('')+'</nav>'+(tab==='support'?resources||'<p>No supporting files recorded.</p>':modules||'<p>No lesson order has been confirmed.</p>')+'</article>';
+      return '<a class="back" href="'+href({shelf:'Courses'})+'">← Courses</a><article><a class="assign-link" href="'+href({work:'1',item:current.id})+'">Assign work</a><h1>'+escape(current.title)+'</h1>'+assetButton(current.id,'Course asset links')+'<p>'+escape(({confirmed:'Course order confirmed',partial:'Course order partly confirmed',unconfirmed:'Lesson order needs checking'})[course.order]||'Lesson order needs checking')+'</p><nav class="tabs">'+[['lessons','Lessons'],['support','Supporting files']].map(([t,name])=>'<a href="'+href({item:current.id,tab:t})+'"'+(t===tab?' aria-current="page"':'')+'>'+name+'</a>').join('')+'</nav>'+(tab==='support'?resources||'<p>No supporting files recorded.</p>':modules||'<p>No lesson order has been confirmed.</p>')+'</article>';
     }
     const files = current.files.map(id => [id,index.files[id]]).filter(([,f]) => f);
     const related = index.records.filter(r => r.parent === current.id);
@@ -63,7 +64,7 @@ function contents(index, params, meta) {
     const cover = !index.downloadsPaused && current.image && index.files[current.image];
     const parent = byId.get(current.parent)||byId.get(params.get('from'));
     return '<nav><a href="' + path + '">Library</a> / <a href="' + href({group:current.group}) + '">' + escape(current.group) + '</a>' + (parent ? ' / <a href="' + href({item:parent.id}) + '">' + escape(parent.title) + '</a>' : '') + '</nav>' +
-      '<article><a class="assign-link" href="'+link({work:'1',item:current.id})+'">Assign work</a><p class="meta">' + escape(current.kind) + ' · ' + escape(label(current.status)) + '</p><h1>' + escape(current.title) + '</h1>' +
+      '<article><a class="assign-link" href="'+link({work:'1',item:current.id})+'">Assign work</a><p class="meta">' + escape(current.kind) + ' · ' + escape(label(current.status)) + '</p><h1>' + escape(current.title) + '</h1>' + (current.id.startsWith('catalogue:') || current.kind==='asset' || related.length ? assetButton(current.id) : '') +
       (preview ? '<img class="detail-preview" alt="" src="'+link({preview})+'">' : cover ? '<img class="cover" alt="" src="' + href({file:current.image,image:'1'}) + '">' : '') +
       (related.length ? '<section><h2>Explore ' + escape(current.title) + '</h2><ul>' + related.map(r => '<li><a href="' + href({item:r.id}) + '">' + escape(r.title) + '</a></li>').join('') + '</ul></section>' : '') +
       sections.join('') +
