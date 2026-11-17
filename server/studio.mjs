@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { HttpError } from './platform.mjs';
 import { displayEntry } from './library-display.mjs';
-import { studioData, editable, projectFor, saveRecord } from './studio-store.mjs';
+import { studioData, editable, projectFor, saveRecord, mergeStudioRecord } from './studio-store.mjs';
 import { templates, blankFields, issues, descendants, cleanText } from './studio-model.mjs';
 import { home, library, createPage, projectList, projectPage, itemPage, newItem, reviewPage, calendar, journey, releasePage } from './studio-pages.mjs';
 import { archivePage, importPage, extractDrafts, importPreview } from './studio-import.mjs';
@@ -28,6 +28,7 @@ function standardsPage(data,env){
 async function history(params,data,api){
   const r=editable(data,params.get('id'));
   const versions=await api('/rest/v1/nufi_studio_versions?item_id=eq.'+encodeURIComponent(r.id)+'&select=revision,payload,created_at&order=revision.desc&limit=50',{service:true});
+  for(const version of versions)version.payload=mergeStudioRecord(data.index.records.find(x=>x.id===r.id),version.payload);
   return heading('Version history',r.title,button('Back to content',url('item',{id:r.id})))+
     list(versions,v=>'<div><strong>Version '+v.revision+'</strong><small>'+esc(v.created_at.slice(0,16).replace('T',' '))+' · '+esc(v.payload.status)+'</small><details><summary>Read this version</summary><pre class="source-text">'+esc(JSON.stringify(v.payload.fields,null,2))+'</pre></details></div>','The original imported version is available. Saving changes will begin the version history.');
 }
@@ -117,7 +118,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env}){
         body=heading('Create a project around '+r.title,'Plan the work needed to develop and release this content.')+
           form('plan-preview',hidden('id',randomUUID())+hidden('rootId',r.id)+hidden('template',Object.hasOwn(templates,r.kind)?r.kind:'custom')+
             input('name','Project name','Finish '+r.title)+textarea('brief','What needs doing?')+input('audience','Audience',r.fields.audience||'')+
-            input('outcome','Outcome',r.fields.outcome||'')+input('weeks','Number of weeks',Math.min(52,Number(r.fields.weeks)||6),'number','min="1" max="52" required')+
+            input('outcome','Outcome',r.fields.outcome||'')+(r.kind==='programme'?hidden('weeks',r.fields.weeks)+'<p>Programme length: '+esc(r.fields.weeks)+' weeks</p>':input('weeks','Number of weeks',Math.min(52,Number(r.fields.weeks)||6),'number','min="1" max="52" required'))+
             select('creator','Creator',Object.fromEntries(data.people.map(p=>[p.id,p.name])))+input('launch','Target launch date','','date'),
             {section:'create'},'Preview project plan');break;
       }
