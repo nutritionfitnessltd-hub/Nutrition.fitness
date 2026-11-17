@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { kinds, templates, blankFields, references, descendants, issues } from './studio-model.mjs';
 import { projectFor } from './studio-store.mjs';
+import { icons } from './library-icons.mjs';
 import { esc, url, heading, button, hidden, input, textarea, select, form, list, pages, badge } from './studio-ui.mjs';
 
 const card=(title,text,href)=>'<a class="studio-card" href="'+href+'"><h2>'+esc(title)+'</h2><p>'+esc(text)+'</p><span aria-hidden="true">↗</span></a>';
@@ -8,6 +9,28 @@ const itemLink=r=>'<a href="'+url('item',{id:r.id})+'">'+esc(r.title)+'</a>';
 const personOptions=d=>Object.fromEntries(d.people.map(p=>[p.id,p.name]));
 const projectChoices=d=>({'':'Library only',...Object.fromEntries(d.projects.filter(p=>p.status!=='Complete').map(p=>[p.id,p.name]))});
 const contentRow=r=>'<div>'+itemLink(r)+'<small>'+esc(kinds[r.kind]||r.kind)+'</small></div>'+badge(r.status);
+const collections={
+  programme:['Training programmes','Complete training pathways and their stages.','Dumbbell'],
+  recipe:['Recipes','Ingredients, methods and nutrition information.','Utensils'],
+  mealplan:['Meal plans','Weekly menus and recipe collections.','Utensils'],
+  exercise:['Exercises','Reusable instructions and demonstrations.','Dumbbell'],
+  activity:['Activities & drills','Running, swimming, cycling and fitness practice.','Dumbbell'],
+  session:['Workouts','Warm-up, main work and cool-down.','ClipboardList'],
+  challenge:['Challenges','Guided journeys with a clear finish line.','CheckCheck'],
+  course:['Courses','Structured learning and practical activities.','BookOpen'],
+  lesson:['Lessons','Individual lessons to use in your courses.','BookOpen'],
+  article:['Articles','Helpful advice and educational content.','FileText'],
+  ebook:['E-books','Longer guides and downloadable books.','Book'],
+  communication:['Coaching messages','WhatsApp messages, emails and member encouragement.','MessageCircle'],
+  campaign:['Marketing content','Campaigns, launch copy and promotional content.','Briefcase'],
+  workflow:['GHL workflows','Triggers, timing, messages and follow-up steps.','Layers'],
+  asset:['Creative assets','Images, video briefs and supporting materials.','FolderOpen'],
+  learning:['Learning content','Guides and useful supporting explanations.','BookOpen'],
+  stage:['Training stages','Start, Develop, Progress and Own It.','Layers'],
+  structure:['Weekly schedules','Training days and week-by-week plans.','LayoutGrid'],
+  rule:['Progression rules','When and how the training moves forward.','ClipboardList'],
+  review:['Check-ins','Questions, reflections and progress reviews.','CheckCheck']
+};
 
 export function home(data){
   const mine=data.actor.role==='admin'?data.items:data.items.filter(r=>data.assigned.has(r.id));
@@ -23,11 +46,22 @@ export function home(data){
 }
 export function library(params,data,meta={}){
   const exercise=params.get('studio')==='exercises',kind=params.get('kind')||'',q=(params.get('q')||'').toLowerCase(),state=params.get('state')||'';
-  let rows=data.items.filter(r=>r.kind!=='settings'&&(exercise?['exercise','activity'].includes(r.kind)&&(!kind||r.kind===kind):kind?r.kind===kind:!['stage','structure','session','activity','rule','review'].includes(r.kind))&&(!state?r.status!=='Archived':r.status===state));
+  if(!exercise&&!kind&&!q&&!state&&params.get('view')!=='all'){
+    const counts=new Map();
+    for(const r of data.items)if(r.status!=='Archived')counts.set(r.kind,(counts.get(r.kind)||0)+1);
+    return heading('Content library','Choose a content type to browse, create or continue your work.',button('Create content',url('new'),true))+
+      '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','library')+hidden('view','all')+input('q','Search all content','','search')+'<button>Search</button>'+button('Browse all content',url('library',{view:'all'}))+'</form>'+
+      '<nav class="studio-cards studio-type-grid" aria-label="Content types">'+Object.entries(collections).map(([id,[title,description,icon]])=>{
+        const count=counts.get(id)||0;
+        return '<a class="studio-card studio-type-card" href="'+url('library',{kind:id})+'"><div class="studio-type-icon" aria-hidden="true">'+icons[icon]+'</div><h2>'+title+'</h2><p>'+description+'</p><div class="studio-type-count">'+count.toLocaleString('en-GB')+' '+(count===1?'item':'items')+'</div><span aria-hidden="true">→</span></a>';
+      }).join('')+'</nav>';
+  }
+  let rows=data.items.filter(r=>r.kind!=='settings'&&(exercise?['exercise','activity'].includes(r.kind)&&(!kind||r.kind===kind):!kind||r.kind===kind)&&(!state?r.status!=='Archived':r.status===state));
   const words=value=>Array.isArray(value)?value.join(' '):String(value||'');
   rows=rows.filter(r=>(r.title+' '+words(r.fields.aliases)+' '+words(r.fields.equipment)+' '+words(r.fields.muscles)).toLowerCase().includes(q));
-  const filter='<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio',exercise?'exercises':'library')+input('q','Search',params.get('q')||'','search')+select('kind','Content type',{'':'All types',...Object.fromEntries(Object.entries(kinds).filter(([k])=>!exercise||['exercise','activity'].includes(k)))},kind)+select('state','Progress',{'':'Active content',Draft:'Draft','In review':'In review','Changes requested':'Changes requested',Approved:'Approved',Archived:'Archived'},state)+'<button>Search</button></form>';
-  return heading(exercise?'Exercises & drills':'Content library',exercise?'Find instructions, coaching cues and demonstrations.':'Your working Nutrition.fitness content.',button('Create content',url('new',{kind:exercise?'exercise':'article'}),true))+filter+
+  const filter='<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio',exercise?'exercises':'library')+hidden('view','all')+input('q','Search',params.get('q')||'','search')+select('kind','Content type',{'':'All types',...Object.fromEntries(Object.entries(kinds).filter(([k])=>!exercise||['exercise','activity'].includes(k)))},kind)+select('state','Progress',{'':'Active content',Draft:'Draft','In review':'In review','Changes requested':'Changes requested',Approved:'Approved',Archived:'Archived'},state)+'<button>Search</button></form>';
+  return (!exercise?'<a class="back" href="'+url('library')+'">← Content types</a>':'')+heading(exercise?'Exercises & drills':collections[kind]?.[0]||'All content',exercise?'Find instructions, coaching cues and demonstrations.':collections[kind]?.[1]||'Your working Nutrition.fitness content.',button(kind?'Create '+(kinds[kind]||'content').toLowerCase():'Create content',url('new',{kind:kind||(exercise?'exercise':'article')}),true))+filter+
+    (!rows.length?'<p class="studio-empty">'+(q||state?'No content matches these filters.':'Nothing here yet. Create the first item or import a starting point from the archive.')+'</p>':'')+
     pages(params,rows,rs=>'<div class="studio-content-grid">'+rs.map(r=>{
       const preview=meta.training?.[r.id]||meta.assets?.[r.id]?.preview;
       return '<a class="studio-content-card" href="'+url('item',{id:r.id})+'">'+(preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+badge(r.status)+'</div></a>';
@@ -52,8 +86,16 @@ export function createPage(params,data,values={}){
       {section:'create',template:choice},'Preview project plan');
 }
 export function projectList(params,data){
-  return heading(data.actor.role==='admin'?'Projects':'My projects','Bring the content, people and customer journey together.',data.actor.role==='admin'?button('Create a project',url('create'),true):'')+
-    pages(params,data.projects,rows=>list(rows,p=>'<div><a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a><small>'+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+' · '+p.weeks+' weeks'+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</small></div>'+badge(p.status)));
+  const kind=params.get('kind')||'',categories={...collections,other:['Other projects','Projects without a content type.','Briefcase']};
+  const projectKind=p=>data.byId.get(p.studio?.rootId)?.kind||templates[p.studio?.type]?.kind||'other';
+  if(!kind&&params.get('view')!=='all')return heading(data.actor.role==='admin'?'Projects':'My projects','Choose the type of content you want to work on.',data.actor.role==='admin'?button('Create a project',url('create'),true):'')+
+    button('Browse all projects',url('projects',{view:'all'}))+'<nav class="studio-cards studio-type-grid" aria-label="Project content types">'+Object.entries(categories).filter(([id])=>id!=='other'||data.projects.some(p=>projectKind(p)==='other')).map(([id,[title,description,icon]])=>{
+      const count=data.projects.filter(p=>projectKind(p)===id).length;
+      return '<a class="studio-card studio-type-card" href="'+url('projects',{kind:id})+'"><div class="studio-type-icon" aria-hidden="true">'+icons[icon]+'</div><h2>'+title+'</h2><p>'+description+'</p><div class="studio-type-count">'+count+' '+(count===1?'project':'projects')+'</div><span aria-hidden="true">→</span></a>';
+    }).join('')+'</nav>';
+  const selected=data.projects.filter(p=>!kind||projectKind(p)===kind);
+  return '<a class="back" href="'+url('projects')+'">← Project types</a>'+heading((categories[kind]?.[0]||'All')+' projects','Bring the content, people and customer journey together.',data.actor.role==='admin'?button('Create a project',url('create'),true):'')+
+    pages(params,selected,rows=>list(rows,p=>'<div><a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a><small>'+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+' · '+p.weeks+' weeks'+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</small></div>'+badge(p.status),'No projects of this type yet.'));
 }
 export function projectPage(params,data){
   const p=projectFor(data,params.get('project')),week=Math.max(0,Math.min(p.weeks,Number(params.get('week'))||0)),admin=data.actor.role==='admin';
@@ -61,7 +103,12 @@ export function projectPage(params,data){
   const root=data.byId.get(p.studio.rootId);
   const nav='<nav class="tabs" aria-label="Project weeks">'+Array.from({length:p.weeks+1},(_,w)=>'<a href="'+url('project',{project:p.id,week:w})+'"'+(week===w?' aria-current="page"':'')+'>'+(w?'Week '+w:'Preparation')+'</a>').join('')+'</nav>';
   const tasks=p.entries.filter(e=>e.week===week);
-  const rows=tasks.map(e=>{
+  const taskRows=new Map();
+  for(const e of tasks){
+    const type=data.byId.get(e.record)?.kind||Object.keys(kinds).find(k=>kinds[k]===e.kind)||({'PT WhatsApp message':'communication','Content to create':'article'})[e.kind]||'article';
+    if(!taskRows.has(type))taskRows.set(type,[]);taskRows.get(type).push(e);
+  }
+  const rows=[...taskRows].map(([type,entries])=>'<section class="studio-task-group"><h3>'+esc(collections[type]?.[0]||'Content')+'</h3>'+entries.map(e=>{
     const r=data.byId.get(e.record);
     return '<section class="studio-task"><div class="studio-heading"><div><small>'+esc(e.kind)+'</small><h3>'+esc(e.title)+'</h3></div>'+badge(e.status)+'</div><p class="prose">'+esc(e.notes||'')+'</p>'+
       (r?button('Open content',url('item',{id:r.id})):button('Create this content',url('new',{project:p.id,entry:e.id,kind:e.kind==='PT WhatsApp message'?'communication':e.kind==='Creative asset'?'asset':e.kind==='GHL workflow'?'workflow':'article',title:e.title})))+
@@ -69,7 +116,7 @@ export function projectPage(params,data){
       input('title','Task',e.title,'text','required maxlength="160"')+textarea('notes','Brief and feedback',e.notes||'')+
       select('status','Progress',Object.fromEntries((admin?['To do','In progress','Ready for review','Changes requested','Done']:['To do','In progress','Ready for review','Changes requested']).map(x=>[x,x])),e.status)+
       input('week','Week (0 is preparation)',e.week,'number','min="0" max="'+p.weeks+'"')+input('due','Due date',e.due||'','date'),state)+'</details></section>';
-  }).join('');
+  }).join('')+'</section>').join('');
   const candidates=data.items.filter(r=>(r.title+' '+r.kind).toLowerCase().includes((params.get('find')||'').toLowerCase())).slice(0,35);
   return heading(p.name,p.studio.audience||p.brief,button('Preview journey',url('journey',{project:p.id}))+button('Release preparation',url('release',{project:p.id})))+
     '<p class="studio-project-meta">'+esc(p.status)+' · '+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</p>'+
@@ -96,7 +143,11 @@ export function itemPage(params,data){
   const checks=issues(r,data.items),preview=params.get('tab')==='preview',schedule=r.kind==='structure'&&params.get('tab')!=='edit'&&!preview;
   let out=heading(r.title,kinds[r.kind]||r.kind,button(preview||schedule?'Edit content':'Member preview',url('item',{id:r.id,tab:preview||schedule?'edit':'preview'}))+(admin?button('Create a project',url('project-from',{id:r.id})):''))+
     '<p>'+badge(r.status)+' <span class="meta">Version '+(r.revision||1)+(r.updatedAt?' · Saved '+esc(new Date(r.updatedAt).toLocaleDateString('en-GB')):'')+'</span></p>';
-  if(children.length)out+='<section class="panel"><h2>Included content</h2>'+list(children,contentRow)+'</section>';
+  if(children.length){
+    const grouped=new Map();for(const child of children){if(!grouped.has(child.kind))grouped.set(child.kind,[]);grouped.get(child.kind).push(child);}
+    const section=params.get('contentKind')||children[0].kind;
+    out+='<section class="panel"><h2>Included content</h2><nav class="tabs" aria-label="Included content types">'+[...grouped].map(([kind,items])=>'<a href="'+url('item',{id:r.id,tab:params.get('tab')||'',contentKind:kind})+'"'+(section===kind?' aria-current="page"':'')+'>'+esc(collections[kind]?.[0]||kinds[kind]||kind)+' ('+items.length+')</a>').join('')+'</nav>'+list(grouped.get(section)||[],contentRow)+'</section>';
+  }
   if(schedule){
     const weeks=r.fields.weeks||[],week=weeks.find(w=>String(w.number)===params.get('week'))||weeks[0];
     const frequencies=data.items.filter(x=>x.kind==='structure'&&x.parent===r.parent);
