@@ -10,6 +10,14 @@ const membership=products.find(p=>p.id==='nufi-membership');
 const root=path.resolve(import.meta.dirname,'..'),out=path.join(root,'dist');
 await fs.rm(out,{recursive:true,force:true});await fs.mkdir(out,{recursive:true});
 await fs.cp(path.join(root,'public'),out,{recursive:true});
+const pdfAssets=path.join(out,'studio-pdf');
+await fs.mkdir(pdfAssets,{recursive:true});
+for(const file of ['pdf.mjs','pdf.worker.mjs']){
+  await fs.copyFile(path.join(root,'node_modules/pdfjs-dist/build',file),path.join(pdfAssets,file));
+}
+for(const directory of ['wasm','standard_fonts','cmaps']){
+  await fs.cp(path.join(root,'node_modules/pdfjs-dist',directory),path.join(pdfAssets,directory),{recursive:true});
+}
 await fs.copyFile(path.join(root,'src/data.mjs'),path.join(out,'data.mjs'));
 await fs.copyFile(path.join(root,'src/collection-books.mjs'),path.join(out,'collection-books.mjs'));
 await fs.copyFile(path.join(root,'src/commerce.mjs'),path.join(out,'commerce.mjs'));
