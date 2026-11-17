@@ -32,75 +32,73 @@ const collections={
   review:['Check-ins','Questions, reflections and progress reviews.','CheckCheck']
 };
 
-export function home(data){
-  const mine=data.actor.role==='admin'?data.items:data.items.filter(r=>data.assigned.has(r.id));
-  const pending=mine.filter(r=>r.status==='In review');
-  const tasks=data.projects.flatMap(p=>p.entries.filter(e=>!['Done'].includes(e.status)).map(e=>({...e,project:p})));
-  return heading(data.actor.role==='admin'?'What would you like to create?':'Your content workspace','Develop an idea, continue a project or review the next piece of work.')+
-    '<div class="studio-cards">'+card('Create something','Start with an idea, a template or the archive.',url('create'))+
-    card('Continue a project',data.projects.filter(p=>p.status!=='Complete').length+' active projects',url('projects'))+
-    card('Review work',pending.length+' items awaiting review',url('review'))+
-    card('Find content','Explore your programmes, recipes, exercises and messages.',url('library'))+'</div>'+
-    '<div class="studio-columns"><section class="panel"><h2>Next work to do</h2>'+list(tasks.slice(0,8),t=>'<div><a href="'+url('project',{project:t.project.id,week:t.week})+'">'+esc(t.title)+'</a><small>'+esc(t.project.name)+' · '+(t.week?'Week '+t.week:'Preparation')+'</small></div>'+badge(t.status),'Create a project to turn an idea into clear production tasks.')+'</section>'+
-    '<section class="panel"><h2>Your training programmes</h2>'+list(data.items.filter(r=>r.kind==='programme'&&r.status!=='Archived'),contentRow)+'</section></div>';
+const shelves={
+  programmes:{title:'Programmes',description:'Training plans and challenges.',icon:'Dumbbell',types:['programme','programme-family','challenge','stage','structure','session','rule','review'],create:'programme'},
+  recipes:{title:'Recipes',description:'Recipes, meal plans and recipe books.',icon:'Utensils',types:['recipe','mealplan'],create:'recipe'},
+  exercises:{title:'Exercises',description:'Exercises, demonstrations and sport drills.',icon:'Dumbbell',types:['exercise','activity'],create:'exercise'},
+  courses:{title:'Courses & guides',description:'Courses, lessons, articles and e-books.',icon:'BookOpen',types:['course','lesson','article','ebook','learning'],create:'course'},
+  messages:{title:'Messages',description:'Coaching, email, WhatsApp and GHL workflows.',icon:'MessageCircle',types:['communication','workflow'],create:'communication'},
+  marketing:{title:'Marketing & assets',description:'Campaigns, images, videos and supporting files.',icon:'Briefcase',types:['campaign','asset'],create:'campaign'}
+};
+const createLink=(kind,admin=true)=>admin&&templates[kind]?url('create',{template:kind}):url('new',{kind});
+function workSummary(data){
+  const pending=data.items.filter(r=>r.status==='In review'&&(data.actor.role==='admin'||data.assigned.has(r.id))).length;
+  const projects=data.projects.filter(p=>p.status!=='Complete');
+  return '<div class="studio-workbar">'+button('Work in progress ('+projects.length+')',url('projects',{view:'all'}))+button('Review work ('+pending+')',url('review'))+'</div>'+
+    (projects.length?'<details class="panel"><summary>Continue your work</summary>'+list(projects.slice(0,6),p=>'<div><a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a><small>'+esc(data.people.find(x=>x.id===p.creator_id)?.name||'Assigned creator')+'</small></div>'+badge(p.status))+'</details>':'');
+}
+export function home(data,meta={}){
+  return library(new URLSearchParams({studio:'library'}),data,meta);
 }
 export function library(params,data,meta={}){
   const exercise=params.get('studio')==='exercises',kind=params.get('kind')||'',q=(params.get('q')||'').toLowerCase(),state=params.get('state')||'';
-  if(!exercise&&!kind&&!q&&!state&&params.get('view')!=='all'){
-    const counts=new Map();
-    for(const r of data.items)if(r.status!=='Archived')counts.set(r.kind,(counts.get(r.kind)||0)+1);
-    return heading('Content library','Choose a content type to browse, create or continue your work.',button('Create content',url('new'),true))+
-      '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','library')+hidden('view','all')+input('q','Search all content','','search')+'<button>Search</button>'+button('Browse all content',url('library',{view:'all'}))+'</form>'+
-      '<nav class="studio-cards studio-type-grid" aria-label="Content types">'+Object.entries(collections).map(([id,[title,description,icon]])=>{
-        const count=counts.get(id)||0;
-        return '<a class="studio-card studio-type-card" href="'+url('library',{kind:id})+'"><div class="studio-type-icon" aria-hidden="true">'+icons[icon]+'</div><h2>'+title+'</h2><p>'+description+'</p><div class="studio-type-count">'+count.toLocaleString('en-GB')+' '+(count===1?'item':'items')+'</div><span aria-hidden="true">→</span></a>';
+  const category=exercise?'exercises':params.get('category')||'',shelf=shelves[category];
+  const all=data.items.filter(r=>r.kind!=='settings'&&(!state?r.status!=='Archived':r.status===state));
+  if(!exercise&&!shelf&&!kind&&!q&&!state&&params.get('view')!=='all'){
+    return heading('Our content','Everything you and Joyce are creating, in one place.',button('Create',url('create'),true))+workSummary(data)+
+      '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','library')+hidden('view','all')+input('q','Find content','','search','placeholder="Search by name"')+'<button>Search</button></form>'+
+      '<nav class="studio-cards studio-simple-grid" aria-label="Content types">'+Object.entries(shelves).map(([id,c])=>{
+        const count=all.filter(r=>(id==='programmes'?['programme','challenge']:c.types).includes(r.kind)).length;
+        return '<a class="studio-card studio-type-card" href="'+url('library',{category:id})+'"><div class="studio-type-icon" aria-hidden="true">'+icons[c.icon]+'</div><h2>'+c.title+'</h2><p>'+c.description+'</p><div class="studio-type-count">'+count.toLocaleString('en-GB')+' items</div><span aria-hidden="true">→</span></a>';
       }).join('')+'</nav>';
   }
-  let rows=data.items.filter(r=>!['settings','programme-family'].includes(r.kind)&&(exercise?['exercise','activity'].includes(r.kind)&&(!kind||r.kind===kind):!kind||r.kind===kind)&&(!state?r.status!=='Archived':r.status===state));
-  if(kind==='programme'){
-    const families=['stronger','build','fitter','run','swim','ride','back-to-it','nufi365'];
-    const rank=r=>{const id=(r.parent||r.id).replace(/^training:/,'');const n=families.indexOf(id);return n<0?99:n;};
-    rows.sort((a,b)=>rank(a)-rank(b)||['start','progress','develop','own-it'].indexOf(a.fields.level)-['start','progress','develop','own-it'].indexOf(b.fields.level));
-  }
+  let rows=all.filter(r=>(!shelf||shelf.types.includes(r.kind))&&(!kind||r.kind===kind));
+  if(category==='programmes'&&!kind&&!q&&!state){
+    rows=rows.filter(r=>r.kind==='programme-family'||(['programme','challenge'].includes(r.kind)&&data.byId.get(r.parent)?.kind!=='programme-family'));
+  }else rows=rows.filter(r=>r.kind!=='programme-family');
   const words=value=>Array.isArray(value)?value.join(' '):String(value||'');
   rows=rows.filter(r=>(r.title+' '+words(r.fields.aliases)+' '+words(r.fields.equipment)+' '+words(r.fields.muscles)).toLowerCase().includes(q));
-  const filter='<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio',exercise?'exercises':'library')+hidden('view','all')+input('q','Search',params.get('q')||'','search')+select('kind','Content type',{'':'All types',...Object.fromEntries(Object.entries(kinds).filter(([k])=>!exercise||['exercise','activity'].includes(k)))},kind)+select('state','Progress',{'':'Active content',Draft:'Draft','In review':'In review','Changes requested':'Changes requested',Approved:'Approved',Archived:'Archived'},state)+'<button>Search</button></form>';
-  return (!exercise?'<a class="back" href="'+url('library')+'">← Content types</a>':'')+heading(exercise?'Exercises & drills':collections[kind]?.[0]||'All content',exercise?'Find instructions, coaching cues and demonstrations.':collections[kind]?.[1]||'Your working Nutrition.fitness content.',button(kind?'Create '+(kinds[kind]||'content').toLowerCase():'Create content',url('new',{kind:kind||(exercise?'exercise':'article')}),true))+filter+
-    (!rows.length?'<p class="studio-empty">'+(q||state?'No content matches these filters.':'Nothing here yet. Create the first item or import a starting point from the archive.')+'</p>':'')+
+  const choices=Object.fromEntries(Object.entries(kinds).filter(([k])=>!shelf||shelf.types.includes(k)));
+  const filter='<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','library')+hidden('view','all')+hidden('category',category)+input('q','Search',params.get('q')||'','search')+select('kind','Show',{'':'All',...choices},kind)+select('state','Progress',{'':'Active content',Draft:'Draft','In review':'In review','Changes requested':'Changes requested',Approved:'Approved',Archived:'Archived'},state)+'<button>Search</button></form>';
+  return '<a class="back" href="'+url('library')+'">← Our content</a>'+heading(shelf?.title||collections[kind]?.[0]||'Search content',shelf?.description||'',button('Create',createLink(kind||shelf?.create||'article',data.actor.role==='admin'),true))+filter+
+    (!rows.length?'<p class="studio-empty">'+(q||state?'No content matches these filters.':'Nothing here yet. Create something or use a starting point from the archive.')+'</p>':'')+
     pages(params,rows,rs=>'<div class="studio-content-grid">'+rs.map(r=>{
       const preview=meta.training?.[r.id]||meta.assets?.[r.id]?.preview||meta.training?.[r.parent];
-      return '<a class="studio-content-card" href="'+url('item',{id:r.id})+'">'+(preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks · '+(r.id==='training:nufi365'?'Year-round programme':'Standalone programme')+'</p>':'')+badge(r.status)+'</div></a>';
+      return '<a class="studio-content-card" href="'+url('item',{id:r.id})+'">'+(preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(r.kind==='programme-family'?'Training programmes':kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks</p>':r.kind==='programme-family'?'<p>Start · Progress · Develop · Own It</p>':'')+badge(r.status)+'</div></a>';
     }).join('')+'</div>');
 }
 export function createPage(params,data,values={}){
-  if(data.actor.role!=='admin')return heading('Create content','Choose a content type and attach it to one of your assigned projects.')+
-    '<div class="studio-cards">'+[['recipe','Recipe'],['exercise','Exercise'],['communication','Coaching message'],['asset','Creative asset'],['article','Article'],['session','Workout']].map(([kind,name])=>card(name,'Create a draft for review.',url('new',{kind}))).join('')+'</div>';
-  const choice=params.get('template'),t=templates[choice];
-  if(!t)return heading('Create something','Choose a starting point. You can change the plan before creating the project.')+
-    '<div class="studio-cards">'+Object.entries(templates).map(([id,t])=>card(t.name,t.description,url('create',{template:id}))).join('')+
-    card('Start from the archive','Use a source book, course or programme.',url('archive'))+'</div>';
-  return heading(t.name,'Describe the outcome. We’ll propose the work needed to get there.')+
+  const choice=params.get('template'),t=data.actor.role==='admin'?templates[choice]:null;
+  if(!t)return heading('What would you like to create?','Choose a type. Start fresh or use something from the archive.')+
+    '<div class="studio-cards studio-simple-grid">'+Object.values(shelves).map(c=>card(c.title,c.description,createLink(c.create,data.actor.role==='admin'))).join('')+'</div>'+
+    '<div class="panel studio-start-options">'+button('Use something from the archive',url('archive'))+'<details><summary>More options</summary><div class="studio-actions">'+[['challenge','Challenge'],['mealplan','Meal plan'],['article','Article'],['ebook','E-book'],['workflow','GHL workflow'],['asset','Creative asset']].map(([k,t])=>button(t,createLink(k,data.actor.role==='admin'))).join('')+'</div></details></div>';
+  return heading(t.name,'Tell us the idea and who will work on it. We’ll organise the steps.')+
     form('plan-preview',hidden('template',choice)+hidden('id',values.id||randomUUID())+hidden('rootId',values.rootId||'')+
-      input('name','Project name',values.name||'','text','required maxlength="160"')+
+      input('name','What shall we call it?',values.name||'','text','required maxlength="160"')+
       textarea('brief','What do you have in mind?',values.brief||'',4)+input('audience','Who is this for?',values.audience||'')+
       input('outcome','What should they achieve?',values.outcome||'')+
       '<div class="studio-columns">'+(choice==='programme'?select('weeks','Programme length',{4:'4 weeks',6:'6 weeks',8:'8 weeks',12:'12 weeks'},values.weeks||12):input('weeks','Number of weeks',values.weeks||6,'number','min="1" max="52" required'))+
       select('creator','Creator',personOptions(data),values.creator||data.people[0]?.id)+'</div>'+
       input('launch','Target launch date (optional)',values.launch||'','date')+
       (data.aiReady?'<label class="check"><input type="checkbox" name="assist" value="yes" checked> Use AI to tailor the production plan to this brief</label>':'<p class="meta">AI drafting will be available when the account connection is complete.</p>'),
-      {section:'create',template:choice},'Preview project plan');
+      {section:'create',template:choice},'Show the plan');
 }
 export function projectList(params,data){
-  const kind=params.get('kind')||'',categories={...collections,other:['Other projects','Projects without a content type.','Briefcase']};
-  const projectKind=p=>data.byId.get(p.studio?.rootId)?.kind||templates[p.studio?.type]?.kind||'other';
-  if(!kind&&params.get('view')!=='all')return heading(data.actor.role==='admin'?'Projects':'My projects','Choose the type of content you want to work on.',data.actor.role==='admin'?button('Create a project',url('create'),true):'')+
-    button('Browse all projects',url('projects',{view:'all'}))+'<nav class="studio-cards studio-type-grid" aria-label="Project content types">'+Object.entries(categories).filter(([id])=>id!=='other'||data.projects.some(p=>projectKind(p)==='other')).map(([id,[title,description,icon]])=>{
-      const count=data.projects.filter(p=>projectKind(p)===id).length;
-      return '<a class="studio-card studio-type-card" href="'+url('projects',{kind:id})+'"><div class="studio-type-icon" aria-hidden="true">'+icons[icon]+'</div><h2>'+title+'</h2><p>'+description+'</p><div class="studio-type-count">'+count+' '+(count===1?'project':'projects')+'</div><span aria-hidden="true">→</span></a>';
-    }).join('')+'</nav>';
-  const selected=data.projects.filter(p=>!kind||projectKind(p)===kind);
-  return '<a class="back" href="'+url('projects')+'">← Project types</a>'+heading((categories[kind]?.[0]||'All')+' projects','Bring the content, people and customer journey together.',data.actor.role==='admin'?button('Create a project',url('create'),true):'')+
-    pages(params,selected,rows=>list(rows,p=>'<div><a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a><small>'+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+' · '+p.weeks+' weeks'+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</small></div>'+badge(p.status),'No projects of this type yet.'));
+  const category=params.get('category')||'',shelf=shelves[category];
+  const selected=data.projects.filter(p=>!shelf||shelf.types.includes(data.byId.get(p.studio?.rootId)?.kind||templates[p.studio?.type]?.kind));
+  return '<a class="back" href="'+url('library')+'">← Our content</a>'+heading('Work in progress','Open a piece of work to see the content, creator and next steps.',button('Create',url('create'),true))+
+    '<nav class="tabs" aria-label="Work types">'+[['','All work'],...Object.entries(shelves).map(([id,c])=>[id,c.title])].map(([id,title])=>'<a href="'+url('projects',{category:id})+'"'+(id===category?' aria-current="page"':'')+'>'+title+'</a>').join('')+'</nav>'+
+    pages(params,selected,rows=>list(rows,p=>'<div><a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a><small>'+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+' · '+p.weeks+' weeks</small></div>'+badge(p.status),'No work here yet. Choose Create to start.'));
 }
 export function projectPage(params,data){
   const p=projectFor(data,params.get('project')),week=Math.max(0,Math.min(p.weeks,Number(params.get('week'))||0)),admin=data.actor.role==='admin';
@@ -123,14 +121,14 @@ export function projectPage(params,data){
       input('week','Week (0 is preparation)',e.week,'number','min="0" max="'+p.weeks+'"')+input('due','Due date',e.due||'','date'),state)+'</details></section>';
   }).join('')+'</section>').join('');
   const candidates=data.items.filter(r=>(r.title+' '+r.kind).toLowerCase().includes((params.get('find')||'').toLowerCase())).slice(0,35);
-  return heading(p.name,p.studio.audience||p.brief,button('Preview journey',url('journey',{project:p.id}))+button('Release preparation',url('release',{project:p.id})))+
+  return heading(p.name,p.studio.audience||p.brief,button('Preview journey',url('journey',{project:p.id}))+button('Prepare for app',url('release',{project:p.id})))+
     '<p class="studio-project-meta">'+esc(p.status)+' · '+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</p>'+
     (root?'<p>Programme content · '+itemLink(root)+'</p>':'')+nav+'<div class="studio-columns project-columns"><section><h2>'+(week?'Week '+week:'Preparation')+'</h2>'+(rows||'<p>No tasks in this week yet.</p>')+'</section>'+
-    '<aside class="panel"><h2>Add work</h2>'+form('task-add',base+input('title','What needs doing?','','text','required maxlength="160"')+
-    select('kind','Content type',{'Content to create':'Content to create','PT WhatsApp message':'PT WhatsApp message','GHL workflow':'GHL workflow','Creative asset':'Creative asset','Marketing content':'Marketing content'})+textarea('notes','What does a finished result need?'),state,'Add task')+
+    '<aside class="panel"><details><summary>Add work</summary>'+form('task-add',base+input('title','What needs doing?','','text','required maxlength="160"')+
+    select('kind','Content type',{'Content to create':'Content to create','PT WhatsApp message':'PT WhatsApp message','GHL workflow':'GHL workflow','Creative asset':'Creative asset','Marketing content':'Marketing content'})+textarea('notes','What does a finished result need?'),state,'Add task')+'</details>'+
     '<details><summary>Attach existing content</summary><form action="/content-library/">'+hidden('work','1')+hidden('studio','project')+hidden('project',p.id)+hidden('week',week)+input('find','Find content',params.get('find')||'')+'<button>Find</button></form>'+
     (params.has('find')?form('task-attach',base+select('record','Library item',Object.fromEntries(candidates.map(r=>[r.id,r.title]))),state,'Attach to this week'):'')+'</details>'+
-    '<details><summary>Project settings</summary>'+form('project-save',base+(admin?input('name','Name',p.name)+select('creator','Creator',personOptions(data),p.creator_id):'')+
+    '<details><summary>Creator & details</summary>'+form('project-save',base+(admin?input('name','Name',p.name)+select('creator','Creator',personOptions(data),p.creator_id):'')+
       textarea('brief','Project brief',p.brief)+input('launch','Target launch',p.studio.launchDate||'','date')+
       select('status','Status',Object.fromEntries((admin?['Planning','In progress','Ready for review','Complete']:['Planning','In progress','Ready for review']).map(x=>[x,x])),p.status),state)+'</details></aside></div>';
 }
@@ -140,38 +138,73 @@ function readable(value,data){
   const ref=data.byId.get(value)||data.byId.get('training:'+value);
   return ref?itemLink(ref):esc(value);
 }
+function weeklyPlan(params,data,schedules,owner){
+  const chosen=schedules.find(x=>x.id===params.get('schedule'))||schedules[0];
+  if(!chosen)return '<p class="studio-empty">No weekly plan has been added yet.</p>';
+  const weeks=Array.isArray(chosen.fields.weeks)?chosen.fields.weeks:[],week=weeks.find(w=>String(w.number)===params.get('week'))||weeks[0];
+  const href=(schedule,w)=>url('item',{id:owner?.id||schedule.id,...(owner?{tab:'plan',schedule:schedule.id}:{}),week:w});
+  let out='<nav class="tabs" aria-label="Training days">'+schedules.map(x=>'<a href="'+href(x,week?.number||1)+'"'+(x.id===chosen.id?' aria-current="page"':'')+'>'+esc(x.fields.frequency)+' days'+(schedules.filter(y=>y.fields.frequency===x.fields.frequency).length>1?' · '+esc(x.title):'')+'</a>').join('')+'</nav>'+
+    '<nav class="tabs studio-week-tabs" aria-label="Training weeks">'+weeks.map(w=>'<a href="'+href(chosen,w.number)+'"'+(w===week?' aria-current="page"':'')+'>Week '+esc(w.number)+'</a>').join('')+'</nav>';
+  if(week){
+    const sessions=(week.sessionIds||[]).map(id=>data.byId.get(id)||data.byId.get('training:'+id));
+    const row=(title,key)=>'<tr><th scope="row">'+title+'</th>'+sessions.map(s=>'<td>'+(s?readable(s.fields[key],data):'Session unavailable')+'</td>').join('')+'</tr>';
+    out+='<h2>Week '+esc(week.number)+' · '+esc(week.title||'')+'</h2><p class="prose">'+esc(week.message||'')+'</p><p class="prose">'+esc(week.progression||'')+'</p>'+
+      '<div class="week-scroll" tabindex="0" role="region" aria-label="Weekly workouts; scroll sideways to see every day"><table><thead><tr><th>Workout</th>'+sessions.map((s,i)=>'<th>Day '+(i+1)+(s?'<br>'+itemLink(s):'')+'</th>').join('')+'</tr></thead><tbody>'+row('Warm-up','warmup')+row('Main work','blocks')+row('Cool-down','cooldown')+'</tbody></table></div>';
+  }
+  return out+'<details class="panel"><summary>Spacing, recovery & busy weeks</summary>'+readable({spacing:chosen.fields.spacing||'',rest:chosen.fields.restRules||'',busyWeek:chosen.fields.busyWeek||{}},data)+button('Edit this schedule',url('item',{id:chosen.id,tab:'edit'}))+'</details>';
+}
+function programmePage(params,data,r){
+  const admin=data.actor.role==='admin',canEdit=admin||data.assigned.has(r.id);
+  const projects=data.projects.filter(p=>p.studio?.rootId===r.id),project=projects.find(p=>p.status!=='Complete')||projects[0];
+  const ids=descendants([r.id,...projects.flatMap(p=>p.entries.map(e=>e.record).filter(Boolean))],data.items),related=data.items.filter(x=>x.id!==r.id&&ids.has(x.id)&&x.status!=='Archived');
+  const schedules=related.filter(x=>x.kind==='structure').sort((a,b)=>a.fields.frequency-b.fields.frequency);
+  const tab=['plan','messages','assets'].includes(params.get('tab'))?params.get('tab'):'overview';
+  const creator=data.people.find(p=>p.id===project?.creator_id);
+  let out='<a class="back" href="'+(data.byId.get(r.parent)?.kind==='programme-family'?url('item',{id:r.parent}):url('library',{category:'programmes'}))+'">← '+esc(data.byId.get(r.parent)?.kind==='programme-family'?data.byId.get(r.parent).title:'Programmes')+'</a>'+
+    heading(r.title,r.fields.weeks+' weeks',button('Member preview',url('item',{id:r.id,tab:'preview'})))+
+    '<div class="studio-programme-bar">'+badge(r.status)+'<span>Creator: '+esc(creator?.name||'Not assigned')+'</span>'+
+    (project?button('Work & feedback',url('project',{project:project.id})):admin?button('Assign work',url('project-from',{id:r.id})): '')+
+    (canEdit?button('Edit & review',url('item',{id:r.id,tab:'edit'})):'')+'</div>'+
+    '<nav class="tabs studio-programme-tabs" aria-label="Programme content">'+[['overview','Overview'],['plan','Weekly plan'],['messages','Messages'],['assets','Assets']].map(([key,title])=>'<a href="'+url('item',{id:r.id,tab:key})+'"'+(tab===key?' aria-current="page"':'')+'>'+title+'</a>').join('')+'</nav>';
+  if(tab==='plan')return out+(schedules.length?weeklyPlan(params,data,schedules,r):'<section class="panel"><h2>Weekly plan</h2><p>This programme’s planning material is below. Open a section to continue building its weeks.</p>'+list(related.filter(x=>['stage','session'].includes(x.kind)),contentRow,'No workouts have been added yet.')+'</section>');
+  if(tab==='messages'||tab==='assets'){
+    const types=tab==='messages'?['communication','workflow']:['asset','campaign'];
+    const rows=related.filter(x=>types.includes(x.kind)),kind=tab==='messages'?'communication':'asset';
+    return out+'<section class="panel">'+heading(tab==='messages'?'Messages':'Assets',tab==='messages'?'Coaching messages and follow-up plans for this programme.':'Images, marketing and supporting files for this programme.',canEdit&&project?button('Add '+(tab==='messages'?'message':'asset'),url('new',{kind,project:project.id})):admin&&!project?button('Assign work to add content',url('project-from',{id:r.id})): '')+
+      pages(params,rows,items=>list(items,contentRow,'Nothing here yet.'))+
+      (tab==='assets'&&canEdit&&r.sourceId?button('Open original source assets','/content-library/?work=1&assets='+encodeURIComponent(r.sourceId)):'')+'</section>';
+  }
+  const fields=[['The aim',r.fields.purpose||r.fields.description],['Who it’s for',r.fields.audience||r.fields.suitableFor],['What you’ll achieve',r.fields.outcome||r.fields.memberPromise],['Before starting',r.fields.entryCriteria],['Equipment',r.fields.equipment],['Completing the programme',r.fields.exitCriteria]];
+  out+='<section class="panel studio-programme-overview">'+fields.filter(([,v])=>v&&(!Array.isArray(v)||v.length)).map(([label,value])=>'<section><h2>'+esc(label)+'</h2><div class="prose">'+readable(value,data)+'</div></section>').join('')+'</section>';
+  out+=button('Open weekly plan',url('item',{id:r.id,tab:'plan'}),true);
+  const supporting=related.filter(x=>['learning','lesson','article','rule','review'].includes(x.kind));
+  if(supporting.length)out+='<details class="panel"><summary>Coaching guidance & check-ins ('+supporting.length+')</summary>'+list(supporting,contentRow)+'</details>';
+  return out;
+}
 export function itemPage(params,data){
   const r=data.byId.get(params.get('id'));if(!r)return heading('Content unavailable');
+  if(r.kind==='programme'&&!['edit','preview'].includes(params.get('tab')))return programmePage(params,data,r);
   if(r.kind==='programme-family'){
     const programmes=data.items.filter(x=>x.parent===r.id&&x.kind==='programme'&&x.status!=='Archived');
-    return heading(r.title,'Choose a standalone level programme. You do not need to complete all four in sequence.')+
+    return '<a class="back" href="'+url('library',{category:'programmes'})+'">← Programmes</a>'+heading(r.title,'Choose the level you want to work on.')+
       '<div class="studio-cards">'+programmes.map(p=>card(p.title,p.fields.weeks+' weeks · '+(p.fields.audience||''),url('item',{id:p.id}))).join('')+'</div>'+
-      '<section class="panel"><h2>Shared content & assets</h2>'+list(data.items.filter(x=>x.parent===r.id&&x.kind!=='programme'&&x.status!=='Archived'),contentRow)+'</section>';
+      '<details class="panel"><summary>Shared content & assets</summary>'+list(data.items.filter(x=>x.parent===r.id&&x.kind!=='programme'&&x.status!=='Archived'),contentRow)+'</details>';
   }
-  const admin=data.actor.role==='admin',canEdit=admin||data.assigned.has(r.id),state={section:'item',id:r.id};
+  const admin=data.actor.role==='admin',canEdit=admin||data.assigned.has(r.id),state={section:'item',id:r.id,tab:'edit'};
   const children=data.items.filter(x=>(x.parent===r.id||(r.fields.sharedContentIds||[]).includes(x.id))&&x.status!=='Archived'),refs=references(r,data.byId).map(id=>data.byId.get(id));
   const parents=data.items.filter(x=>x.id!==r.id&&(x.id===r.parent||references(x,data.byId).includes(r.id)));
   const checks=issues(r,data.items),preview=params.get('tab')==='preview',schedule=r.kind==='structure'&&params.get('tab')!=='edit'&&!preview;
-  let out=heading(r.title,(kinds[r.kind]||r.kind)+(r.kind==='programme'?' · '+r.fields.weeks+' weeks':''),button(preview||schedule?'Edit content':'Member preview',url('item',{id:r.id,tab:preview||schedule?'edit':'preview'}))+(admin?button('Create a project',url('project-from',{id:r.id})):''))+
+  let out=(r.kind==='programme'?'<a class="back" href="'+url('item',{id:r.id})+'">← Programme overview</a>':'')+heading(r.title,(kinds[r.kind]||r.kind)+(r.kind==='programme'?' · '+r.fields.weeks+' weeks':''),button(preview||schedule?'Edit content':'Member preview',url('item',{id:r.id,tab:preview||schedule?'edit':'preview'}))+(admin&&r.kind!=='programme'?button('Assign work',url('project-from',{id:r.id})):''))+
     '<p>'+badge(r.status)+' <span class="meta">Version '+(r.revision||1)+(r.updatedAt?' · Saved '+esc(new Date(r.updatedAt).toLocaleDateString('en-GB')):'')+'</span></p>';
-  if(children.length){
+  if(children.length&&r.kind!=='programme'){
     const grouped=new Map();for(const child of children){if(!grouped.has(child.kind))grouped.set(child.kind,[]);grouped.get(child.kind).push(child);}
     const section=params.get('contentKind')||children[0].kind;
     out+='<section class="panel"><h2>Included content</h2><nav class="tabs" aria-label="Included content types">'+[...grouped].map(([kind,items])=>'<a href="'+url('item',{id:r.id,tab:params.get('tab')||'',contentKind:kind})+'"'+(section===kind?' aria-current="page"':'')+'>'+esc(collections[kind]?.[0]||kinds[kind]||kind)+' ('+items.length+')</a>').join('')+'</nav>'+list(grouped.get(section)||[],contentRow)+'</section>';
   }
   if(schedule){
-    const weeks=r.fields.weeks||[],week=weeks.find(w=>String(w.number)===params.get('week'))||weeks[0];
-    const frequencies=data.items.filter(x=>x.kind==='structure'&&x.parent===r.parent);
-    out+='<nav class="tabs" aria-label="Training days">'+frequencies.map(x=>'<a href="'+url('item',{id:x.id,week:week?.number||1})+'"'+(x.id===r.id?' aria-current="page"':'')+'>'+esc(x.fields.frequency)+' days</a>').join('')+'</nav>'+
-      '<nav class="tabs" aria-label="Training weeks">'+weeks.map(w=>'<a href="'+url('item',{id:r.id,week:w.number})+'"'+(w===week?' aria-current="page"':'')+'>Week '+esc(w.number)+'</a>').join('')+'</nav>';
-    if(week){
-      const sessions=(week.sessionIds||[]).map(id=>data.byId.get(id)||data.byId.get('training:'+id));
-      const row=(title,key)=>'<tr><th scope="row">'+title+'</th>'+sessions.map(s=>'<td>'+(s?readable(s.fields[key],data):'Session unavailable')+'</td>').join('')+'</tr>';
-      out+='<h2>Week '+week.number+' · '+esc(week.title||'')+'</h2><p>'+esc(week.message||'')+'</p><p>'+esc(week.progression||'')+'</p>'+
-      '<div class="week-scroll"><table><thead><tr><th>Workout</th>'+sessions.map((s,i)=>'<th>Day '+(i+1)+(s?'<br>'+itemLink(s):'')+'</th>').join('')+'</tr></thead><tbody>'+
-      row('Warm-up','warmup')+row('Main work','blocks')+row('Cool-down','cooldown')+'</tbody></table></div>';
-    }
-    return out;
+    const frequencies=data.items.filter(x=>x.kind==='structure'&&x.parent===r.parent&&x.status!=='Archived');
+    const selected=new URLSearchParams(params);selected.set('schedule',r.id);
+    return out+weeklyPlan(selected,data,frequencies);
   }
   if(preview)return out+'<article class="studio-preview"><h2>'+esc(r.title)+'</h2>'+readable(r.fields,data)+'</article>';
   if(canEdit){
