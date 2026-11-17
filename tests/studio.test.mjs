@@ -7,6 +7,8 @@ import { projectDraft, changeStudio } from '../server/studio-actions.mjs';
 import { extractDrafts } from '../server/studio-import.mjs';
 import { handleStudio } from '../server/studio.mjs';
 import { generateDraft } from '../server/studio-ai.mjs';
+import { library, itemPage, createPage, projectList } from '../server/studio-pages.mjs';
+import { studioFrame } from '../server/studio-ui.mjs';
 
 const admin={role:'admin',id:randomUUID()},staff={role:'staff',id:randomUUID(),name:'Creator'};
 const exercise={id:'training:ex-one',kind:'exercise',title:'Chair stand',status:'draft',fields:{movement:'squat',equipment:['chair'],instructions:['Stand up'],cues:['Controlled movement']},files:[]};
@@ -17,6 +19,51 @@ function fixture(actor=admin){
   const items=[exercise,session,other].map(canonical);
   return {actor,items,byId:new Map(items.map(r=>[r.id,r])),people:[{id:staff.id,name:'Creator'}],projects:[],tasks:[],assigned:new Set([session.id,exercise.id]),index:{records:items,files:{}}};
 }
+
+test('simple studio keeps six shelves and three main choices with tools still accessible',()=>{
+  const data=fixture(),html=library(new URLSearchParams(),data);
+  assert.equal((html.match(/class="studio-card studio-type-card"/g)||[]).length,6);
+  assert.match(html,/category=programmes/);
+  assert.doesNotMatch(html,/>Training stages</);
+  const frame=studioFrame(html,'library',admin);
+  const nav=frame.match(/aria-label="Studio navigation">(.*?)<\/nav>/s)[1];
+  assert.equal((nav.match(/<a /g)||[]).length,3);
+  assert.match(frame,/<summary>Team & tools<\/summary>/);
+  assert.match(frame,/studio=review/);
+  assert.match(createPage(new URLSearchParams(),data),/Use something from the archive/);
+  assert.match(projectList(new URLSearchParams(),data),/aria-label="Work types"/);
+});
+
+test('programme dashboard switches week and frequency without losing workout sections',()=>{
+  const data=fixture();
+  const programme=canonical({id:'training:plan',kind:'programme',title:'Sample plan',fields:{weeks:4,purpose:'Build confidence',audience:'New lifters'}});
+  const schedules=[3,4,5].map(f=>canonical({id:'training:plan-'+f,kind:'structure',parent:programme.id,title:f+' days',fields:{frequency:f,weeks:[1,2].map(number=>({number,title:'Week focus '+number,message:'Coach note '+number,sessionIds:Array(f).fill(session.id)}))}}));
+  data.items.push(programme,...schedules);data.byId=new Map(data.items.map(r=>[r.id,r]));
+  const overview=itemPage(new URLSearchParams({id:programme.id}),data);
+  assert.match(overview,/aria-label="Programme content"/);
+  assert.doesNotMatch(overview,/id="studio-editor"/);
+  assert.match(overview,/Assign work/);
+  for(const days of [3,4,5]){
+    const html=itemPage(new URLSearchParams({id:programme.id,tab:'plan',schedule:'training:plan-'+days,week:'2'}),data);
+    assert.match(html,/Coach note 2/);
+    assert.equal((html.match(/<th>Day /g)||[]).length,days);
+    for(const label of ['Warm-up','Main work','Cool-down'])assert.ok(html.includes(label));
+    assert.match(html,/Chair stand/);
+    assert.match(html,/schedule=training%3Aplan-/);
+  }
+  assert.match(itemPage(new URLSearchParams({id:programme.id,tab:'edit'}),data),/id="studio-editor"/);
+  data.actor=staff;data.assigned.clear();
+  assert.doesNotMatch(itemPage(new URLSearchParams({id:programme.id}),data),/Assign work|Edit &amp; review/);
+});
+
+test('programme messages include work attached through a project',()=>{
+  const data=fixture(),root=canonical({id:'training:plan',kind:'programme',title:'Plan',fields:{weeks:4}}),message=canonical({id:'studio:message',kind:'communication',title:'Week one welcome',fields:{body:'Welcome'}});
+  data.items.push(root,message);data.byId=new Map(data.items.map(r=>[r.id,r]));
+  data.projects=[{id:'project-one',studio:{rootId:root.id},entries:[{record:message.id}],creator_id:staff.id}];
+  const html=itemPage(new URLSearchParams({id:root.id,tab:'messages'}),data);
+  assert.match(html,/Week one welcome/);
+  assert.match(html,/project=project-one/);
+});
 test('training references retain session-specific dose and reusable exercise instructions',()=>{
   assert.deepEqual([...descendants([session.id],[session,exercise])].sort(),[exercise.id,session.id].sort());
   assert.equal(issues(session,[session,exercise]).length,0);
