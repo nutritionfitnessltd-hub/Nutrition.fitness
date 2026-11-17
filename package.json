@@ -17,6 +17,7 @@
     "review": "npm run build && node scripts/make-review.mjs"
   },
   "dependencies": {
-    "@vercel/blob": "2.9.0"
+    "@vercel/blob": "2.9.0",
+    "pdfjs-dist": "6.5.438"
   }
 }
