@@ -1,0 +1,110 @@
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
+import { gunzipSync } from 'node:zlib';
+import { get } from '@vercel/blob';
+import { renderLibrary } from './library-view.mjs';
+
+const path = '/content-library/';
+const cookieName = '__Host-nufi-library';
+const sessionSeconds = 8 * 60 * 60;
+const indexPath = 'nutrition-library/v1/index.json.gz';
+const digest = input => createHash('sha256').update(input).digest();
+const equal = (a, b) => a.length === b.length && timingSafeEqual(a, b);
+let cached;
+
+async function readIndex() {
+  if (cached && cached.expires > Date.now()) return cached.index;
+  const result = await get(indexPath, { access: 'private', useCache: false });
+  if (!result?.stream) throw new Error('Missing library');
+  const buffer = Buffer.from(await new Response(result.stream).arrayBuffer());
+  const index = JSON.parse(gunzipSync(buffer, { maxOutputLength: 64 * 1024 * 1024 }));
+  if (index.version !== 1 || !Array.isArray(index.records)) throw new Error('Invalid library');
+  cached = { index, expires: Date.now() + 60_000 };
+  return index;
+}
+
+function cookie(value, lifetime) {
+  return cookieName + '=' + value + '; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=' + lifetime;
+}
+function signature(key, value) {
+  return createHmac('sha256', key).update('library-reader:v1:' + value).digest('base64url');
+}
+function validSession(req, key) {
+  const token = (req.headers.cookie || '').split(';').map(v => v.trim()).find(v => v.startsWith(cookieName + '='))?.slice(cookieName.length + 1);
+  if (!token || token.length > 160) return false;
+  const match = /^(\d{10})\.([\w-]{22})\.([\w-]{43})$/.exec(token);
+  const now = Math.floor(Date.now() / 1000);
+  return !!match && Number(match[1]) > now && Number(match[1]) <= now + sessionSeconds &&
+    equal(Buffer.from(signature(key, match[1] + '.' + match[2])), Buffer.from(match[3]));
+}
+function redirect(res) {
+  res.statusCode = 303;
+  res.setHeader('Location', path);
+  res.end();
+}
+function html(res, status, page) {
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.end(page);
+}
+
+export function createLibraryReader({ env = process.env, load = readIndex,
+  fetchFile = name => get(name, { access: 'private' }) } = {}) {
+  return async (req, res) => {
+    res.setHeader('Cache-Control', 'private, no-store, max-age=0');
+    res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
+    res.setHeader('Vary', 'Cookie');
+    res.setHeader('Referrer-Policy', 'no-referrer');
+    res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'self'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+    const params = new URL(req.url, 'https://localhost').searchParams;
+    const config = env.NUFI_LIBRARY_PASSWORD_SHA256;
+    if (!/^[a-f0-9]{64}$/.test(config || '')) return html(res, 503, renderLibrary({ error: 'The shared library is being set up. Please try again later.' }));
+    const key = Buffer.from(config, 'hex');
+    if (req.method === 'POST') {
+      const origin = req.headers.origin;
+      if (!origin || origin !== 'https://' + req.headers.host) return html(res, 403, renderLibrary({ error: 'Open the library link and try again.' }));
+      const fields = typeof req.body === 'string' ? Object.fromEntries(new URLSearchParams(req.body)) : req.body;
+      if (fields?.action === 'logout') {
+        res.setHeader('Set-Cookie', cookie('', 0));
+        return redirect(res);
+      }
+      const password = fields?.password;
+      if (typeof password !== 'string' || password.length > 256 || !equal(digest(password), key)) {
+        return html(res, 401, renderLibrary({ login: true, error: 'That password didn’t match. Please try again.' }));
+      }
+      const payload = (Math.floor(Date.now() / 1000) + sessionSeconds) + '.' + randomBytes(16).toString('base64url');
+      res.setHeader('Set-Cookie', cookie(payload + '.' + signature(key, payload), sessionSeconds));
+      return redirect(res);
+    }
+    if (req.method !== 'GET') {
+      res.setHeader('Allow', 'GET, POST');
+      return html(res, 405, renderLibrary({ error: 'This request is unavailable.' }));
+    }
+    if (!validSession(req, key)) return html(res, 401, renderLibrary({ login: true }));
+    try {
+      const index = await load();
+      const fileId = params.get('file');
+      if (fileId !== null) {
+        const file = /^[a-f0-9]{64}$/.test(fileId) && index.files[fileId];
+        if (!file) return html(res, 404, renderLibrary({ error: 'File not found.' }));
+        const result = await fetchFile('nutrition-library/v1/files/' + fileId);
+        if (!result?.stream) return html(res, 404, renderLibrary({ error: 'File unavailable.' }));
+        const inline = params.get('image') === '1' && ['image/jpeg','image/png','image/webp'].includes(file.type);
+        res.setHeader('Content-Disposition', (inline ? 'inline' : 'attachment') + "; filename*=UTF-8''" + encodeURIComponent(file.name).replace(/['()*]/g, c => '%' + c.charCodeAt(0).toString(16)));
+        res.setHeader('Content-Type', inline ? file.type : 'application/octet-stream');
+        res.statusCode = 200;
+        await pipeline(Readable.fromWeb(result.stream), res);
+        return;
+      }
+      const itemId = params.get('item');
+      if (itemId && !index.records.some(record => record.id === itemId)) return html(res, 404, renderLibrary({ error: 'Item not found.' }));
+      return html(res, 200, renderLibrary({ index, params }));
+    } catch {
+      if (res.headersSent) return res.destroy();
+      return html(res, 503, renderLibrary({ error: 'The library could not be loaded. Please try again shortly.' }));
+    }
+  };
+}

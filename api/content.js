@@ -3,6 +3,11 @@ import {managementReady,readPublicOverlays,publicContent} from '../server/websit
 
 export function createContentHandler({env=process.env,fetcher=fetch}={}){
   return async(req,res)=>{try{
+    const url = new URL(req.url || '/api/content', 'https://localhost');
+    if (url.pathname === '/content-library/' || url.searchParams.get('view') === 'library' || req.query?.view === 'library') {
+      const {createLibraryReader} = await import('../server/library-reader.mjs');
+      return await createLibraryReader({env})(req,res);
+    }
     if(req.method!=='GET'){res.setHeader('Allow','GET');throw new HttpError(405,'Use GET to read published content.');}
     if(!managementReady(env))return reply(res,200,{pages:[],products:[],recipes:[],settings:null});
     const api=platform(env,fetcher);

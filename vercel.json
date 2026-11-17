@@ -4,6 +4,9 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "trailingSlash": true,
+  "rewrites": [
+    { "source": "/content-library/", "destination": "/api/content?view=library" }
+  ],
   "headers": [
     {
       "source": "/(.*)",
