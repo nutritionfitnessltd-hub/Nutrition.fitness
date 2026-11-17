@@ -32,7 +32,7 @@ test('shared password controls the catalogue, detail pages and direct downloads'
   const session=login.headers.get('set-cookie');assert.match(session,/HttpOnly; Secure/);assert.ok(!session.includes(password));
   const cookie=session.split(';')[0];
   const get=suffix=>fetch(base+'/content-library/'+suffix,{headers:{cookie}});
-  const listing=await get('');assert.equal(listing.status,200);assert.match(await listing.text(),/Fixture training programme/);
+  const listing=await get('?shelf=Training');assert.equal(listing.status,200);assert.match(await listing.text(),/Fixture training programme/);
   const detail=await get('?item=training%3Asample');assert.match(await detail.text(),/Gentle walk/);
   const empty=await get('?q=NoMatches');assert.match(await empty.text(),/0 results/);
   const download=await get('?file='+fileId);assert.match(download.headers.get('content-disposition'),/attachment/);assert.equal(await download.text(),'Private bytes');
