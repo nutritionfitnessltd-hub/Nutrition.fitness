@@ -10,6 +10,7 @@ test-results/
 *.log
 .env
 .env.local
+server/guest-catalogue.enc
 .env.*.local
 supabase/.temp/
 __pycache__/

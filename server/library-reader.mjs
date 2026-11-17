@@ -1,9 +1,11 @@
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 import { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { gunzipSync } from 'node:zlib';
 import { get } from '@vercel/blob';
 import { renderLibrary } from './library-view.mjs';
+import { unpackCatalogue, verifyReleaseProof } from './library-release.mjs';
 
 const path = '/content-library/';
 const cookieName = '__Host-nufi-library';
@@ -13,12 +15,25 @@ const digest = input => createHash('sha256').update(input).digest();
 const equal = (a, b) => a.length === b.length && timingSafeEqual(a, b);
 let cached;
 
+async function bundledCatalogue() {
+  const file = await readFile(new URL('./guest-catalogue.enc', import.meta.url));
+  const compressed = unpackCatalogue(process.env.NUFI_LIBRARY_PASSWORD_SHA256, file);
+  const index = JSON.parse(gunzipSync(compressed, { maxOutputLength: 64 * 1024 * 1024 }));
+  index.downloadsPaused = true;
+  return index;
+}
+
 async function readIndex() {
   if (cached && cached.expires > Date.now()) return cached.index;
-  const result = await get(indexPath, { access: 'private', useCache: false });
-  if (!result?.stream) throw new Error('Missing library');
-  const buffer = Buffer.from(await new Response(result.stream).arrayBuffer());
-  const index = JSON.parse(gunzipSync(buffer, { maxOutputLength: 64 * 1024 * 1024 }));
+  let index;
+  try {
+    const result = await get(indexPath, { access: 'private', useCache: false });
+    if (!result?.stream) throw new Error('Missing library');
+    const buffer = Buffer.from(await new Response(result.stream).arrayBuffer());
+    index = JSON.parse(gunzipSync(buffer, { maxOutputLength: 64 * 1024 * 1024 }));
+  } catch {
+    index = await bundledCatalogue();
+  }
   if (index.version !== 1 || !Array.isArray(index.records)) throw new Error('Invalid library');
   cached = { index, expires: Date.now() + 60_000 };
   return index;
@@ -63,6 +78,17 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     const config = env.NUFI_LIBRARY_PASSWORD_SHA256;
     if (!/^[a-f0-9]{64}$/.test(config || '')) return html(res, 503, renderLibrary({ error: 'The shared library is being set up. Please try again later.' }));
     const key = Buffer.from(config, 'hex');
+    if (params.get('release') === 'snapshot') {
+      if (req.method !== 'GET' || !verifyReleaseProof(config,req.headers['x-nufi-release-proof'])) {
+        return html(res,401,renderLibrary({login:true}));
+      }
+      try {
+        const bytes = await readFile(new URL('./guest-catalogue.enc', import.meta.url));
+        res.setHeader('Content-Type','application/octet-stream');
+        res.statusCode=200;
+        return res.end(bytes);
+      } catch { return html(res,503,renderLibrary({error:'Release catalogue unavailable.'})); }
+    }
     if (req.method === 'POST') {
       const origin = req.headers.origin;
       if (!origin || origin !== 'https://' + req.headers.host) return html(res, 403, renderLibrary({ error: 'Open the library link and try again.' }));
@@ -88,6 +114,7 @@ export function createLibraryReader({ env = process.env, load = readIndex,
       const index = await load();
       const fileId = params.get('file');
       if (fileId !== null) {
+        if (index.downloadsPaused) return html(res, 503, renderLibrary({ error: 'File downloads are temporarily unavailable. You can still browse the library.' }));
         const file = /^[a-f0-9]{64}$/.test(fileId) && index.files[fileId];
         if (!file) return html(res, 404, renderLibrary({ error: 'File not found.' }));
         const result = await fetchFile('nutrition-library/v1/files/' + fileId);

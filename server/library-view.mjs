@@ -38,14 +38,14 @@ function contents(index, params) {
       const title=({warmup:'Warm-up',blocks:'Main workout',cooldown:'Cool-down',recipeText:'Recipe',stageIds:'Stages'})[name] || label(name);
       return '<section><h2>' + escape(title) + '</h2><div class="prose">' + field(value,byId) + '</div></section>';
     });
-    const cover = current.image && index.files[current.image];
+    const cover = !index.downloadsPaused && current.image && index.files[current.image];
     const parent = byId.get(current.parent);
     return '<nav><a href="' + path + '">Library</a> / <a href="' + href({group:current.group}) + '">' + escape(current.group) + '</a>' + (parent ? ' / <a href="' + href({item:parent.id}) + '">' + escape(parent.title) + '</a>' : '') + '</nav>' +
       '<article><p class="meta">' + escape(current.kind) + ' · ' + escape(label(current.status)) + '</p><h1>' + escape(current.title) + '</h1>' +
       (cover ? '<img class="cover" alt="" src="' + href({file:current.image,image:'1'}) + '">' : '') +
       (related.length ? '<section><h2>Explore ' + escape(current.title) + '</h2><ul>' + related.map(r => '<li><a href="' + href({item:r.id}) + '">' + escape(r.title) + '</a></li>').join('') + '</ul></section>' : '') +
       sections.join('') +
-      (files.length ? '<section><h2>Files</h2><ul>' + files.map(([id,f]) => '<li>' + fileLink(id,f) + '</li>').join('') + '</ul></section>' : '') +
+      (files.length ? '<section><h2>Files</h2>' + (index.downloadsPaused ? '<p>Downloads are temporarily unavailable.</p>' : '') + '<ul>' + files.map(([id,f]) => '<li>' + (index.downloadsPaused ? escape(f.name) : fileLink(id,f)) + '</li>').join('') + '</ul></section>' : '') +
       (!files.length && current.id.startsWith('catalogue:') && !current.fields.recipeText ? '<p>Catalogue entry. A downloadable copy has yet to be added.</p>' : '') + '</article>';
   }
   const group=params.get('group') || '', q=(params.get('q') || '').slice(0,160);
@@ -55,6 +55,6 @@ function contents(index, params) {
   return '<h1>Content library</h1><form class="search" method="get" action="'+path+'"><label>Search<input type="search" name="q" value="'+escape(q)+'" maxlength="160" placeholder="Find a recipe, workout or guide"></label><label>Collection<select name="group"><option value="">All collections</option>'+groups.map(g=>'<option'+(g===group?' selected':'')+'>'+escape(g)+'</option>').join('')+'</select></label><button>Search</button></form><p class="meta">'+rows.length+' results · Page '+page+' of '+pages+'</p><ul class="items">'+rows.slice((page-1)*30,page*30).map(r=>'<li><a href="'+href({item:r.id})+'"><strong>'+escape(r.title)+'</strong><span>'+escape(r.group)+' · '+escape(r.kind)+' · '+escape(label(r.status))+'</span></a></li>').join('')+'</ul>'+(!rows.length?'<p>Try another search or choose a different collection.</p>':'')+'<nav>'+(page>1?'<a href="'+href({q,group,page:page-1})+'">← Previous</a>':'')+' '+(page<pages?'<a href="'+href({q,group,page:page+1})+'">Next →</a>':'')+'</nav>';
 }
 export function renderLibrary({login,error,index,params}) {
-  const main=(error?'<p role="alert">'+escape(error)+'</p>':'')+(login?'<h1>Content library</h1><p>Enter the password you received with your invitation.</p><form method="post" action="'+path+'"><label>Library password<input type="password" name="password" required maxlength="256" autocomplete="current-password"></label><button>Open library</button></form>':index?contents(index,params):'<a href="'+path+'">Return to the library</a>');
+  const main=(error?'<p role="alert">'+escape(error)+'</p>':'')+(login?'<h1>Content library</h1><p>Enter the password you received with your invitation.</p><form method="post" action="'+path+'"><label>Library password<input type="password" name="password" required maxlength="256" autocomplete="current-password"></label><button>Open library</button></form>':index?(index.downloadsPaused?'<p role="status">File downloads are temporarily unavailable. Recipes, workouts and other written content are open for reading.</p>':'')+contents(index,params):'<a href="'+path+'">Return to the library</a>');
   return '<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Content library | Nutrition.fitness</title><link rel="stylesheet" href="/library-reader.css"></head><body><header><a href="'+path+'"><b>nutrition</b>.fitness</a>'+(index?'<form method="post" action="'+path+'"><button name="action" value="logout">Sign out</button></form>':'')+'</header><main>'+main+'</main></body></html>';
 }
