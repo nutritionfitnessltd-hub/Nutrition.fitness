@@ -17,7 +17,7 @@ let cached;
 
 async function bundledCatalogue() {
   const file = await readFile(new URL('./guest-catalogue.enc', import.meta.url));
-  const compressed = unpackCatalogue(process.env.NUFI_LIBRARY_PASSWORD_SHA256, file);
+  const compressed = unpackCatalogue(process.env.NUFI_LIBRARY_CATALOGUE_KEY, file);
   const index = JSON.parse(gunzipSync(compressed, { maxOutputLength: 64 * 1024 * 1024 }));
   index.downloadsPaused = true;
   return index;
@@ -77,9 +77,12 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     const params = new URL(req.url, 'https://localhost').searchParams;
     const config = env.NUFI_LIBRARY_PASSWORD_SHA256;
     if (!/^[a-f0-9]{64}$/.test(config || '')) return html(res, 503, renderLibrary({ error: 'The shared library is being set up. Please try again later.' }));
-    const key = Buffer.from(config, 'hex');
+    const catalogueKey = env.NUFI_LIBRARY_CATALOGUE_KEY;
+    if (!/^[a-f0-9]{64}$/.test(catalogueKey || '')) return html(res, 503, renderLibrary({ error: 'The shared library is being set up. Please try again later.' }));
+    const passwordHash = Buffer.from(config, 'hex');
+    const key = createHmac('sha256', Buffer.from(catalogueKey, 'hex')).update('guest-session:v1:').update(passwordHash).digest();
     if (params.get('release') === 'snapshot') {
-      if (req.method !== 'GET' || !verifyReleaseProof(config,req.headers['x-nufi-release-proof'])) {
+      if (req.method !== 'GET' || !verifyReleaseProof(catalogueKey,req.headers['x-nufi-release-proof'])) {
         return html(res,401,renderLibrary({login:true}));
       }
       try {
@@ -98,7 +101,7 @@ export function createLibraryReader({ env = process.env, load = readIndex,
         return redirect(res);
       }
       const password = fields?.password;
-      if (typeof password !== 'string' || password.length > 256 || !equal(digest(password), key)) {
+      if (typeof password !== 'string' || password.length > 256 || !equal(digest(password), passwordHash)) {
         return html(res, 401, renderLibrary({ login: true, error: 'That password didn’t match. Please try again.' }));
       }
       const payload = (Math.floor(Date.now() / 1000) + sessionSeconds) + '.' + randomBytes(16).toString('base64url');

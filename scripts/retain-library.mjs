@@ -1,8 +1,9 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { releaseProof, unpackCatalogue } from '../server/library-release.mjs';
 
-const secret = process.env.NUFI_LIBRARY_PASSWORD_SHA256;
-if (process.env.VERCEL_ENV === 'production' && secret) {
+const secret = process.env.NUFI_LIBRARY_CATALOGUE_KEY;
+if (process.env.VERCEL_ENV === 'production' && process.env.NUFI_LIBRARY_PASSWORD_SHA256) {
+  if (!/^[a-f0-9]{64}$/.test(secret || '')) throw new Error('Missing private catalogue key.');
   const target = new URL('../server/guest-catalogue.enc', import.meta.url);
   let packed;
   try { packed=await readFile(target); }

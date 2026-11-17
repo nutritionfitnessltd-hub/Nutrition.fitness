@@ -9,7 +9,7 @@ const password='fixture-guest-password-for-tests-only';
 const fileId='a'.repeat(64);
 const item={id:'training:sample',title:'Fixture training programme',group:'Programmes',kind:'programme',status:'draft',fields:{warmup:['Gentle walk'],cooldown:['Easy pace']},files:[fileId]};
 const index={version:1,records:[item],files:{[fileId]:{name:'A meal guide.pdf',type:'application/pdf'}}};
-const env={NUFI_LIBRARY_PASSWORD_SHA256:createHash('sha256').update(password).digest('hex')};
+const env={NUFI_LIBRARY_PASSWORD_SHA256:createHash('sha256').update(password).digest('hex'), NUFI_LIBRARY_CATALOGUE_KEY:'a'.repeat(64)};
 let server,base,loads=0,files=0;
 before(async()=>{
   const handler=createLibraryReader({env,load:async()=>{loads++;return index;},fetchFile:async key=>{files++;assert.equal(key,'nutrition-library/v1/files/'+fileId);return {stream:new Response('Private bytes').body};}});
