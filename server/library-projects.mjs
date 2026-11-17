@@ -44,6 +44,7 @@ export async function projectScreen(params,actor,api,load){
     return '<a class="back" href="'+link({work:'1'})+'">← Work assignments</a><h1>'+ (admin?'Projects':'My projects')+'</h1><div class="panels">'+(admin?'<section class="panel"><h2>Create a project</h2>'+postForm('project-create',hidden('id',randomUUID())+personAndPlan(people)+'<button class="primary">Create project</button>')+'</section>':'')+'<section class="panel"><h2>'+ (admin?'Team projects':'Assigned to me')+'</h2>'+(cards?'<ul class="project-list">'+cards+'</ul>':'<p>No projects yet.</p>')+'<nav class="pages">'+(page>1?'<a href="'+url({page:page-1})+'">Previous</a>':'')+(rows.length>30?'<a href="'+url({page:page+1})+'">Next</a>':'')+'</nav></section></div>';
   }
   const p=await getProject(id,actor,api);
+  if(p.studio?.rootId)return '<a class="back" href="'+url()+'">← Projects</a><h1>'+esc(p.name)+'</h1><p>This project is managed in the content studio.</p><a class="btn primary" href="'+link({work:'1',studio:'project',project:p.id})+'">Open project in the studio</a>';
   const selected=Math.min(p.weeks,Math.max(1,parseInt(params.get('week'))||1));
   const find=(params.get('find')||'').trim().slice(0,160);
   const selection=params.get('pick');
@@ -74,6 +75,7 @@ export async function changeProject(params,f,actor,api,load){
     return {project:id,week:1};
   }
   const p=await getProject(params.get('project'),actor,api);
+  if(p.studio?.rootId)throw new HttpError(409,'Open this project in the content studio to make changes.');
   if(p.revision!==Number(f.revision))throw new HttpError(409,'This project has changed. Reopen it before saving.');
   let week=weeks(f.week,p.weeks), update={};
   if(f.action==='project-settings'){
