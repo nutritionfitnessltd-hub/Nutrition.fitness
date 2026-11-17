@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 import { HttpError, uuid } from './platform.mjs';
 import { esc, link } from './library-shelves.mjs';
 
+import { assetButton } from './library-assets.mjs';
+
 const table='/rest/v1/nufi_library_projects';
 const service={service:true};
 const statuses=['Planning','In progress','Ready for review','Complete'];
@@ -55,7 +57,7 @@ export async function projectScreen(params,actor,api,load){
   const entries=p.entries.filter(e=>e.week===selected);
   if(!entries.length)out+='<p>No content assigned to this week yet.</p>';
   for(const e of entries){
-    out+='<section class="task"><small>'+esc(e.kind)+' · '+esc(e.status)+'</small><strong>'+(e.record?'<a href="'+link({item:e.record})+'">'+esc(e.title)+'</a>':esc(e.title))+'</strong><p>'+esc(e.notes)+'</p><details><summary>Edit item</summary>'+postForm('project-entry-save',hidden('entry',e.id)+'<label>Week<select name="week">'+opts(numbers(p.weeks),String(e.week))+'</select></label><label>Status<select name="status">'+opts(entryStates,e.status)+'</select></label><label>Build notes<textarea name="notes" maxlength="4000">'+esc(e.notes)+'</textarea></label><button>Save item</button>',p)+postForm('project-entry-remove',weekInput+hidden('entry',e.id)+'<button>Remove from project</button>',p)+'</details></section>';
+    out+='<section class="task"><small>'+esc(e.kind)+' · '+esc(e.status)+'</small><strong>'+(e.record?'<a href="'+link({item:e.record})+'">'+esc(e.title)+'</a>':esc(e.title))+'</strong>'+(e.record&&(admin||e.assignedAsset)?assetButton(e.record):'')+(admin&&e.record&&!e.assignedAsset?postForm('project-allow-asset',weekInput+hidden('entry',e.id)+'<button>Give creator access to original assets</button>',p):'')+'<p>'+esc(e.notes)+'</p><details><summary>Edit item</summary>'+postForm('project-entry-save',hidden('entry',e.id)+'<label>Week<select name="week">'+opts(numbers(p.weeks),String(e.week))+'</select></label><label>Status<select name="status">'+opts(entryStates,e.status)+'</select></label><label>Build notes<textarea name="notes" maxlength="4000">'+esc(e.notes)+'</textarea></label><button>Save item</button>',p)+postForm('project-entry-remove',weekInput+hidden('entry',e.id)+'<button>Remove from project</button>',p)+'</details></section>';
   }
   out+='</section><section class="panel"><h2>Add library content to Week '+selected+'</h2><form class="workbar" action="/content-library/">'+hidden('work','1')+hidden('projects','1')+hidden('project',id)+weekInput+'<label>Search the library<input type="search" name="find" value="'+esc(find)+'" required></label><button>Find content</button></form>';
   if(find)out+=hits.length?'<ul>'+hits.map(r=>'<li><a href="'+url({project:id,week:selected,pick:r.id})+'">'+esc(r.title)+'</a> · '+esc(r.group)+'</li>').join('')+'</ul>':'<p>No matching content.</p>';
@@ -90,11 +92,12 @@ export async function changeProject(params,f,actor,api,load){
       if(f.action==='project-attach'&&!record)throw new HttpError(400,'Select an existing library item.');
       if(!record&&!kinds.includes(f.kind))throw new HttpError(400,'Select the type of work.');
       if(record&&entries.some(e=>e.week===week&&e.record===record.id))throw new HttpError(409,'This item already belongs to the selected week.');
-      entries.push({id:randomUUID(),week,kind:record?.group||f.kind,record:record?.id||null,title:record?.title||clean(f.title,160,true),notes:clean(f.notes||'',4000),status:'To do'});
+      entries.push({id:randomUUID(),week,kind:record?.group||f.kind,record:record?.id||null,assignedAsset:Boolean(admin&&record),title:record?.title||clean(f.title,160,true),notes:clean(f.notes||'',4000),status:'To do'});
     }else{
       const i=entries.findIndex(e=>e.id===f.entry);
       if(i<0)throw new HttpError(404,'Project item not found.');
-      if(f.action==='project-entry-remove')entries.splice(i,1);
+      if(f.action==='project-allow-asset'&&admin&&entries[i].record)entries[i]={...entries[i],assignedAsset:true};
+      else if(f.action==='project-entry-remove')entries.splice(i,1);
       else if(f.action==='project-entry-save'&&entryStates.includes(f.status)){
         if(entries[i].record&&entries.some((e,j)=>j!==i&&e.record===entries[i].record&&e.week===week))throw new HttpError(409,'This item is already in the destination week.');
         entries[i]={...entries[i],week,status:f.status,notes:clean(f.notes||'',4000)};
