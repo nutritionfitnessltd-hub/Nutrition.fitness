@@ -4,6 +4,14 @@ import { canonical, descendants } from './studio-model.mjs';
 const service={service:true};
 export const itemTable='/rest/v1/nufi_studio_items';
 export const projectTable='/rest/v1/nufi_library_projects';
+export function mergeStudioRecord(base,payload){
+  if(!payload._basePatch)return payload;
+  if(!base)throw new HttpError(503,'The original content for this revised draft is unavailable.');
+  const record={...base,...payload,fields:{...base.fields,...payload.fields}};
+  for(const key of payload.removedFields||[])delete record.fields[key];
+  delete record._basePatch;delete record.removedFields;
+  return record;
+}
 export async function allRows(api,url){
   const rows=[];
   for(let offset=0;;offset+=500){
@@ -19,7 +27,7 @@ export async function studioData(api,actor,load){
     actor.role==='admin'?api('/rest/v1/nufi_library_staff?select=id,name,email&order=name',service):Promise.resolve([{id:actor.id,name:actor.name}])
   ]);
   const records=new Map(index.records.filter(r=>r.id.startsWith('training:')||r.fields?.recipeText).map(r=>[r.id,canonical(r)]));
-  for(const row of overlays)records.set(row.id,{...row.payload,id:row.id,revision:row.revision,updatedAt:row.updated_at});
+  for(const row of overlays)records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
   const items=[...records.values()];
   const assigned=actor.role==='admin'?new Set(items.map(r=>r.id)):descendants([
     ...tasks.map(t=>t.record_id),
