@@ -4,6 +4,7 @@ import { signInProvisioned } from './provisioned-login.mjs';
 import { esc, frame, link } from './library-shelves.mjs';
 import { projectScreen, changeProject } from './library-projects.mjs';
 
+import { handleStudio } from './studio.mjs';
 import { assetButton, assetScreen } from './library-assets.mjs';
 import { displayEntry } from './library-display.mjs';
 
@@ -108,6 +109,7 @@ async function dashboard(params,api,actor,load) {
   const filter=(admin?(person?'&staff_id=eq.'+person:''):'&staff_id=eq.'+actor.id)+(status?'&status=eq.'+encodeURIComponent(status):'');
   const rows=await api(tasksTable+'?select=id,title,instructions,staff_id,record_id,record_title,due_date,status,revision&order=due_date.asc.nullslast,created_at.desc,id.asc&limit=31&offset='+((page-1)*30)+filter,service);
   let out='<div class="workbar"><h1>'+esc(admin?'Work assignments':actor.name+'’s assignments')+'</h1>'+form('work-logout','<button>Leave work screen</button>')+'</div><div class="panels">';
+  out+='<section class="panel"><h2>Content studio</h2><a class="btn primary" href="'+link({work:'1',studio:'home'})+'">Open content studio</a></section>';
   out+='<section class="panel"><h2>Projects</h2><a class="btn" href="'+link({work:'1',projects:'1'})+'">'+(admin?'Create and manage projects':'Open my projects')+'</a></section>';
   if(admin){
     out+='<section class="panel"><h2>Original assets</h2>'+assetButton('all','Browse original assets')+'</section>';
@@ -153,7 +155,8 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
   const item=params.get('item')||'';
   const projects=params.get('projects')==='1';
   const asset=params.get('assets');
-  const destination=asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
+  const studio=params.get('studio');
+  const destination=studio?Object.fromEntries([...params].filter(([k])=>['studio','id','project','week','source','template','kind','tab'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
   try {
     if(!['GET','POST'].includes(req.method))throw new HttpError(405,'Use the work screen to continue.');
     const key=env.NUFI_LIBRARY_CATALOGUE_KEY;
@@ -164,11 +167,12 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
     const api=apiFactory(env);
     if(req.method==='POST'&&['admin-login','staff-login'].includes(f.action)){
       await login(f,res,api,env,key);
-      if(projects||asset){res.statusCode=303;res.setHeader('Location',route+'&'+new URLSearchParams(destination));return res.end();}
+      if(projects||asset||studio){res.statusCode=303;res.setHeader('Location',route+'&'+new URLSearchParams(destination));return res.end();}
       return redirect(res,item);
     }
     const actor=await readActor(req,res,api,env,key);
     if(!actor)return writePage(res,401,signInPage(item,destination));
+    if(studio)return handleStudio(req,res,{params,actor,api,load,env});
     if(asset){
       if(req.method!=='GET')throw new HttpError(405,'Open the asset page to continue.');
       return writePage(res,200,await assetScreen(params,actor,api,load,id=>displayEntry(env,id)));
