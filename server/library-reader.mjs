@@ -6,6 +6,8 @@ import { gunzipSync } from 'node:zlib';
 import { get } from '@vercel/blob';
 import { renderLibrary } from './library-view.mjs';
 import { unpackCatalogue, verifyReleaseProof } from './library-release.mjs';
+import { displayEntry } from './library-display.mjs';
+import { handleLibraryWork } from './library-work.mjs';
 
 const path = '/content-library/';
 const cookieName = '__Host-nufi-library';
@@ -74,8 +76,9 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'self'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+    res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
     const params = new URL(req.url, 'https://localhost').searchParams;
+    if (params.get('work')==='1') return handleLibraryWork(req,res,{env,load,params});
     const config = env.NUFI_LIBRARY_PASSWORD_SHA256;
     if (!/^[a-f0-9]{64}$/.test(config || '')) return html(res, 503, renderLibrary({ error: 'The shared library is being set up. Please try again later.' }));
     const catalogueKey = env.NUFI_LIBRARY_CATALOGUE_KEY;
@@ -115,6 +118,14 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     }
     if (!validSession(req, key)) return html(res, 401, renderLibrary({ login: true }));
     try {
+      if (params.has('preview')) {
+        const id=params.get('preview');
+        const asset=/^(?:[a-f0-9]{32}|brand-font)$/.test(id) && await displayEntry(env,id);
+        if (!asset || !['image/webp','font/woff2'].includes(asset.type)) return html(res,404,renderLibrary({error:'Preview unavailable.'}));
+        res.setHeader('Content-Type',asset.type);
+        res.statusCode=200;
+        return res.end(Buffer.from(asset.data,'base64'));
+      }
       const index = await load();
       const fileId = params.get('file');
       if (fileId !== null) {
@@ -132,7 +143,8 @@ export function createLibraryReader({ env = process.env, load = readIndex,
       }
       const itemId = params.get('item');
       if (itemId && !index.records.some(record => record.id === itemId)) return html(res, 404, renderLibrary({ error: 'Item not found.' }));
-      return html(res, 200, renderLibrary({ index, params }));
+      const meta=await displayEntry(env,'shelves').catch(()=>null);
+      return html(res, 200, renderLibrary({ index, params, meta:meta||{} }));
     } catch {
       if (res.headersSent) return res.destroy();
       return html(res, 503, renderLibrary({ error: 'The library could not be loaded. Please try again shortly.' }));
