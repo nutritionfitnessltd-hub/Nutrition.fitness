@@ -1,25 +1,29 @@
-for (const panel of document.querySelectorAll('[data-team-welcome]')) {
-  const to = panel.querySelector('[data-welcome-to]');
-  const subject = panel.querySelector('[data-welcome-subject]');
-  const message = panel.querySelector('[data-welcome-message]');
-  const email = panel.querySelector('[data-welcome-email]');
-  const copy = panel.querySelector('[data-welcome-copy]');
-  const status = panel.querySelector('[data-welcome-status]');
-  const updateLink = () => {
-    email.href = 'mailto:' + encodeURIComponent(to.value) + '?subject=' + encodeURIComponent(subject.value) + '&body=' + encodeURIComponent(message.value);
-    status.textContent = '';
-  };
-  subject.addEventListener('input', updateLink);
-  message.addEventListener('input', updateLink);
-  email.addEventListener('click', () => {
-    updateLink();
-    status.textContent = 'Your email app should open with the draft. If it does not, use Copy welcome message and paste it into a new email.';
+for (const form of document.querySelectorAll('[data-team-welcome]')) {
+  const to = form.querySelector('[data-welcome-to]');
+  const subject = form.querySelector('[data-welcome-subject]');
+  const message = form.querySelector('[data-welcome-message]');
+  const send = form.querySelector('[data-welcome-send]');
+  const copy = form.querySelector('[data-welcome-copy]');
+  const status = form.querySelector('[data-welcome-status]');
+  let busy=false,locked=send.disabled;
+  form.addEventListener('submit',async event=>{
+    event.preventDefault();if(busy||locked)return;
+    const body=new URLSearchParams(new FormData(form));busy=true;send.disabled=true;
+    subject.readOnly=message.readOnly=true;status.textContent='Sending welcome email…';
+    try{
+      const response=await fetch(form.getAttribute('action'),{method:'POST',headers:{Accept:'application/json'},body});
+      const result=await response.json().catch(()=>({error:'Your session may have ended. Sign in again before sending; your message is still here.'}));
+      if(!response.ok||result.error)throw new Error(result.error||'The email could not be sent. Your message is still here.');
+      locked=result.state!=='failed';status.textContent=result.detail;
+      send.textContent=result.state==='accepted'?'Accepted by Microsoft':locked?'Check email activity':'Retry welcome email';
+    }catch(error){status.textContent=error.message;send.textContent='Retry welcome email';}
+    finally{busy=false;send.disabled=locked;subject.readOnly=message.readOnly=locked;}
   });
   copy.hidden = false;
   copy.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText('To: ' + to.value + '\nSubject: ' + subject.value + '\n\n' + message.value);
-      status.textContent = 'Welcome message copied. Paste it into your email app and send it to ' + to.value + '.';
+      status.textContent = 'Welcome message copied.';
     } catch {
       message.focus();
       message.select();

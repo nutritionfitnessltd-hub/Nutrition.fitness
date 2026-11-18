@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { HttpError, email } from './platform.mjs';
 import { itemTable, saveRecord } from './studio-store.mjs';
 import { esc, url, heading, form, hidden, input, button } from './studio-ui.mjs';
+import { openWelcomeMessage, welcomeRecipient } from './studio-mail-private.mjs';
 import { brandKit } from './studio-brand.mjs';
 
 const settingsId='studio:notifications';
@@ -33,12 +34,17 @@ function notificationLink(env,section,values){
   return base.origin+url(section,values).replaceAll('&amp;','&');
 }
 export function notificationHtml({title,message,link}){
-  return '<!doctype html><html lang="en-GB"><body style="margin:0;background:#ffffff;color:#092A3E;font-family:Arial,sans-serif"><table role="presentation" style="max-width:600px;width:100%;margin:auto;padding:32px"><tr><td><p style="font-size:24px;font-weight:bold">nutrition.fitness</p><h1 style="font-size:24px">'+esc(title)+'</h1><p>'+esc(message)+'</p><p style="margin:28px 0"><a href="'+esc(link)+'" style="background:#06475E;color:#ffffff;text-decoration:none;padding:14px 20px;border-radius:6px;display:inline-block">Open in Content workspace</a></p><p style="font-size:13px;color:#536572">Sign in to view this work. Real food. Real progress. A fitter, happier you.</p></td></tr></table></body></html>';
+  return '<!doctype html><html lang="en-GB"><body style="margin:0;background:#ffffff;color:#092A3E;font-family:Arial,sans-serif"><table role="presentation" style="max-width:600px;width:100%;margin:auto;padding:32px"><tr><td><p style="font-size:24px;font-weight:bold">nutrition.fitness</p><h1 style="font-size:24px">'+esc(title)+'</h1><p style="white-space:pre-line">'+esc(message)+'</p><p style="margin:28px 0"><a href="'+esc(link)+'" style="background:#06475E;color:#ffffff;text-decoration:none;padding:14px 20px;border-radius:6px;display:inline-block">Open in Content workspace</a></p><p style="font-size:13px;color:#536572">Sign in to view this work. Real food. Real progress. A fitter, happier you.</p></td></tr></table></body></html>';
 }
 // A failed token request cannot send mail. A timed-out send can, so its result is unknown.
 export async function sendExchange(env,notification,fetcher=fetch){
   if(!exchangeConfigured(env))return {state:'failed',detail:'Microsoft 365 is not connected.'};
   if(!/^[a-zA-Z0-9.-]+$/.test(env.EXCHANGE_TENANT_ID))return {state:'failed',detail:'Check the Microsoft tenant ID.'};
+  let message=notification;
+  if(notification.type==='welcome'){
+    try{message={...notification,message:openWelcomeMessage(env,notification)};}
+    catch{return {state:'cancelled',detail:'This welcome message is unavailable. Prepare a new welcome email.'};}
+  }
   let token;
   try{
     const response=await fetcher('https://login.microsoftonline.com/'+encodeURIComponent(env.EXCHANGE_TENANT_ID)+'/oauth2/v2.0/token',{
@@ -56,14 +62,17 @@ export async function sendExchange(env,notification,fetcher=fetch){
   try{
     const response=await fetcher('https://graph.microsoft.com/v1.0/users/'+encodeURIComponent(sender)+'/sendMail',{
       method:'POST',headers:{Authorization:'Bearer '+token,'Content-Type':'application/json'},
-      body:JSON.stringify({message:{subject:notification.title,body:{contentType:'HTML',content:notificationHtml(notification)},toRecipients:[{emailAddress:{address:email(notification.recipient)}}],internetMessageHeaders:[{name:'x-nufi-notification-id',value:notification.id}]},saveToSentItems:true}),signal:AbortSignal.timeout(15000)
+      body:JSON.stringify({message:{subject:notification.title,body:{contentType:'HTML',content:notificationHtml(message)},toRecipients:[{emailAddress:{address:email(notification.recipient)}}],internetMessageHeaders:[{name:'x-nufi-notification-id',value:notification.id}]},saveToSentItems:true}),signal:AbortSignal.timeout(15000)
     });
     if(response.status===202)return {state:'accepted',detail:'Accepted by Microsoft 365.'};
     if(response.status>=500)return {state:'unknown',detail:'Microsoft returned an uncertain result. Check the sender’s Sent Items before sending again.'};
-    return {state:'failed',detail:response.status===403?'Microsoft has not authorised this app to send from '+sender+'.':'Microsoft did not accept this email (HTTP '+response.status+').'};
+    const failure=await response.json().catch(()=>null);
+    const safeCode=['ErrorAccessDenied','Authorization_RequestDenied','ErrorSendAsDenied','InvalidAuthenticationToken','MailboxNotEnabledForRESTAPI'].includes(failure?.error?.code)?' ('+failure.error.code+')':'';
+    return {state:'failed',detail:response.status===403?'Microsoft sign-in succeeded, but sending from '+sender+' is not authorised'+safeCode+'. An Exchange administrator must complete the mailbox-scoped Application Mail.Send permission.':'Microsoft did not accept this email (HTTP '+response.status+')'+safeCode+'.'};
   }catch{return {state:'unknown',detail:'The send request timed out. Check the sender’s Sent Items; it may have been sent.'};}
 }
-export async function deliverNotification({api,actor,env,event,fetcher=fetch,retry=false}){
+export async function deliverNotification({api,actor,env,event,fetcher=fetch,retry=false,returnResult=false}){
+  const answer=fields=>returnResult?{state:fields.state,detail:fields.detail||'The send result is not yet confirmed. Check recent email activity before sending again.'}:fields.state;
   const id=notificationPrefix+createHash('sha256').update(event.key).digest('hex');
   let record=await findRecord(api,id);
   if(!record){
@@ -72,14 +81,21 @@ export async function deliverNotification({api,actor,env,event,fetcher=fetch,ret
     catch(error){if(error.status!==409)throw error;record=await findRecord(api,id);}
   }
   if(!record)throw new HttpError(503,'The notification could not be recorded.');
-  if(record.fields.state!=='queued'&&!(retry&&record.fields.state==='failed'))return record.fields.state;
+  if(record.fields.state!=='queued'&&!(retry&&record.fields.state==='failed'))return answer(record.fields);
   // Claim before sending. Concurrent requests and repeated POSTs cannot send the same event twice.
-  const sending={...record,fields:{...record.fields,state:'sending',attemptedAt:new Date().toISOString()}};delete sending.revision;
+  const sending={...record,title:event.type==='welcome'&&record.fields.state==='failed'?event.title:record.title,fields:{...record.fields,...(retry&&record.fields.state==='failed'&&event.type==='welcome'?event:{}),state:'sending',attemptedAt:new Date().toISOString()}};delete sending.revision;
   let claimed;
-  try{claimed=await saveRecord(api,actor,sending,record.revision);}catch(error){if(error.status===409)return 'sending';throw error;}
-  const result=await sendExchange(env,{...sending.fields,id},fetcher);
-  await saveRecord(api,actor,{...sending,fields:{...sending.fields,...result}},claimed.revision);
-  return result.state;
+  try{claimed=await saveRecord(api,actor,sending,record.revision);}catch(error){if(error.status===409)return answer({state:'sending'});throw error;}
+  let result;
+  if(sending.fields.type==='welcome'){
+    try{await welcomeRecipient(api,env,sending.fields);}
+    catch(error){if(error.status!==409)throw error;result={state:'cancelled',detail:error.message};}
+  }
+  result ||= await sendExchange(env,{...sending.fields,id},fetcher);
+  const fields={...sending.fields,...result};
+  if(fields.type==='welcome'&&result.state!=='failed')delete fields.encryptedMessage;
+  await saveRecord(api,actor,{...sending,fields},claimed.revision);
+  return answer(fields);
 }
 export function workflowNotifications(params,f,data,env){
   const settings=notificationSettings(data);if(!settings.enabled)return [];
@@ -120,7 +136,7 @@ export async function connectionsPage(data,env,api,params){
   adminOnly(data.actor);
   const settings=notificationSettings(data),r=data.byId.get(settingsId),configured=exchangeConfigured(env);
   const rows=await api(itemTable+'?id=like.studio:notification:*&select=id,payload,revision,updated_at&order=updated_at.desc&limit=12',{service:true});
-  const statuses={queued:'Waiting',sending:'Sending / check Sent Items',accepted:'Accepted by Microsoft',failed:'Not sent',unknown:'Check Sent Items'};
+  const statuses={queued:'Waiting',sending:'Sending / check Sent Items',accepted:'Accepted by Microsoft',failed:'Not sent',unknown:'Check Sent Items',cancelled:'Prepare fresh welcome details'};
   return heading('Connections','Manage the services used by your workspace.')+
     (params.get('saved')?'<p role="status">Notification settings saved.</p>':'')+
     (params.get('mail')?'<p role="status">'+esc(statuses[params.get('mail')]||'Check the recent email activity below.')+'</p>':'')+
@@ -144,7 +160,7 @@ export async function changeNotifications(f,data,api,env,fetcher){
   }
   if(f.action==='notifications-test'){
     if(!/^[a-f0-9-]{36}$/i.test(f.requestId||''))throw new HttpError(400,'Reopen the test email form.');
-    const event={key:'test:'+f.requestId,recipient:email(f.recipient),title:'Your Content workspace email is connected',message:'This is a test notification from nutrition.fitness.',link:notificationLink(env,'connections',{})};
+    const event={key:'test:'+f.requestId,recipient:email(f.recipient),title:'Content Manager email test',message:'This is a test notification from nutrition.fitness.',link:notificationLink(env,'connections',{})};
     return {mail:await deliverNotification({api,actor:data.actor,env,event,fetcher})};
   }
   if(f.action==='notifications-retry'){
