@@ -32,11 +32,11 @@ test('software releases save and reload, preserve conflicts, and deny staff writ
     return path.includes('nufi_studio_items?')?[...rows.values()]:[];
   };
   const id='studio:software-release:'+randomUUID();
-  const fields={action:'software-release-save',id,revision:'0',title:'Website update',version:'1.1',platform:'Website',stage:'Testing',target:'2026-12-01'};
+  const fields={action:'software-release-save',id,revision:'0',title:'Website update',version:'1.1',platform:'Website',stage:'Planned',target:'2026-12-01'};
   const res=response();
   await handleStudio({method:'POST',body:fields},res,{params:new URLSearchParams({studio:'software-releases'}),actor:admin,api,load,env:{}});
   assert.equal(res.statusCode,303);assert.equal(rows.get(id).revision,1);
-  const page=response();await handleStudio({method:'GET'},page,{params:new URLSearchParams({studio:'software-releases'}),actor:admin,api,load,env:{}});
+  const page=response();await handleStudio({method:'GET'},page,{params:new URLSearchParams({studio:'software-releases',tab:'releases'}),actor:admin,api,load,env:{}});
   assert.equal(page.statusCode,200);assert.match(page.body,/Website update/);assert.match(page.body,/2026-12-01/);
   const conflict=response();await handleStudio({method:'POST',body:fields},conflict,{params:new URLSearchParams({studio:'software-releases'}),actor:admin,api,load,env:{}});
   assert.equal(conflict.statusCode,409);assert.equal(rows.get(id).revision,1);

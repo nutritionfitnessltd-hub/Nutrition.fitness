@@ -10,6 +10,7 @@ import { esc, url, heading, button, hidden, input, textarea, select, form, list,
 // These roles were checked against James HQ and the saved Rory role on 18 November 2026.
 // A named employee or scheduled chat is not a published API-triggerable Workspace Agent.
 export const workers={
+  ellis:{portrait:'/assets/studio-team/ellis.png',defaultBuild:'marketing',name:'Ellis',role:'Software Release Manager',employeeId:'employee:Nutrition.Fitness:release-manager',reason:'Collects bugs and feature requests, clarifies acceptance criteria and prepares releases for James to approve and Codex to build.'},
   morgan:{portrait:'/assets/studio-team/morgan.svg',defaultBuild:'project',name:'Morgan',role:'Project Manager',employeeId:'employee:Nutrition.Fitness:morgan',reason:'Turn Shiny Things into clear project proposals, check overlaps and track tasks, milestones and blockers in James HQ.'},
   nina:{portrait:'/assets/studio-team/nina.jpg',defaultBuild:'newsletter',name:'Nina',role:'Content & marketing',employeeId:'employee:Nutrition.Fitness:content',reason:'Newsletters, articles, emails and campaign copy.'},
   imogen:{portrait:'/assets/studio-team/imogen-aligned.png',defaultBuild:'course',name:'Imogen',role:'Courses & production',employeeId:'employee:Nutrition.Fitness:course-production',reason:'Course structure, lesson scripts and production preparation.'},

@@ -421,3 +421,5 @@
 
 
 .worker-ideas>.studio-list>li,.worker-conversation>.studio-list>li{display:block}.worker-ideas>.studio-list>li>.panel{width:100%;box-sizing:border-box}
+
+.worker-ellis{--worker-tint:#e0edef;--worker-accent:#4d8790}.release-manager-summary .btn{margin-top:8px}.release-scope-items{border:1px solid #d6dedb;border-radius:10px;padding:20px}.release-scope-items .check{margin:12px 0}.release-scope-items small{display:block;color:#526e7b}.source-text{white-space:pre-wrap;overflow-wrap:anywhere}

@@ -29,12 +29,12 @@ function workerCards(data){
       return '<article class="dashboard-worker worker-'+id+'"><header>'+workerPortrait(w)+'<div><h3>'+w.name+'</h3><p>'+esc(w.role)+'</p></div></header><p class="worker-state">'+(content.length?content.length+' content items · '+drafts+' drafts · '+reviews+' awaiting approval':plans.length?plans.length+' planned · not started':id==='nina'?'No unfinished content':'No work planned')+'</p>'+
         (['alex','andy','martina'].includes(id)?'<section class="worker-idea-summary"><strong>Daily ideas · 9 am London</strong>'+(data.hqIdeas?.[id]?'<p><a href="'+url('worker-chat',{worker:id})+'">'+esc(data.hqIdeas[id].title)+'</a></p><p>'+esc(({pending:'Awaiting your approval',scoping:'Preparing scope',scoped:'Scope ready to review',active:'Plan in progress',done:'Plan completed',rejected:'New idea due tomorrow',superseded:'Newer proposal available'})[data.hqIdeas[id].state]||'Open for review')+'</p>':'<p>Your first proposal will appear after HQ processes the queued work.</p>')+'</section>':'')+
         (content.length?'<ul class="worker-content-list">'+content.slice(0,5).map(r=>'<li><a '+(r.kind==='article'||r.status==='In review'?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+(r.kind==='article'||r.status==='In review'?url('review-preview',{id:r.id}):url('item',{id:r.id,tab:'edit'}))+'">'+esc(r.title)+'</a>'+badge(r.publication?.status==='published'?'Published':r.status)+'</li>').join('')+'</ul>':'')+
-        button('Open '+w.name+'’s work',url('library',{worker:id,view:'all'}))+
+        button('Open '+w.name+'’s work',id==='ellis'?url('software-releases'):url('library',{worker:id,view:'all'}))+
         button('Message '+w.name+(['alex','andy','martina'].includes(id)?' & review ideas':''),url('worker-chat',{worker:id}))+
         (w.setupNote?'<p class="worker-empty">'+esc(w.setupNote)+'</p>':'')+
         (plans.length?'<ul class="worker-plan-list">'+plans.slice(0,3).map(({request,output})=>'<li><a href="'+url('worker-requests',{id:request.id})+'">'+esc(output.title)+'</a><small>From '+esc(request.title)+'</small><details><summary>What '+w.name+' will do</summary><p>'+esc(output.brief)+'</p></details></li>').join('')+'</ul>':'<p class="worker-empty">'+esc(w.reason.split(' HQ directory')[0])+'</p>')+
         (plans.length>3?button('View all '+w.name+'’s plans',url('worker-requests',{worker:id})):'')+
-        '<a class="worker-new" href="'+(id==='morgan'?url('shiny-things'):url('builder',{build:w.defaultBuild}))+'">Plan work for '+w.name+' →</a></article>';
+        '<a class="worker-new" href="'+(id==='ellis'?url('software-releases'):id==='morgan'?url('shiny-things'):url('builder',{build:w.defaultBuild}))+'">Plan work for '+w.name+' →</a></article>';
     }).join('')+'</div></section>';
 }
 

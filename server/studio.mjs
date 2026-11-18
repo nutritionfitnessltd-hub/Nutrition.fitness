@@ -1,3 +1,5 @@
+import {changeSoftwareRelease,softwareReleaseErrorForm} from './software-releases.mjs';
+import {hqRequest} from './studio-hq.mjs';
 import { shinyThingsPage, changeShinyThing, ideaProjectPage } from './studio-shiny-things.mjs';
 import {workerIdeaSummaries} from './studio-ideas.mjs';
 import {workerChatPage,changeHq} from './studio-hq.mjs';
@@ -110,11 +112,8 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(req.method==='POST'){
       if(['hq-message','hq-idea','hq-approve-plan'].includes(f.action)){const result=await changeHq(params,f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url(result.section,result).replaceAll('&amp;','&'));return res.end();}
 
-      if(f.action==='software-release-save'){
-        await saveSoftwareRelease(f,data,api);
-        res.statusCode=303;res.setHeader('Location',url('software-releases').replaceAll('&amp;','&'));return res.end();
-      }
-
+      if(f.action==='software-manager-review'){await hqRequest(env,{action:'message',worker:'ellis',message:f.message,clientMessageId:f.requestId},fetcher);res.statusCode=303;res.setHeader('Location',url('worker-chat',{worker:'ellis'}).replaceAll('&amp;','&'));return res.end();}
+      if(['software-release-save','software-backlog-save','software-release-decision'].includes(f.action)){const result=await changeSoftwareRelease(f,data,api);res.statusCode=303;res.setHeader('Location',url(result.section,result).replaceAll('&amp;','&'));return res.end();}
       if(f.action?.startsWith('notifications-')){
         const result=await changeNotifications(f,data,api,env,fetcher);
         res.statusCode=303;res.setHeader('Location',url('connections',result).replaceAll('&amp;','&'));return res.end();
@@ -273,6 +272,8 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       if(schedule?.kind==='structure'&&week&&(data.actor.role==='admin'||data.assigned.has(schedule.id))){
         body+='<p>Your unsaved day changes are shown below. If the schedule changed, open the latest weekly plan before combining your changes.</p>'+button('Open latest weekly plan',url('item',{id:params.get('id'),tab:'plan',schedule:schedule.id,week:week.number}))+workoutDaysEditor(params,data,schedule,week,f);
       }
+    }else if(req.method==='POST'&&['software-backlog-save','software-release-save','software-release-decision'].includes(f.action)&&data?.actor.role==='admin'){
+      try{body+=softwareReleaseErrorForm(f,data);}catch{body+=button('Open backlog',url('software-releases'));}
     }else if(req.method==='POST'&&['hq-message','hq-idea'].includes(f.action)&&data?.actor.role==='admin'){
       body+=await workerChatPage(new URLSearchParams({worker:f.worker}),data,env,fetcher,f);
     }else if(req.method==='POST'&&['worker-step','worker-preview','worker-save'].includes(f.action)&&data?.actor.role==='admin'){
