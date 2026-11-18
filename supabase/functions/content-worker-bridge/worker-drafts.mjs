@@ -66,6 +66,14 @@ export function draftResult(row,website){
     body:r.kind==='recipe'?f.sourceText||f.body||'':f.body||'',fields:f,assetUrls:f.assetUrls||[],
     ...(r.kind==='recipe'?{ingredients:f.ingredients||[],method:f.instructions||[],allergens:f.allergens||[],servings:f.servings}:{}),
     status:({'Draft':'draft','In review':'review','Changes requested':'changes_requested','Approved':'approved','Archived':'archived'})[r.status]||'draft',
+    feedback:r.comments||[],reviewFeedback:r.reviewFeedback||[],
     updatedAt:row.updated_at,programmeId:r.workerSource.programmeId,sourceId:r.workerSource.sourceId,
     imageUploaded:Boolean(r.workerImage||r.articleImage),reviewUrl:website+'/content-library/?work=1&studio=item&id='+encodeURIComponent(r.id)};
+}
+// Only owner-authored review entries become reusable guidance. Ordinary source text is not policy.
+export function reviewGuidance(records,workerId){
+ return records.filter(r=>r.status!=='Archived').flatMap(r=>(r.reviewFeedback||[])
+  .filter(f=>f.workerId===workerId&&f.guidance?.trim())
+  .map(f=>({id:f.id,guidance:f.guidance,sourceId:r.id,sourceTitle:r.title,at:f.at})))
+  .sort((a,b)=>(b.at||'').localeCompare(a.at||''));
 }
