@@ -21,6 +21,7 @@ const records=[
  make('training:lesson-two','lesson','Second lesson',{body:'Second lesson content',videoUrl:'https://example.test/video',script:'This is the recorded narration.',durationSeconds:125})
 ];
 records.push({id:'catalogue:challenge',kind:'Challenge guide',group:'Challenges',title:'Six-week challenge',fields:{collection:'Six-week challenge'},files:[]});
+records.push({id:'catalogue:programme',kind:'Workout programme',group:'Programs',title:'Starter strength programme',fields:{body:'Original programme overview: three training sessions per week.'},files:[]});
 const index={records,files:{}},saved=new Map();
 const api=async(endpoint,opts={})=>{
  if(endpoint.includes('rpc/nufi_studio_save')){

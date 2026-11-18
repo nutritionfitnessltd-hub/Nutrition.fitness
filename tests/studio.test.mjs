@@ -22,7 +22,7 @@ function fixture(actor=admin){
 
 test('library retains separate content types while creation and programme navigation stay simple',()=>{
   const data=fixture(),html=library(new URLSearchParams(),data);
-  assert.equal((html.match(/class="studio-card studio-type-card"/g)||[]).length,21);
+  assert.equal((html.match(/class="[^"]*\bstudio-type-card\b[^"]*"/g)||[]).length,21);
   for(const type of ['recipe','mealplan','course','article','ebook','communication','workflow','asset'])assert.ok(html.includes('kind='+type));
   const frame=studioFrame(html,'library',admin);
   const nav=frame.match(/aria-label="Studio navigation">(.*?)<\/nav>/s)[1];
