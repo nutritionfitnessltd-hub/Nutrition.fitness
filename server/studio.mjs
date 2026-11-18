@@ -109,6 +109,10 @@ export async function handleStudio(req,res,{params,actor,api,load,env}){
       case 'history':body=await history(params,data,api);break;
       case 'archive':body=archivePage(params,data,meta||{});break;
       case 'import':body=importPage(params,data);break;
+      case 'settings':
+        if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
+        body=heading('Settings','Manage your team, brand guidance and connections.')+'<div class="studio-cards">'+
+          button('Team & permissions',url('team'))+button('Brand & writing guidance',url('standards'))+button('Connections',url('standards'))+'</div>';break;
       case 'standards':
         if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
         body=standardsPage(data,env);break;
