@@ -1,3 +1,4 @@
+import { workerContent } from './studio-worker-content.mjs';
 import { canAccess } from './library-permissions.mjs';
 import { workers } from './studio-workers.mjs';
 import { contentPhoto, workerPortrait } from './studio-visuals.mjs';
@@ -21,10 +22,13 @@ export function dashboardWork(data){
 
 function workerCards(data){
   const requests=requestsFor(data);
-  return '<section class="dashboard-team" aria-labelledby="workers-title"><div class="dashboard-section-heading"><div><h2 id="workers-title">AI workers</h2><p>The work you have planned with your team.</p></div>'+button('All worker plans',url('worker-requests'))+'</div>'+
+  return '<section class="dashboard-team" aria-labelledby="workers-title"><div class="dashboard-section-heading"><div><h2 id="workers-title">AI workers</h2><p>Your team’s saved content and planned work.</p></div>'+button('All worker plans',url('worker-requests'))+'</div>'+
     '<p class="dashboard-connection">Plans are saved here. Automatic worker start and progress updates are not connected yet.</p><div class="dashboard-workers">'+Object.entries(workers).map(([id,w])=>{
+      const content=workerContent(data,id),drafts=content.filter(r=>['Draft','Changes requested'].includes(r.status)).length,reviews=content.filter(r=>r.status==='In review').length;
       const plans=requests.flatMap(request=>(request.fields.outputs||[]).filter(o=>o.worker===id).map(output=>({request,output})));
-      return '<article class="dashboard-worker worker-'+id+'"><header>'+workerPortrait(w)+'<div><h3>'+w.name+'</h3><p>'+esc(w.role)+'</p></div></header><p class="worker-state">'+(plans.length?plans.length+' planned · not started':'No work planned')+'</p>'+
+      return '<article class="dashboard-worker worker-'+id+'"><header>'+workerPortrait(w)+'<div><h3>'+w.name+'</h3><p>'+esc(w.role)+'</p></div></header><p class="worker-state">'+(content.length?content.length+' content items · '+drafts+' drafts · '+reviews+' awaiting approval':plans.length?plans.length+' planned · not started':'No work planned')+'</p>'+
+        (content.length?'<ul class="worker-content-list">'+content.slice(0,5).map(r=>'<li><a href="'+url('item',{id:r.id,tab:'edit'})+'">'+esc(r.title)+'</a>'+badge(r.publication?.status==='published'?'Published':r.status)+'</li>').join('')+'</ul>':'')+
+        button('Open '+w.name+'’s work',url('library',{worker:id,view:'all'}))+
         (w.setupNote?'<p class="worker-empty">'+esc(w.setupNote)+'</p>':'')+
         (plans.length?'<ul class="worker-plan-list">'+plans.slice(0,3).map(({request,output})=>'<li><a href="'+url('worker-requests',{id:request.id})+'">'+esc(output.title)+'</a><small>From '+esc(request.title)+'</small><details><summary>What '+w.name+' will do</summary><p>'+esc(output.brief)+'</p></details></li>').join('')+'</ul>':'<p class="worker-empty">'+esc(w.reason.split(' HQ directory')[0])+'</p>')+
         (plans.length>3?button('View all '+w.name+'’s plans',url('worker-requests',{worker:id})):'')+

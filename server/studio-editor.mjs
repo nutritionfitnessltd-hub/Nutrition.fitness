@@ -1,7 +1,10 @@
+import { workerNames, contentWorker } from './studio-worker-content.mjs';
 import { blankFields } from './studio-model.mjs';
 import { articleImageEditor } from './studio-articles.mjs';
 import { primaryFields, fieldLabel } from '../public/studio-fields.mjs';
-import { esc, url, hidden, input, textarea, button } from './studio-ui.mjs';
+import { esc, url, hidden, input, textarea, button, select } from './studio-ui.mjs';
+
+const workerAssignment=(r,data)=>data.actor.role==='admin'?select('workerId','Worker',{'none':'No worker',...workerNames},contentWorker(r,data.byId)||'none'):'';
 
 export function referenceData(data){
   return '<textarea hidden id="studio-reference-data">'+esc(JSON.stringify(data.items.filter(r=>r.kind!=='settings'&&r.status!=='Archived').map(r=>({id:r.id,title:r.title,kind:r.kind,image:r.fields.imageUrl||r.fields.thumbnailUrl||r.fields.media?.thumbnailUrl||''}))))+'</textarea>';
@@ -14,7 +17,7 @@ export function editorForm(r,data,{create=false,project='',entry='',feedback='',
   if(r.kind==='communication')return messageEditorForm(r,data,{create,project,entry,unsaved});
   return '<form method="post" action="'+url(create?'new':'item',create?{kind:r.kind}:{id:r.id,tab:'edit'})+'" class="studio-form content-editor" id="studio-editor-form">'+
     hidden('action',create?'content-create':'content-save')+hidden(create?'id':'revision',create?r.id:r.revision)+
-    (create?hidden('kind',r.kind)+hidden('entry',entry):'')+editorFields(r)+
+    (create?hidden('kind',r.kind)+hidden('entry',entry):'')+editorFields(r)+workerAssignment(r,data)+
     (!create&&r.kind==='article'?articleImageEditor(r):'')+
     (r.source?.needsChecking?'<label class="check"><input type="checkbox" name="sourceChecked" value="yes"> I checked this content against the original</label>':'')+
     (create?'<details class="editor-details"><summary>Assign to a project (optional)</summary><label>Project<select name="project">'+(data.actor.role==='admin'?'<option value="">No project</option>':'')+data.projects.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===project?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></label></details>':
@@ -26,7 +29,7 @@ export function editorForm(r,data,{create=false,project='',entry='',feedback='',
 function messageEditorForm(r,data,{create,project,entry,unsaved}){
   return '<form method="post" action="'+url(create?'new':'item',create?{kind:r.kind}:{id:r.id,tab:'edit'})+'" class="studio-form content-editor message-editor" id="studio-editor-form">'+
     hidden('action',create?'content-create':'content-save')+hidden(create?'id':'revision',create?r.id:r.revision)+
-    (create?hidden('kind',r.kind)+hidden('entry',entry):'')+editorFields(r)+
+    (create?hidden('kind',r.kind)+hidden('entry',entry):'')+editorFields(r)+workerAssignment(r,data)+
     (r.source?.needsChecking?'<label class="check"><input type="checkbox" name="sourceChecked" value="yes"> Checked against the original</label>':'')+
     '<div class="studio-save-bar"><span data-editor-status'+(unsaved?' data-unsaved="true"':'')+' role="status">'+(unsaved?'Unsaved changes':create?'New message':'Saved')+'</span><div class="studio-actions">'+
       '<button type="submit" name="intent" value="preview">Preview</button><button class="primary" type="submit" name="intent" value="draft">Save</button></div></div>'+
