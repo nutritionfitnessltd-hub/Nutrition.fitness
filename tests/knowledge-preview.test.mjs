@@ -18,7 +18,7 @@ test('private preview uses Knowledge Centre styles and captions without chat wra
 test('editor and library link the saved draft to its private preview and show a Kalam caption',()=>{
  const data=fixture(),html=itemPage(new URLSearchParams({id:'sample',tab:'preview'}),data);
  assert.match(html,/<iframe[^>]+Website preview/);assert.match(html,/article-preview/);
- assert.match(itemPage(new URLSearchParams({id:'sample',tab:'edit'}),data),/Preview in Knowledge Centre/);
+ assert.match(itemPage(new URLSearchParams({id:'sample',tab:'edit'}),data),/Preview article/);
  assert.match(library(new URLSearchParams({kind:'article'}),data),/studio-photo-caption/);
 });
 test('preview requests read the saved draft without writes and remain scoped to assigned staff',async()=>{

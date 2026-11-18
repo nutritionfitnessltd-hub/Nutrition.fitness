@@ -34,8 +34,8 @@ test('dashboard reviews and worker approvals open the reading window, with draft
  d.items=[review,draft];d.byId=new Map(d.items.map(r=>[r.id,r]));
  const html=workspaceDashboard(d),work=dashboardWork(d);
  assert.match(work.reviews[0].href,/studio=review-preview/);
- assert.equal((html.match(/data-review-preview target="_blank" rel="noopener"/g)||[]).length,2);
- assert.match(html,/studio=item&amp;id=worker%3Adraft&amp;tab=edit/);
+ assert.equal((html.match(/data-review-preview target="_blank" rel="noopener"/g)||[]).length,3);
+ assert.match(html,/studio=review-preview&amp;id=worker%3Adraft/);
  assert.doesNotMatch(html,/studio=item&amp;id=worker%3Areview/);
 });
 
