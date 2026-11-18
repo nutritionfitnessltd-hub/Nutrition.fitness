@@ -22,7 +22,7 @@ export async function allRows(api,url){
 }
 export async function studioData(api,actor,load){
   const [index,overlays,projects,tasks,people]=await Promise.all([
-    load(),allRows(api,itemTable+'?select=id,payload,revision,updated_at&order=id'),
+    load(),allRows(api,itemTable+'?select=id,payload,revision,updated_at&order=id&id=not.like.studio:notification:*'),
     allRows(api,projectTable+'?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&creator_id=eq.'+actor.id)),
     allRows(api,'/rest/v1/nufi_library_tasks?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&staff_id=eq.'+actor.id)),
     actor.role==='admin'?api('/rest/v1/nufi_library_staff?select=id,name,email&order=name',service):Promise.resolve([{id:actor.id,name:actor.name}])

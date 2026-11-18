@@ -266,6 +266,20 @@
 .workout-selected [hidden] { display:none !important; }
 @media(max-width:760px){.workout-inline-editor .field-object-body { grid-template-columns:1fr; }.workout-inline-editor .studio-save-bar { position:static; }}
 
+.studio-brand-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.studio-brand-grid .panel { margin:0 0 20px; }
+.studio-brand-logo img { display:block; width:min(100%,360px); height:auto; margin:28px 0; }
+.studio-brand-font { font-size:32px; font-weight:700; margin:12px 0; }
+.studio-brand-themes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin:20px 0; }
+.studio-brand-theme { padding:18px; border-radius:8px; border-top:5px solid; color:#092A3E; }
+.studio-brand-theme h3 { font-size:17px; margin:0 0 14px; }
+.studio-brand-theme span { display:block; font-size:14px; margin:6px 0; }
+.studio-brand-theme code { white-space:nowrap; }
+.studio-brand-palette { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-top:20px; }
+.studio-brand-palette>div { display:flex; align-items:center; gap:10px; font-size:14px; }
+.studio-brand-swatch { width:36px; height:36px; border:1px solid #C7D0D5; border-radius:6px; flex-shrink:0; }
+@media(max-width:900px){.studio-brand-themes { grid-template-columns:repeat(2,minmax(0,1fr)); }}
+@media(max-width:640px){.studio-brand-grid,.studio-brand-themes { grid-template-columns:1fr; }}
 /* A warmer workspace: real content imagery and recognisable teammates. */
 .studio { background:#faf8f3; --line:#dddcd4; }
 .studio .side { background:#fffdf8; border-right:1px solid #e4ded2; }
