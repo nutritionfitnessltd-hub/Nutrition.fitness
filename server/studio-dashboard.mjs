@@ -34,7 +34,7 @@ function workerCards(data){
         (w.setupNote?'<p class="worker-empty">'+esc(w.setupNote)+'</p>':'')+
         (plans.length?'<ul class="worker-plan-list">'+plans.slice(0,3).map(({request,output})=>'<li><a href="'+url('worker-requests',{id:request.id})+'">'+esc(output.title)+'</a><small>From '+esc(request.title)+'</small><details><summary>What '+w.name+' will do</summary><p>'+esc(output.brief)+'</p></details></li>').join('')+'</ul>':'<p class="worker-empty">'+esc(w.reason.split(' HQ directory')[0])+'</p>')+
         (plans.length>3?button('View all '+w.name+'’s plans',url('worker-requests',{worker:id})):'')+
-        '<a class="worker-new" href="'+url('builder',{build:w.defaultBuild})+'">Plan work for '+w.name+' →</a></article>';
+        '<a class="worker-new" href="'+(id==='ellis'?url('software-releases'):url('builder',{build:w.defaultBuild}))+'">Plan work for '+w.name+' →</a></article>';
     }).join('')+'</div></section>';
 }
 
