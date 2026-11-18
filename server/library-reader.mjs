@@ -22,6 +22,7 @@ const digest = input => createHash('sha256').update(input).digest();
 const equal = (a, b) => a.length === b.length && timingSafeEqual(a, b);
 const escTarget=value=>('/content-library/'+new URL(value,'https://local.invalid').search).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
 let cached;
+export {readIndex as readProductionIndex};
 
 async function bundledCatalogue() {
   const file = await readFile(new URL('./guest-catalogue.enc', import.meta.url));
