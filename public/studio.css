@@ -419,3 +419,5 @@
 [data-review-feedback]{margin-top:18px}[data-review-feedback][hidden]{display:none}[data-review-feedback] textarea{width:100%;box-sizing:border-box}
 @media(max-width:600px){.review-popup{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;border:0}.review-popup-header,.review-popup-body,.review-popup-footer{padding:14px}.review-popup-footer .studio-actions{gap:8px;flex-wrap:wrap}.review-popup-body .studio-article-frame{min-height:300px}}
 
+
+.worker-ideas>.studio-list>li,.worker-conversation>.studio-list>li{display:block}.worker-ideas>.studio-list>li>.panel{width:100%;box-sizing:border-box}

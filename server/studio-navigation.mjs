@@ -8,7 +8,7 @@ export const referenceSections=['Recipes','Programs','Courses','Challenges','Art
 const href=(section,values={})=>'/content-library/?'+new URLSearchParams({work:'1',studio:section,...values}).toString().replaceAll('&','&amp;');
 const row=(name,section,values={})=>'<a href="'+href(section,values)+'">'+name+'</a>';
 export function studioNavigation(section,actor){
-  const active=section==='home'?'home':['projects','project','work','calendar','journey','release','export'].includes(section)?'projects':['software-releases'].includes(section)?'software-releases':['settings','team','connections','nda'].includes(section)?'team':section==='workspace-archive'?'workspace-archive':'assets';
+  const active=['home','worker-chat'].includes(section)?'home':['projects','project','work','calendar','journey','release','export'].includes(section)?'projects':['software-releases'].includes(section)?'software-releases':['settings','team','connections','nda'].includes(section)?'team':section==='workspace-archive'?'workspace-archive':'assets';
   const assets=canAccess(actor,'library')||canAccess(actor,'studio')||canAccess(actor,'originals');
   const menu=[['home','Home','LayoutGrid'],...(canAccess(actor,'work')?[['projects','Projects','Briefcase']]:[]),...(assets?[['assets','Assets','Layers']]:[]),...(actor.role==='admin'?[['software-releases','Software Releases','CheckCheck'],['team','Team','Settings']]:[]),...(canAccess(actor,'library')||canAccess(actor,'work')?[['workspace-archive','Archive','FolderOpen']]:[])];
   const subs=(canAccess(actor,'studio')?row('Content Studio','create'):'')+(canAccess(actor,'library')?row('Content Library','library'):'')+(canAccess(actor,'library')?row('Brand & Media','brand-media'):'');
