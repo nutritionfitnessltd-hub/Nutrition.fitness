@@ -147,6 +147,12 @@
 .studio label small { display:block; color:var(--muted); font-weight:400; margin:5px 0; }
 .check { display:flex; align-items:center; gap:10px; }
 .check input { min-height:18px; width:18px; height:18px; }
+.notification-reviewers { border:0; padding:0; margin:24px 0; min-width:0; }
+.notification-reviewers legend { font-weight:600; padding:0; }
+.notification-reviewer-options { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:12px; margin:12px 0 18px; }
+.notification-reviewer-options .check { margin:0; padding:12px; border:1px solid var(--line,#d5dfe2); border-radius:8px; align-items:flex-start; overflow-wrap:anywhere; }
+.notification-reviewer-options small { display:block; color:#536572; margin-top:4px; }
+.notification-reviewer-options input { flex-shrink:0; }
 .studio-preview { max-width:100%; border:1px solid var(--line); padding:28px; background:white; border-radius:12px; white-space:pre-wrap; }
 .studio-preview dt { text-transform:capitalize; }
 .studio-preview dd { margin-bottom:18px; }
