@@ -1,22 +1,29 @@
+import { contents } from './library-view.mjs';
+import { activeShelf, link } from './library-shelves.mjs';
 import { randomUUID } from 'node:crypto';
 import { HttpError } from './platform.mjs';
 import { blankFields, cleanText } from './studio-model.mjs';
 import { esc, url, heading, button, hidden, input, textarea, select, form, pages } from './studio-ui.mjs';
 
-export function archivePage(params,data,meta){
-  const q=(params.get('q')||'').toLowerCase(),category=params.get('category')||'';
-  const archive=data.index.records.filter(r=>!r.id.startsWith('training:'));
-  const categories={'':'All categories',...Object.fromEntries([...new Set(archive.map(r=>r.group))].sort().map(g=>[g,g]))};
-  const rows=archive.filter(r=>(!category||r.group===category)&&(r.title+' '+r.kind+' '+(r.fields.collection||'')).toLowerCase().includes(q));
-  return heading('Archive','Choose a source to develop into Nutrition.fitness content.',button('Import a PDF or text',url('import'),true))+
-    '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','archive')+input('q','Search the archive',params.get('q')||'','search')+
-    select('category','Category',categories,category)+'<button>Find content</button></form>'+
-    pages(params,rows,items=>'<div class="studio-content-grid">'+items.map(r=>{
-      const preview=meta.assets?.[r.id]?.preview;
-      return '<div class="studio-content-card">'+(preview?'<img alt="" loading="lazy" src="'+url('media',{preview})+'">':'')+
-        '<div><small>'+esc(r.kind)+'</small><h2>'+esc(r.title)+'</h2><div class="studio-actions">'+button('Use as a starting point',url('import',{source:r.id}))+
-        button('Original assets','/content-library/?work=1&assets='+encodeURIComponent(r.id))+'</div></div></div>';
-    }).join('')+'</div>',24);
+export function archivePage(params,data,meta={}){
+  const index={...data.index,records:data.index.records.filter(r=>!r.id.startsWith('training:'))};
+  const state=new URLSearchParams(params);
+  if(!state.has('shelf')&&state.has('category'))state.set('shelf',state.get('category')==='Unsorted'?'Needs sorting':state.get('category'));
+  const shelf=activeShelf(state,index),record=index.records.find(r=>r.id===state.get('item'));
+  const sections=['Recipes','Courses','Programs','Challenges','Articles','E-Books','Business','Socials','Needs sorting','Source collections','All content'];
+  const navigation='<nav class="tabs archive-sections" aria-label="Archive shelves">'+sections.map(name=>'<a href="'+url('archive',{shelf:name})+'"'+(name===shelf?' aria-current="page"':'')+'>'+esc(name)+'</a>').join('')+'</nav>';
+  // Reuse the original shelf ordering, collection folders, recipe tabs and course detail view.
+  // Keep source-asset access and file downloads on their existing authorised routes.
+  let body=contents(index,state,meta);
+  body=body.replace(/(href|src)="(\/content-library\/(?:\?[^"<>]*)?)"/g,(match,attribute,destination)=>{
+    const query=new URL(destination.replaceAll('&amp;','&'),'https://studio.invalid').searchParams;
+    if(query.has('work')||query.has('file'))return match;
+    const target=query.has('preview')?url('media',{preview:query.get('preview')}):url('archive',Object.fromEntries(query));
+    return attribute+'="'+target+'"';
+  });
+  body=body.replace('<form class="filters" action="/content-library/">','<form class="filters" action="/content-library/">'+hidden('work','1')+hidden('studio','archive'));
+  return heading('Archive','Your original library, organised by its existing shelves and collections.',button('Import a PDF or text',url('import')))+navigation+
+    (record?'<div class="studio-workbar">'+button('Use as a starting point',url('import',{source:record.id}),true)+button('Original assets',link({work:'1',assets:record.id}))+'</div>':'')+body;
 }
 export function importPage(params,data,error='',values={}){
   const source=data.index.records.find(r=>r.id===(params.get('source')||values.source));
