@@ -3,6 +3,7 @@ import { HttpError, uuid } from './platform.mjs';
 import { kinds, templates, blankFields, cleanText, validateFields, validateShape, issues, makeProjectPlan, descendants } from './studio-model.mjs';
 import { editable, projectFor, saveRecord, saveProject } from './studio-store.mjs';
 import { extractDrafts } from './studio-import.mjs';
+import { refreshMealPlan } from './studio-mealplans.mjs';
 
 const adminOnly=data=>{if(data.actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');};
 function number(value,min,max){
@@ -81,14 +82,18 @@ export async function changeStudio(params,f,data,api){
       next.title=cleanText(f.title,200);if(!next.title)throw new HttpError(400,'Add a title.');
       try{next.fields=JSON.parse(f.fields);}catch{throw new HttpError(400,'The content fields could not be read.');}
       if(!next.fields||Array.isArray(next.fields)||typeof next.fields!=='object'||JSON.stringify(next.fields).length>500000)throw new HttpError(400,'Check the content fields and size.');
-      validateFields(next.fields);
+      validateFields(next.fields,0,next.kind==='mealplan'?2000:500);
       validateShape(next.kind,next.fields);
+      if(next.kind==='mealplan'&&r.fields.plannerVersion===1){
+        next.fields=refreshMealPlan(next.fields,data,r.fields);
+      }
       if(next.source&&f.sourceChecked==='yes')next.source.needsChecking=false;
       next.status='Draft';delete next.approval;
     }else if(action==='content-review'){
       if(!['In review','Changes requested','Approved','Archived'].includes(f.status))throw new HttpError(400,'Choose a review status.');
       if(f.status!=='In review')adminOnly(data);
       const missing=issues(next,data.items);
+      if(next.kind==='mealplan'&&next.fields.plannerVersion===1)next.fields=refreshMealPlan(next.fields,data,r.fields);
       if(f.status==='Approved'&&missing.length)throw new HttpError(400,missing.join(' '));
       next.status=f.status;
       if(f.status==='Approved')next.approval={by:data.actor.id,at:new Date().toISOString(),revision:r.revision+1};

@@ -44,16 +44,16 @@ export function cleanText(value,max=4000){
   if(typeof value!=='string'||value.length>max||/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value))throw new HttpError(400,'Check the text length and try again.');
   return value.trim();
 }
-export function validateFields(value,depth=0){
+export function validateFields(value,depth=0,arrayLimit=500){
   if(depth>16)throw new HttpError(400,'The content is nested too deeply.');
   if(value===null||typeof value==='boolean')return;
   if(typeof value==='number'&&Number.isFinite(value))return;
   if(typeof value==='string'){cleanText(value,100000);return;}
-  if(Array.isArray(value)){if(value.length>500)throw new HttpError(400,'Use up to 500 entries in a section.');value.forEach(v=>validateFields(v,depth+1));return;}
+  if(Array.isArray(value)){if(value.length>arrayLimit)throw new HttpError(400,'Use up to '+arrayLimit+' entries in a section.');value.forEach(v=>validateFields(v,depth+1,arrayLimit));return;}
   if(value&&typeof value==='object'){
     for(const [k,v] of Object.entries(value)){
       if(['__proto__','prototype','constructor'].includes(k)||k.length>100)throw new HttpError(400,'Invalid content field.');
-      validateFields(v,depth+1);
+      validateFields(v,depth+1,arrayLimit);
     }
     return;
   }
@@ -100,7 +100,7 @@ export function issues(record,records){
   const required={
     programme:['purpose','audience'],stage:['entryCriteria','exitCriteria'],structure:['spacing','weeks'],
     session:['warmup','blocks','cooldown'],exercise:['movement','equipment','instructions','cues'],
-    recipe:['ingredients','instructions'],course:['outcome'],lesson:['body'],article:['body'],
+    recipe:['ingredients','instructions'],mealplan:['days'],course:['outcome'],lesson:['body'],article:['body'],
     communication:['channel','trigger','timing','body'],campaign:['body'],workflow:['trigger','steps'],asset:['brief']
   };
   for(const key of required[record.kind]||[])if(!present(d[key]))out.push('Add '+key.replace(/([A-Z])/g,' $1').toLowerCase()+'.');

@@ -12,20 +12,23 @@ const baseInstructions = [
   'Avoid repetitive coaching messages and jargon such as hypoxia. Explain the member action and the reason for it.',
   'Return fieldsJson as a JSON object matching the supplied content field shape, and notes as review guidance.'
 ].join('\n');
-export async function generateDraft({env,record,prompt,standards,exercises=[],fetcher=fetch}){
+export async function generateDraft({env,record,prompt,standards,exercises=[],context={},fieldSchema,maxOutputTokens=10000,fetcher=fetch}){
   if(!env.OPENAI_API_KEY)throw new HttpError(503,'The OpenAI account connection is still being completed. You can continue editing and importing content.');
   if(!prompt.trim())throw new HttpError(400,'Describe what you want the draft to do.');
+  const fieldsShape=fieldSchema?{...fieldSchema}:null;
+  if(fieldsShape)delete fieldsShape.$defs;
   const schema={type:'object',additionalProperties:false,properties:{
-    title:{type:'string'},fieldsJson:{type:'string'},notes:{type:'string'}
-  },required:['title','fieldsJson','notes']};
+    title:{type:'string'},[fieldSchema?'fields':'fieldsJson']:fieldsShape||{type:'string'},notes:{type:'string'}
+  },required:['title',fieldSchema?'fields':'fieldsJson','notes']};
+  if(fieldSchema?.$defs)schema.$defs=fieldSchema.$defs;
   let response;
   try{
     response=await fetcher('https://api.openai.com/v1/responses',{
       method:'POST',headers:{Authorization:'Bearer '+env.OPENAI_API_KEY,'Content-Type':'application/json'},
       body:JSON.stringify({model:env.OPENAI_STUDIO_MODEL||'gpt-5-mini',store:false,
-        instructions:baseInstructions+'\nBrand guidance\n'+(standards||''),
-        input:JSON.stringify({request:prompt,kind:record.kind,title:record.title,fields:{...blankFields(record.kind),...record.fields},source:record.source?.text||'',exercises}),
-        text:{format:{type:'json_schema',name:'content_draft',strict:true,schema}},max_output_tokens:10000}),
+        instructions:baseInstructions+(fieldSchema?'\nFor this request return fields as the structured object required by the schema, not fieldsJson.':'')+'\nBrand guidance\n'+(standards||''),
+        input:JSON.stringify({request:prompt,kind:record.kind,title:record.title,fields:{...blankFields(record.kind),...record.fields},source:record.source?.text||'',exercises,context}),
+        text:{format:{type:'json_schema',name:'content_draft',strict:true,schema}},max_output_tokens:maxOutputTokens}),
       signal:AbortSignal.timeout(180000)
     });
   }catch{throw new HttpError(503,'The draft request could not finish. Your saved content is available to continue editing.');}
@@ -37,7 +40,7 @@ export async function generateDraft({env,record,prompt,standards,exercises=[],fe
   if(data.status!=='completed')throw new HttpError(503,'The draft was incomplete. Try a smaller request, such as one workout or one week.');
   const text=data.output?.flatMap(o=>o.content||[]).filter(c=>c.type==='output_text').map(c=>c.text).join('');
   let draft,fields;
-  try{draft=JSON.parse(text);fields=JSON.parse(draft.fieldsJson);}catch{throw new HttpError(503,'The draft did not return readable content. Please try again.');}
+  try{draft=JSON.parse(text);fields=fieldSchema?draft.fields:JSON.parse(draft.fieldsJson);}catch{throw new HttpError(503,'The draft did not return readable content. Please try again.');}
   if(!fields||Array.isArray(fields)||typeof fields!=='object'||JSON.stringify(fields).length>500000)throw new HttpError(503,'The draft format could not be checked.');
   validateFields(fields);
   validateShape(record.kind,fields);
