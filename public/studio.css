@@ -7,6 +7,7 @@
 .login-shell .auth { background:white; margin:0; max-width:none; }
 .login-shell .auth h1 { font-size:28px; }
 .login-shell .auth form { margin:24px 0; }
+.login-shell .auth .remember-me{display:flex;align-items:center;gap:9px;font-weight:400;cursor:pointer;}.login-shell .remember-me input{width:18px;height:18px;min-height:0;margin:0;padding:0;accent-color:#064c60;}
 .team-row .studio-actions form { margin:0; }
 .studio .side { height:100dvh; position:sticky; }
 .studio .workspace main { max-width: 1640px; margin: auto; padding: 32px 40px 64px; }
