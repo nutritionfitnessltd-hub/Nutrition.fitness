@@ -5,6 +5,7 @@ import { signInProvisioned, consumePasswordAttempt } from './provisioned-login.m
 import { esc, link } from './library-shelves.mjs';
 import { projectScreen, changeProject } from './library-projects.mjs';
 
+import { welcomePanel } from './library-welcome.mjs';
 import { libraryLogin } from './library-login.mjs';
 import { requireLibraryNda, ndaAdminScreen } from './library-nda.mjs';
 import { studioFrame } from './studio-ui.mjs';
@@ -109,14 +110,14 @@ function accessFields(access){
   const current=accessFor({role:'staff',access});
   return field('accessVersion','1')+'<fieldset class="team-access"><legend>Access</legend><p class="meta">Tick what this person can use. Dashboard and their own signed agreement are always available. Approvals, publishing and Settings remain administrator-only.</p><div class="team-access-grid">'+accessOptions.map(([key,title,description])=>'<label class="team-access-option"><input type="checkbox" name="access_'+key+'" value="1"'+(current[key]?' checked':'')+'><span><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span></label>').join('')+'</div></fieldset>';
 }
-async function teamScreen(api,actor){
+async function teamScreen(api,actor,origin){
   if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
   const staff=await api(staffTable+'?select=id,name,email,code_hash,access,access_revision&order=name.asc',service),target=link({work:'1',studio:'team'});
   return '<h1>Team & permissions</h1><p>Choose what each team member can see and do. Changes apply on their next request, including when they are already signed in.</p><section class="panel"><h2>Create user</h2>'+form('create-user','<label>Full name<input name="name" maxlength="100" required autocomplete="off"></label><label>Email<input name="email" type="email" maxlength="254" required autocomplete="off"></label>'+accessFields(null)+'<button class="primary">Create user</button>',target)+'</section><section class="panel"><h2>Team members</h2>'+
-    (staff.length?staff.map(s=>'<section class="team-member"><div class="team-row"><div><strong>'+esc(s.name)+'</strong><br>'+esc(s.email)+'<br><small>'+(s.code_hash?'Access enabled':'Access disabled or password not set')+'</small></div><div class="studio-actions">'+form('issue-code',field('staff',s.id)+'<button>'+(s.code_hash?'Reset password':'Set password & enable')+'</button>',target)+(s.code_hash?form('disable-user',field('staff',s.id)+'<button>Disable access</button>',target):'')+'</div></div><details><summary>Set access for '+esc(s.name)+'</summary>'+form('save-access',field('staff',s.id)+field('accessRevision',s.access_revision||1)+accessFields(s.access)+'<button class="primary">Save access</button>',target)+'</details></section>').join(''):'<p>No team members yet.</p>')+'</section>';
+    (staff.length?staff.map(s=>'<section class="team-member"><div class="team-row"><div><strong>'+esc(s.name)+'</strong><br>'+esc(s.email)+'<br><small>'+(s.code_hash?'Access enabled':'Access disabled or password not set')+'</small></div><div class="studio-actions">'+form('issue-code',field('staff',s.id)+'<button>'+(s.code_hash?'Reset password':'Set password & enable')+'</button>',target)+(s.code_hash?form('disable-user',field('staff',s.id)+'<button>Disable access</button>',target):'')+'</div></div><details><summary>Set access for '+esc(s.name)+'</summary>'+form('save-access',field('staff',s.id)+field('accessRevision',s.access_revision||1)+accessFields(s.access)+'<button class="primary">Save access</button>',target)+'</details>'+(s.code_hash?'<details class="team-welcome-details"><summary>Send welcome details to '+esc(s.name)+'</summary>'+welcomePanel(s,{origin})+'</details>':'<p class="meta">Set a password to enable this account and prepare its welcome email.</p>')+'</section>').join(''):'<p>No team members yet.</p>')+'</section>';
 }
-function passwordResult(person,password){
-  return '<h1>Team password</h1><p>Share these details privately with '+esc(person.name)+'. This password is shown only now.</p><section class="panel"><p>Email: <strong>'+esc(person.email)+'</strong></p><p>Password: <code class="staff-code">'+esc(password)+'</code></p><p>Sign in at <a href="/content-library/">the content workspace</a>.</p></section><a class="btn" href="'+link({work:'1',studio:'team'})+'">Back to Team & permissions</a>';
+function passwordResult(person,password,origin){
+  return '<h1>Login details ready</h1><p>The account is enabled. Send these details privately to '+esc(person.name)+'. The new password is shown only now.</p><section class="panel"><p>Email: <strong>'+esc(person.email)+'</strong></p><p>Password: <code class="staff-code">'+esc(password)+'</code></p>'+welcomePanel(person,{origin,password})+'</section><a class="btn" href="'+link({work:'1',studio:'team'})+'">Back to Team & permissions</a>';
 }
 function tasksMarkup(tasks,staff,actor) {
   if(!tasks.length)return '<p>No assignments match this view.</p>';
@@ -153,7 +154,7 @@ async function dashboard(params,api,actor,load) {
   if(admin)out+='<section class="panel"><a href="'+link({work:'1',studio:'team'})+'">Team & permissions</a></section>';
   return out+'</div>';
 }
-async function change(actor,f,api,load) {
+async function change(actor,f,api,load,origin) {
   if(f.action==='update'){
     requireAccess(actor,'work','edit');
     const revision=Number(f.revision);
@@ -167,7 +168,7 @@ async function change(actor,f,api,load) {
     const password=randomBytes(24).toString('base64url');
     const person={name:readText(f.name,'the name',100),email:email(f.email),code_hash:hash(password),access:accessFromForm(f)};
     try{await api(staffTable,post(person));}catch(e){if(e.status===409)throw new HttpError(409,'A team member with this email already exists. Use Reset password for that person.');throw e;}
-    return passwordResult(person,password);
+    return passwordResult(person,password,origin);
   }
   if(f.action==='save-access'){
     const access=accessFromForm(f),revision=Number(f.accessRevision);
@@ -187,7 +188,7 @@ async function change(actor,f,api,load) {
     const code=randomBytes(24).toString('base64url');
     const rows=await api(staffTable+'?id=eq.'+uuid(f.staff),{service:true,method:'PATCH',headers:{Prefer:'return=representation'},payload:{code_hash:hash(code)}});
     if(!rows.length)throw new HttpError(404,'Colleague not found.');
-    return passwordResult(rows[0],code);
+    return passwordResult(rows[0],code,origin);
   }
   if(f.action!=='create')throw new HttpError(400,'Unknown work action.');
   const item=(await load()).records.find(r=>r.id===f.item);
@@ -196,6 +197,7 @@ async function change(actor,f,api,load) {
   await api(tasksTable+'?on_conflict=id',post(data,'resolution=ignore-duplicates,return=minimal'));
 }
 export async function handleLibraryWork(req,res,{env,load,params,apiFactory=platform}) {
+  const origin='https://'+req.headers.host;
   const item=params.get('item')||'';
   const projects=params.get('projects')==='1';
   const asset=params.get('assets');
@@ -232,11 +234,11 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
       if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
       if(req.method==='POST'){
         if(!['create-user','issue-code','disable-user','save-access'].includes(f.action))throw new HttpError(400,'Choose a team action.');
-        const message=await change(actor,f,api,load);
+        const message=await change(actor,f,api,load,origin);
         if(message)return writePage(res,200,message,actor,'team');
         res.statusCode=303;res.setHeader('Location',route+'&studio=team'+(f.action==='save-access'?'&saved=access':''));return res.end();
       }
-      return writePage(res,200,(params.get('saved')==='access'?'<p role="status" class="panel">Access saved. The new settings apply on this person’s next request.</p>':'')+await teamScreen(api,actor),actor,'team');
+      return writePage(res,200,(params.get('saved')==='access'?'<p role="status" class="panel">Access saved. The new settings apply on this person’s next request.</p>':'')+await teamScreen(api,actor,origin),actor,'team');
     }
     if(studio)return handleStudio(req,res,{params,actor,api,load,env});
     if(asset){
@@ -253,7 +255,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
       res.statusCode=303;res.setHeader('Location',route+'&projects=1&'+new URLSearchParams(next));return res.end();
     }
     if(req.method==='POST'){
-      const message=await change(actor,f,api,load);
+      const message=await change(actor,f,api,load,origin);
       return message?writePage(res,200,message,actor):redirect(res);
     }
     if(!params.has('assignments')&&!['item','find','staff','status','page'].some(k=>params.has(k)))return handleStudio(req,res,{params:new URLSearchParams({studio:'home'}),actor,api,load,env});
