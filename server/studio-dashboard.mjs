@@ -1,3 +1,4 @@
+import { canAccess } from './library-permissions.mjs';
 import { workers } from './studio-workers.mjs';
 import { contentPhoto, workerPortrait } from './studio-visuals.mjs';
 import { esc, url, heading, button, list, badge } from './studio-ui.mjs';
@@ -31,7 +32,17 @@ function workerCards(data){
     }).join('')+'</div></section>';
 }
 
+function teamDashboard(data){
+  const {mine,reviews}=dashboardWork(data),allowed=key=>canAccess(data.actor,key);
+  const sections=[['library','Content library','Read your working content.','library'],['originals','Originals','Browse reference material.','archive'],['studio','Studio','Create drafts for your assigned projects.','create'],['work','Work','Your projects, tasks and calendar.','projects']].filter(([key])=>allowed(key));
+  return heading('Dashboard','Welcome back, '+data.actor.name+'.')+
+    '<div class="studio-cards">'+sections.map(([,title,note,section])=>'<a class="studio-card" href="'+url(section)+'"><h2>'+title+'</h2><p>'+note+'</p></a>').join('')+'</div>'+
+    (!sections.length?'<section class="panel"><p>Your account is ready. Ask your administrator to enable the areas you need.</p></section>':'')+
+    (allowed('work')?'<section class="panel"><h2>My work</h2>'+list(mine.slice(0,10),row,'No open tasks assigned to you.')+'</section>':'')+
+    (allowed('work')&&allowed('library')?'<section class="panel"><h2>Awaiting review</h2>'+list(reviews.slice(0,5),row,'No submitted work awaiting review.')+'</section>':'');
+}
 export function workspaceDashboard(data){
+  if(data.actor.role!=='admin')return teamDashboard(data);
   const {mine,reviews,ownProjects}=dashboardWork(data),admin=data.actor.role==='admin';
   const plans=admin?requestsFor(data).reduce((n,r)=>n+(r.fields.outputs||[]).length,0):0;
   return '<section class="dashboard-welcome"><div class="welcome-copy"><span class="studio-eyebrow">Made for real life. Created by your team.</span><h1>Dashboard</h1><p class="welcome-lead">Good ideas start here.</p><p>Your work, your team and what comes next. Turn your originals into something people will enjoy, use and come back to.</p><div class="studio-actions">'+button('Create content',url('create'),true)+button('Explore your library',url('library'))+'</div></div><div class="welcome-pictures"><a href="'+url('library',{kind:'recipe'})+'">'+contentPhoto('recipe','welcome-photo',true)+'<span>Food to enjoy ↗</span></a><a href="'+url('library',{kind:'programme'})+'">'+contentPhoto('programme','welcome-photo',true)+'<span>Movement for real life ↗</span></a></div></section>'+

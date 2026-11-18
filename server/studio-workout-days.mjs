@@ -1,10 +1,11 @@
+import { canAccess, canEditContent } from './library-permissions.mjs';
 import { HttpError } from './platform.mjs';
 import { descendants } from './studio-model.mjs';
 import { editable, saveRecord } from './studio-store.mjs';
 import { esc, url, button, hidden, input, select } from './studio-ui.mjs';
 
 const resolve = (data, id) => data.byId.get(id) || data.byId.get('training:' + id);
-export const canEditDays = (schedule, data) => data.actor.role === 'admin' || data.assigned.has(schedule.id);
+export const canEditDays = (schedule, data) => canEditContent(data,schedule.id);
 
 function availableWorkouts(schedule, data) {
   const schedules = data.items.filter(r => r.kind === 'structure' && r.status !== 'Archived' && (r.id === schedule.id || (schedule.parent && r.parent === schedule.parent)));
@@ -34,7 +35,7 @@ export function workoutDaysEditor(params, data, schedule, week, submitted) {
     const label = submitted ? String(submitted['label' + i] || '') : week.dayLabels?.[i] || '';
     const rowOptions = { ...options };
     if (chosen && !Object.hasOwn(rowOptions, chosen)) rowOptions[chosen] = 'Unavailable selection';
-    const current = resolve(data, chosen), canEdit = current?.kind === 'session' && (data.actor.role === 'admin' || data.assigned.has(current.id));
+    const current = resolve(data, chosen), canEdit = current?.kind === 'session' && (canEditContent(data,current.id));
     return '<fieldset class="workout-day-edit" data-day-row><legend>Day ' + (i + 1) + '</legend><div class="workout-day-fields">' +
       input('label' + i, 'Day name (optional)', label, 'text', 'maxlength="40" placeholder="e.g. Monday" data-day-label') +
       select('session' + i, 'Workout', rowOptions, chosen) + '</div><div class="studio-actions">' +

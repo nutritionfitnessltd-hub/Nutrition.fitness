@@ -1,3 +1,4 @@
+import { authorizeStudioRequest, canAccess } from './library-permissions.mjs';
 import { saveInlineWorkout } from './studio-workout-inline.mjs';
 import { brandPage, sendBrandFile } from './studio-brand.mjs';
 import { connectionsPage, changeNotifications, workflowNotifications, notifyWorkflow } from './studio-notifications.mjs';
@@ -56,6 +57,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
   let data,meta;
   const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
   try{
+    authorizeStudioRequest(actor,section,req.method,f,params);
     if(Buffer.byteLength(JSON.stringify(f))>1200000)throw new HttpError(413,'Import a smaller section of this document.');
     if(section==='brand-file')return await sendBrandFile(req,res,params,actor);
     if(section==='media'){
@@ -67,7 +69,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }
     [data,meta]=await Promise.all([studioData(api,actor,load),displayEntry(env,'shelves').catch(()=>({}))]);
     meta=meta||{};
-    data.aiReady=Boolean(env.OPENAI_API_KEY);
+    data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');
     if(section==='book-file')return await sendBookFile(req,res,params,data);
     if(section==='article-image')return await sendArticleImage(req,res,params,data);
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);

@@ -1,3 +1,4 @@
+import { canAccess, canEditContent } from './library-permissions.mjs';
 import {get} from '@vercel/blob';
 import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
@@ -41,5 +42,5 @@ export function bookPage(r,data){
  (f.editionNote?'<p class="prose">'+esc(f.editionNote)+'</p>':'')+
  '<div class="studio-columns">'+asset('front','Front cover')+asset('back','Back cover')+'</div>'+
  '<div class="studio-columns">'+edition('digital','Reading PDF',f.digitalStatus||'Existing digital edition.')+edition('print','Print PDF',f.printStatus||'Print production has not been completed.')+'</div>'+
- (allowed?button('Edit book details',url('item',{id:r.id,tab:'edit'})):'')+'</details>';
+ (canEditContent(data,r.id)?button('Edit book details',url('item',{id:r.id,tab:'edit'})):'')+'</details>';
 }

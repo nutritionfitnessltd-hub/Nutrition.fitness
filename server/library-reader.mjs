@@ -1,3 +1,4 @@
+import { canAccess } from './library-permissions.mjs';
 import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { Readable } from 'node:stream';
@@ -139,6 +140,8 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     try{actor=await libraryActor(req,res,env,apiFactory);}catch{return html(res,503,loginScreen('Sign-in could not be checked. Please try again.'));}
     if (!actor&&!validSession(req, key)) return html(res, 401, loginScreen());
     if(await requireLibraryNda(req,res,{actor:ndaActor(actor),api:apiFactory(env),params}))return;
+    if(actor&&params.has('file')&&(!canAccess(actor,'originals')||!canAccess(actor,'sources')))return html(res,403,renderLibrary({error:'Your account cannot open original files. Ask your administrator to update your access.'}));
+    if(actor&&params.has('preview')&&params.get('preview')!=='brand-font'&&!canAccess(actor,'library')&&!canAccess(actor,'originals'))return html(res,403,renderLibrary({error:'Preview access is not enabled for your account.'}));
     if(actor&&!params.has('file')&&!params.has('preview')){
       const destination=new URLSearchParams(params);destination.set('work','1');destination.set('studio',[...params].length?'archive':'home');
       res.statusCode=303;res.setHeader('Location',path+'?'+destination);return res.end();

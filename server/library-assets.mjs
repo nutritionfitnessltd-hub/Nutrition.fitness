@@ -1,3 +1,4 @@
+import { requireAccess } from './library-permissions.mjs';
 import { HttpError } from './platform.mjs';
 import { esc, link } from './library-shelves.mjs';
 
@@ -15,6 +16,7 @@ function sourceLink(entry) {
 }
 
 export async function assetScreen(params, actor, api, load, display) {
+  requireAccess(actor,'originals','sources');
   const id = params.get('assets');
   const admin = actor.role === 'admin';
   const back = '<a class="back" href="' + link({ work:'1' }) + '">← Work assignments</a>';

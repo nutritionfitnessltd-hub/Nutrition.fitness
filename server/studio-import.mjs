@@ -1,3 +1,4 @@
+import { canAccess } from './library-permissions.mjs';
 import { contents } from './library-view.mjs';
 import { activeShelf, link } from './library-shelves.mjs';
 import { randomUUID } from 'node:crypto';
@@ -6,7 +7,7 @@ import { blankFields, cleanText } from './studio-model.mjs';
 import { esc, url, heading, button, hidden, input, textarea, select, form, pages } from './studio-ui.mjs';
 
 export function archivePage(params,data,meta={}){
-  const index={...data.index,records:data.index.records.filter(r=>!r.id.startsWith('training:'))};
+  const index={...data.index,records:data.index.records.filter(r=>!r.id.startsWith('training:')).map(r=>canAccess(data.actor,'sources')?r:{...r,files:[]})};
   const state=new URLSearchParams(params);
   if(!state.has('shelf')&&state.has('category'))state.set('shelf',state.get('category')==='Unsorted'?'Needs sorting':state.get('category'));
   const shelf=activeShelf(state,index),record=index.records.find(r=>r.id===state.get('item'));
@@ -14,7 +15,7 @@ export function archivePage(params,data,meta={}){
   const navigation='<nav class="tabs archive-sections" aria-label="Archive shelves">'+sections.map(name=>'<a href="'+url('archive',{shelf:name})+'"'+(name===shelf?' aria-current="page"':'')+'>'+esc(name)+'</a>').join('')+'</nav>';
   // Reuse the original shelf ordering, collection folders, recipe tabs and course detail view.
   // Keep source-asset access and file downloads on their existing authorised routes.
-  let body=contents(index,state,meta);
+  let body=contents(index,state,meta,{sources:canAccess(data.actor,'sources'),assign:data.actor.role==='admin'});
   body=body.replace(/(href|src)="(\/content-library\/(?:\?[^"<>]*)?)"/g,(match,attribute,destination)=>{
     const query=new URL(destination.replaceAll('&amp;','&'),'https://studio.invalid').searchParams;
     if(query.has('work')||query.has('file'))return match;
@@ -22,9 +23,9 @@ export function archivePage(params,data,meta={}){
     return attribute+'="'+target+'"';
   });
   body=body.replace('<form class="filters" action="/content-library/">','<form class="filters" action="/content-library/">'+hidden('work','1')+hidden('studio','archive'));
-  return heading('Originals','Source files, grouped by category.',button('Import a file',url('import')))+navigation+
+  return heading('Originals','Source files, grouped by category.',(canAccess(data.actor,'studio')?button('Import a file',url('import')):''))+navigation+
     (data.actor.role==='admin'&&(record||state.get('folder'))?'<div class="studio-workbar">'+button('Create with a worker',url('builder',record?{source:record.id}:{folder:state.get('folder'),shelf}),true)+'</div>':'')+
-    (record?'<div class="studio-workbar">'+button('Import source text',url('import',{source:record.id}),true)+button('Original assets',link({work:'1',assets:record.id}))+'</div>':'')+body;
+    (record?'<div class="studio-workbar">'+(canAccess(data.actor,'studio')?button('Import source text',url('import',{source:record.id}),true):'')+(canAccess(data.actor,'sources')?button('Original assets',link({work:'1',assets:record.id})):'' )+'</div>':'')+body;
 }
 export function importPage(params,data,error='',values={}){
   const source=data.index.records.find(r=>r.id===(params.get('source')||values.source));
