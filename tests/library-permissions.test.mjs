@@ -97,7 +97,7 @@ test('restricted menus and dashboard omit disabled features; reading does not ex
   const actor=staff({library:true}),record={id:'book:one',kind:'ebook',title:'Test book',status:'Draft',revision:1,fields:{bookType:'Guide'},bookAssets:{digital:{},front:{}}};
   const data={actor,assigned:new Set([record.id]),items:[record],byId:new Map([[record.id,record]]),tasks:[],projects:[],people:[],index:{records:[],files:{}}};
   const nav=studioNavigation('home',actor).html;
-  assert.match(nav,/Content library/);assert.doesNotMatch(nav,/>Originals<|>Studio<|>Work<|>Settings</);
+  assert.match(nav,/Content Library/);assert.doesNotMatch(nav,/>Originals<|>Studio<|>Work<|>Settings</);
   const dashboard=workspaceDashboard(data);
   assert.doesNotMatch(dashboard,/studio=create|studio=projects|studio=archive/);
   assert.doesNotMatch(library(new URLSearchParams(),data),/Create content/);

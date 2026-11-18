@@ -19,7 +19,7 @@ test('dashboard is the first navigation item and shows only the signed-in person
  d.items=[{id:'review',title:'Ready for checking',status:'In review'}];
  assert.equal(dashboardWork(d).mine.length,2);
  const html=workspaceDashboard(d);assert.match(html,/<h1>Dashboard/);assert.match(html,/My open task|My assignment/);assert.doesNotMatch(html,/Their task|Other assignment|My finished task/);assert.match(html,/Ready for checking/);
- const nav=studioNavigation('home',d.actor);assert.equal(nav.label,'Dashboard');assert.match(nav.html,/studio=home" aria-current="page"/);assert.ok(nav.html.indexOf('Dashboard')<nav.html.indexOf('Content library'));
+ const nav=studioNavigation('home',d.actor);assert.equal(nav.label,'Home');assert.match(nav.html,/studio=home" aria-current="page"/);assert.ok(nav.html.indexOf('Home')<nav.html.indexOf('Assets'));
 });
 
 test('worker cards derive plans from saved assignments and never invent activity; staff cannot see private plans',()=>{
