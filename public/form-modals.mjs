@@ -184,6 +184,8 @@ function boot() {
    if(target)primary=local(target,{...route,useHistory:normalPath(location.pathname)!=='/search/'},{auto:true});
   }
   document.querySelectorAll('form,[data-quiz],[data-form-modal]').forEach(form=>{
+   // Search is an everyday browsing control; keep it on the page.
+   if(form.querySelector('input[type="search"]'))return;
    if(form.closest('dialog,[role="dialog"],template')||form.hasAttribute('hidden')||form.dataset.nfNoModal!==undefined||prepared.has(form))return;
    const entry=local(form,formSpec(form));
    if(entry?.filter){

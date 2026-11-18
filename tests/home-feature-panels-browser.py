@@ -27,7 +27,7 @@ with sync_playwright() as w:
    p.evaluate('async()=>await document.fonts.ready')
    expect(p.locator('.nf-home-feature')).to_have_count(2)
    expect(p.locator('.home-programme-tile')).to_have_count(3);expect(p.locator('.home-product-tile')).to_have_count(4)
-   expect(p.locator('.launch-banner')).to_have_count(1);expect(p.locator('#about')).to_have_count(1)
+   expect(p.locator('.launch-banner:visible')).to_have_count(0);expect(p.locator('#about')).to_have_count(1)
    expect(p.locator('.home-powder-pack')).to_have_count(0)
    for card in p.locator('.nf-home-feature').all():
     box=card.bounding_box();regions=[]
@@ -45,7 +45,7 @@ with sync_playwright() as w:
    if width==390:
     p.add_style_tag(content='.nf-home-feature h2{font-size:64px}.nf-home-feature__description{font-size:32px}.nf-home-feature__action{font-size:32px}.nf-home-feature__note>span{font-size:42px}')
     ok('Enlarged text reflows without horizontal page overflow',p.evaluate('document.documentElement.scrollWidth<=innerWidth'))
-  for target in ['/recipes/','/shop/']:
+  for target in ['/meal-planner/','/shop/']:
    p.goto(BASE+'/');p.locator(f'.nf-home-feature__action[href="{target}"]').click();expect(p).to_have_url(BASE+target)
    ok('Working feature action '+target)
   # Render the developer handoff with the real site fonts, not a guessed substitute.

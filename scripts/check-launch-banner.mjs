@@ -14,6 +14,12 @@ assert.ok(files.length>0,'Build the site before checking its banner.');
 for(const file of files){
  const html=await readFile(file,'utf8'),name=path.relative(dist,file);
  const banner=html.indexOf('class="launch-widget launch-banner"'),main=html.search(/<main\b[^>]*\bid="main"[^>]*>/);
+ if(Date.now()>=Date.parse(LAUNCH.at)){
+  assert.equal(banner,-1,`${name}: an expired launch banner must not be shown`);
+  assert.ok(main>=0,`${name}: main content is missing`);
+  assert.ok(!html.includes('class="preview-bar"'),`${name}: obsolete preview strip`);
+  continue;
+ }
  assert.equal((html.match(/class="launch-widget launch-banner"/g)||[]).length,1,`${name}: exactly one launch banner required`);
  assert.ok(banner>html.indexOf('</header>')&&banner<main,`${name}: banner must be below navigation and above main content`);
  assert.equal((html.match(/id="launch-heading"/g)||[]).length,1,`${name}: duplicate launch heading`);
@@ -21,4 +27,4 @@ for(const file of files){
  assert.ok(html.slice(banner,main).includes(`datetime="${LAUNCH.at}"`),`${name}: incorrect launch date`);
  assert.ok(!html.includes('class="preview-bar"'),`${name}: obsolete preview strip`);
 }
-console.log(`Verified one shared launch banner on all ${files.length} generated pages.`);
+console.log(`Verified date-appropriate launch visibility on all ${files.length} generated pages.`);

@@ -3,7 +3,7 @@ The offline mode verifies local layout/behaviour only, not a deployed service.
 """
 from pathlib import Path
 from datetime import datetime, timezone
-import base64, json, mimetypes, os, re, sys
+import base64, json, mimetypes, os, re, sys, subprocess
 from playwright.sync_api import sync_playwright
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -14,6 +14,7 @@ OFFLINE = '--offline' in sys.argv
 BASE_URL = os.environ.get('NUFI_TEST_BASE_URL', 'http://127.0.0.1:4173').rstrip('/')
 checks = []
 errors = []
+BANNER = subprocess.check_output(['node','--input-type=module','-e',"import {launchWidget} from './src/launch-layout.mjs'; console.log(launchWidget(Date.parse('2026-10-01T09:00:00Z')));"],cwd=ROOT,text=True,encoding='utf-8').strip()
 
 def check(name, value):
     if not value:
@@ -35,7 +36,7 @@ def local_html():
         return uri
     def asset(path):
         return 'data:' + (mimetypes.guess_type(path)[0] or 'application/octet-stream') + ';base64,' + base64.b64encode(path.read_bytes()).decode()
-    html = (DIST / 'index.html').read_text()
+    html = (DIST / 'index.html').read_text(encoding='utf-8').replace('<main id="main">',BANNER+'<main id="main">')
     def stylesheet(m):
         href = re.search(r'href="([^"]+)"', m[0])
         if 'rel="stylesheet"' in m[0] and href and href[1].startswith('/'):
@@ -61,6 +62,12 @@ with sync_playwright() as pw:
         page.set_content(local_html(), wait_until='load')
     else:
         page.goto(BASE_URL+'/', wait_until='load')
+        check('Expired banner is absent from the built page',page.locator('.launch-banner:visible').count()==0)
+        # Simulate a page built before launch to exercise the existing date boundary.
+        original=page.request.get(BASE_URL+'/').text()
+        historical=original.replace('<main id="main">',BANNER+'<main id="main">')
+        page.route(BASE_URL+'/',lambda route:route.fulfill(status=200,content_type='text/html',body=historical))
+        page.reload(wait_until='load')
     page.wait_for_function('document.querySelector("[data-days]").textContent !== "—"')
     check('Explicit goes-live headline', page.locator('[data-launch-kicker]').get_attribute('aria-label') == 'Nutrition.Fitness goes live in…')
     check('Fixed launch date visible', page.locator('.launch-date time').get_attribute('aria-label') == '1 November 2026 · 9am UK time')
@@ -84,7 +91,7 @@ with sync_playwright() as pw:
     page.clock.set_system_time(datetime(2026, 11, 1, 9, 0, tzinfo=timezone.utc))
     page.clock.fast_forward(20000)
     check('Clock disappears after launch rather than counting backwards', page.locator('[data-launch-clock]').is_hidden())
-    check('Timer alone does not claim unfinished services are live', 'The countdown is complete.' in page.locator('[data-launch-kicker]').inner_text())
+    check('Whole expired banner disappears without a live-service claim',page.locator('.launch-banner').is_hidden())
     check('No application JavaScript errors', not errors)
     browser.close()
 report = {'mode': 'offline embedded assets' if OFFLINE else 'HTTP '+BASE_URL, 'passed': len(checks), 'checks': checks}

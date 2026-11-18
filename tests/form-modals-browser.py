@@ -103,13 +103,14 @@ with sync_playwright() as w:
   goto('/login/');expect(p.locator('dialog[open]')).to_have_count(0)
   expect(p.locator('[data-auth-form]')).to_be_visible();expect(p.locator('[data-auth-form] button[type=submit]')).to_be_disabled()
   ok('Account sign-in uses a full screen and cannot fake success when unavailable')
-  goto('/knowledge-centre/');p.get_by_role('button',name='Open search',exact=True).click()
+  goto('/knowledge-centre/');expect(p.locator('#kc-query')).to_be_visible()
+  assert p.get_by_role('button',name='Open search',exact=True).count()==0
   p.locator('#kc-query').fill('protein');p.locator('.kc-search').evaluate('(form)=>form.requestSubmit()')
   closed();expect(p.locator('#kc-result-count')).not_to_contain_text('temporarily unavailable')
   p.get_by_role('button',name='Choose filters',exact=True).click()
   p.locator('#kc-filter-form input[type=checkbox]').first.check()
   p.get_by_role('button',name='Show results',exact=True).click();closed()
-  ok('Knowledge Centre search and filters open in modals and retain results')
+  ok('Knowledge Centre search stays inline and optional filters retain results')
   for width in [390,768,1440]:
    p.set_viewport_size({'width':width,'height':844 if width==390 else 1000})
    goto('/');p.locator('.hero-button').click();f=frame();expect(f.locator('[data-next]')).to_be_visible()

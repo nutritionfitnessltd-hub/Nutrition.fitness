@@ -5,7 +5,7 @@ import {launchWidget,compileLaunchLayout} from '../src/launch-layout.mjs';
 import {LAUNCH} from '../public/launch-config.mjs';
 
 test('banner announces the whole-system launch with compact phone labels',()=>{
- const markup=launchWidget();
+ const markup=launchWidget(Date.parse(LAUNCH.at)-60000);
  assert.match(markup,/Nutrition\.Fitness goes live in…/);
  assert.match(markup,/The full system launches together/);
  assert.match(markup,/launch-title-short/);
@@ -14,10 +14,10 @@ test('banner announces the whole-system launch with compact phone labels',()=>{
 });
 test('launch date remains 1 November 2026 at 9am UK',()=>{
  assert.equal(LAUNCH.at,'2026-11-01T09:00:00.000Z');
- assert.ok(launchWidget().includes(`<time datetime="${LAUNCH.at}" aria-label="${LAUNCH.label}">`));
+ assert.ok(launchWidget(Date.parse(LAUNCH.at)-60000).includes(`<time datetime="${LAUNCH.at}" aria-label="${LAUNCH.label}">`));
 });
 test('timer exposes full unit names without repeated screen reader announcements',()=>{
- const markup=launchWidget();
+ const markup=launchWidget(Date.parse(LAUNCH.at)-60000);
  assert.match(markup,/aria-labelledby="launch-heading"/);
  assert.match(markup,/role="timer" aria-live="off"/);
  for(const unit of ['days','hours','minutes']){
@@ -29,7 +29,7 @@ test('timer exposes full unit names without repeated screen reader announcements
 const base='<head></head><body><div class="preview-bar">preview</div><header class="site-header">links</header><nav class="mobile-nav">mobile</nav><main id="main"><section class="hero">approved content</section></main></body>';
 for(const route of ['/', '/nufi/', '/recipes/', '/recipes/blueberry-lemon-oats/', '/meal-planner/', '/shopping-list/', '/programmes/core/', '/courses/core/lesson-1/', '/shop/plain-whey/', '/subscriptions/', '/basket/', '/checkout/', '/get-started/', '/account/', '/knowledge-centre/', '/privacy/', '/404/']){
  test(`shared layout adds exactly one banner below navigation on ${route}`,()=>{
-  const result=compileLaunchLayout(base,route);
+  const result=compileLaunchLayout(base,route,Date.parse(LAUNCH.at)-60000);
   assert.equal((result.match(/class="launch-widget launch-banner"/g)||[]).length,1);
   assert.ok(result.indexOf('launch-banner')>result.indexOf('</nav>'));
   assert.ok(result.indexOf('launch-banner')<result.indexOf('<main'));
@@ -45,4 +45,13 @@ test('a missing main landmark fails loudly on an inner page',()=>{
 test('page body compiler does not add a second countdown',()=>{
  const builder=readFileSync(new URL('../scripts/build-launch.mjs',import.meta.url),'utf8');
  assert.doesNotMatch(builder,/\$\{launchWidget\(\)\}/);
+});
+
+test('expired banners are removed without claiming the app is live',()=>{
+ for(const now of [Date.parse(LAUNCH.at),Date.parse(LAUNCH.at)+86400000]){
+  assert.equal(launchWidget(now),'');
+  const html=compileLaunchLayout(base,'/recipes/',now);
+  assert.doesNotMatch(html,/launch-banner|countdown is complete/);
+  assert.match(html,/<main id="main">/);
+ }
 });

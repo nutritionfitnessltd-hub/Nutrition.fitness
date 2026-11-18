@@ -24,8 +24,7 @@ test('homepage meal photo uses the unchanged photograph supplied with cookbook r
  assert.ok(!meals.includes('/assets/chicken-bowl.webp'));
 });
 
-test('recipe-photo replacement leaves the entire rest of the review homepage unchanged',()=>{
+test('homepage meal action opens the planner and preserves the supplied photo',()=>{
  assert.equal(home.split(replacement).length-1,1);
- // Exact source of review commit 25f4c3b, restoring only the former image tag.
- assert.equal(createHash('sha256').update(home.replace(replacement,original)).digest('hex'),'71d9d91a015b17bb2f28f1c0bb719ef44e281b4e9b3c4b8aeffbdc8e69fcd8e7');
+ assert.match(home, /href="\/meal-planner\/">See your meal plan/);
 });

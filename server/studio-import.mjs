@@ -22,7 +22,7 @@ export function archivePage(params,data,meta={}){
     return attribute+'="'+target+'"';
   });
   body=body.replace('<form class="filters" action="/content-library/">','<form class="filters" action="/content-library/">'+hidden('work','1')+hidden('studio','archive'));
-  return heading('Reference Library','Your original library, organised by its existing shelves and collections.',button('Import a PDF or text',url('import')))+navigation+
+  return heading('Originals','Source files, grouped by category.',button('Import a file',url('import')))+navigation+
     (record?'<div class="studio-workbar">'+button('Use as a starting point',url('import',{source:record.id}),true)+button('Original assets',link({work:'1',assets:record.id}))+'</div>':'')+body;
 }
 export function importPage(params,data,error='',values={}){
@@ -30,7 +30,7 @@ export function importPage(params,data,error='',values={}){
   const choices=Object.fromEntries(data.projects.map(p=>[p.id,p.name]));
   if(data.actor.role==='admin')choices['']='Working library';
   const recorded=source?.fields.recipeText||source?.fields.body||'';
-  return heading('Import and extract','Choose a source, inspect the text and create an editable draft.')+
+  return heading('Import a file','Choose a PDF or text file, then check the draft before saving.')+
     (error?'<p role="alert">'+esc(error)+'</p>':'')+
     (source?'<section class="panel"><h2>'+esc(source.title)+'</h2>'+button('Open original source','/content-library/?work=1&assets='+encodeURIComponent(source.id))+
       '<p>Export the source as a PDF in Canva or Drive, then select the file below. Extracted text can also be pasted.</p></section>':'')+
@@ -38,8 +38,8 @@ export function importPage(params,data,error='',values={}){
       '<label>PDF or text file<input id="studio-file" type="file" accept=".pdf,.txt,.md"></label><p id="studio-file-status" role="status"></p>'+
       form('import-preview',hidden('source',source?.id||'')+input('sourceName','Source name',values.sourceName||source?.title||'')+
       select('kind','Create',{'recipe':'Recipes','programme':'Programme starting point','exercise':'Exercise','lesson':'Lesson','article':'Article','communication':'Coaching message'},values.kind||'recipe')+
-      select('project','Add to project',choices,values.project||'')+
-      textarea('sourceText','Source text',values.sourceText||recorded,18),{section:'import',source:source?.id||''},'Preview extracted drafts','id="studio-import-form"')+
+      '<details><summary>Assign to a project (optional)</summary>'+select('project','Project',choices,values.project||'')+'</details>'+
+      '<details'+(values.sourceText||recorded?' open':'')+'><summary>Paste or inspect text</summary>'+textarea('sourceText','Source text',values.sourceText||recorded,12)+'</details>',{section:'import',source:source?.id||''},'Preview drafts','id="studio-import-form"')+
       '</section><section class="panel"><h2>Original PDF</h2><p id="studio-pdf-help">Select a PDF to compare its pages with the extracted text.</p><div id="studio-pdf-controls" hidden><button type="button" id="studio-pdf-prev">Previous page</button><span id="studio-pdf-page"></span><button type="button" id="studio-pdf-next">Next page</button></div><canvas id="studio-pdf-canvas" hidden></canvas></section></div>';
 }
 export function extractDrafts(text,kind,name,sourceId=''){

@@ -67,7 +67,7 @@ Object.assign(kitchen, {
   quip:'Proper food. A little less fuss.',
   description:'100 recipes for real life: breakfasts, lunches, dinners, snacks and drinks. The complete High Protein Kitchen, with the original recipe photographs, clear methods and the supplied nutrition figures.',
   details:['22 breakfasts, 24 lunches, 25 dinners, 14 snacks and 15 smoothies and drinks.','143 pages in the supplied digital edition, including the practical kitchen, nutrition and fitness notes.','The salmon, coriander & lime rice bowl on the cover is recipe 67, page 99.','Explore all 100 recipes on the website and save your favourites to your meal planner.'],
-  caution:'Launching 1 November 2026 at 9am UK time. Digital and hardback pricing, physical availability and delivery terms are still to be confirmed. No payment is taken and no paid PDF download is exposed on this page.'
+  caution:'Coming soon. Digital and hardback pricing, physical availability and delivery terms are still to be confirmed. No payment is taken and no paid PDF download is exposed on this page.'
 });
 export const programmes = [
   {slug:'start',name:'Start',title:'A start you can actually stick to.',tag:'Start here',level:'Beginner',place:'Home or gym',weeks:6,sessions:3,minutes:'20–30',color:'aqua',icon:'dumbbell',description:'For anyone who would like to get going without being told to become a different person by Thursday.',goal:'Build a routine',outcome:'Find your feet, learn the movements and build a week you can repeat.',focus:['Simple full-body sessions','A gradual introduction to training','Food planning that fits your week'],quip:'No previous enthusiasm required.'},

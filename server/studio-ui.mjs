@@ -1,4 +1,5 @@
 import { studioNavigation } from './studio-navigation.mjs';
+import { statusLabel } from '../public/studio-fields.mjs';
 import { esc, link } from './library-shelves.mjs';
 import { icons } from './library-icons.mjs';
 export { esc };
@@ -8,7 +9,7 @@ export const input=(name,label,value='',type='text',extra='')=>'<label>'+esc(lab
 export const textarea=(name,label,value='',rows=4)=>'<label>'+esc(label)+'<textarea name="'+esc(name)+'" rows="'+rows+'">'+esc(value)+'</textarea></label>';
 export const select=(name,label,options,current='')=>'<label>'+esc(label)+'<select name="'+esc(name)+'">'+Object.entries(options).map(([v,t])=>'<option value="'+esc(v)+'"'+(v===String(current)?' selected':'')+'>'+esc(t)+'</option>').join('')+'</select></label>';
 export const form=(action,body,values={},label='Save changes',extra='')=>'<form method="post" action="'+url(values.section||'home',values)+'" class="studio-form" '+extra+'>'+hidden('action',action)+body+'<button class="primary">'+esc(label)+'</button></form>';
-export const badge=state=>'<span class="studio-status">'+esc(state)+'</span>';
+export const badge=state=>'<span class="studio-status">'+esc(statusLabel(state))+'</span>';
 export const heading=(title,description='',actions='')=>'<div class="studio-heading"><div><h1>'+esc(title)+'</h1>'+(description?'<p>'+esc(description)+'</p>':'')+'</div><div class="studio-actions">'+actions+'</div></div>';
 export const button=(text,href,primary=false)=>'<a class="btn'+(primary?' primary':'')+'" href="'+href+'">'+esc(text)+'</a>';
 export function studioFrame(body,section,actor,meta={}){
@@ -20,6 +21,7 @@ export function list(items,render,empty='Nothing here yet.'){
   return items.length?'<ul class="studio-list">'+items.map(r=>'<li>'+render(r)+'</li>').join('')+'</ul>':'<p class="studio-empty">'+esc(empty)+'</p>';
 }
 export function pages(params,rows,render,size=30){
+  if(!rows.length)return render([]);
   const total=Math.max(1,Math.ceil(rows.length/size)),page=Math.max(1,Math.min(total,parseInt(params.get('page'))||1));
   const state=Object.fromEntries(params);delete state.work;delete state.studio;
   return render(rows.slice((page-1)*size,page*size))+'<nav class="pages">'+(page>1?button('Previous',url(params.get('studio'),{...state,page:page-1})):'')+'<span>'+rows.length+' items · Page '+page+' of '+total+'</span>'+(page<total?button('Next',url(params.get('studio'),{...state,page:page+1})):'')+'</nav>';
