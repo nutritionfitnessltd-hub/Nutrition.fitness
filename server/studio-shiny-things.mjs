@@ -1,6 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {HttpError,uuid} from './platform.mjs';
 import {cleanText} from './studio-model.mjs';
+import {canAccess} from './library-permissions.mjs';
 import {saveRecord} from './studio-store.mjs';
 import {hqRequest} from './studio-hq.mjs';
 import {esc,url,heading,button,form,hidden,input,textarea,select,list,badge} from './studio-ui.mjs';
@@ -10,7 +11,7 @@ const admin=data=>{if(data.actor.role!=='admin')throw new HttpError(403,'Only th
 const ideas=data=>data.items.filter(r=>r.kind==='settings'&&r.id.startsWith(prefix));
 const projectFor=(data,id)=>data.projects.find(p=>p.studio?.ideaId===id);
 const projectId=id=>uuid(id.slice(prefix.length));
-const planText=plan=>(plan?.tasks||[]).map(t=>[t.title,t.notes||'',t.week||0,t.due||'',t.worker||'',t.milestone?'yes':''].join(' | ')).join('\n');
+const planText=plan=>(plan?.tasks||[]).map(t=>[t.title,t.notes||'',t.week||0,t.due||'',t.worker||'',t.milestone?'yes':''].map(v=>String(v).replace(/[|\r\n]/g,' ')).join(' | ')).join('\n');
 const validDate=value=>!value||/^\d{4}-\d{2}-\d{2}$/.test(value)&&Number.isFinite(Date.parse(value))&&new Date(value).toISOString().slice(0,10)===value;
 export function validateIdeaPlan(value,weeks){
   if(!value||!Array.isArray(value.tasks)||!value.tasks.length||value.tasks.length>40)throw new HttpError(400,'Add between 1 and 40 project tasks.');
@@ -117,6 +118,7 @@ export function ideaProjectPage(params,data){
   const p=data.projects.find(p=>p.id===params.get('project'));
   if(!p)throw new HttpError(404,'This project is unavailable.');
   const owner=data.people.find(person=>person.id===p.creator_id)?.name||'Assigned owner',isAdmin=data.actor.role==='admin';
+  if(!canAccess(data.actor,'edit'))return heading(p.name,p.brief,button('All projects',url('projects')))+'<p>'+esc(owner)+' · '+esc(p.status)+'</p>'+list(p.entries,e=>'<div><h3>'+esc(e.title)+'</h3><p class="prose">'+esc(e.notes||'')+'</p></div>'+badge(e.status));
   const base=hidden('projectRevision',p.revision),state={section:'project',project:p.id};
   return heading(p.name,p.brief,button('All projects',url('projects'))+(isAdmin?button('Original idea',url('shiny-things',{id:p.studio.ideaId}))+button('Message Morgan',url('worker-chat',{worker:'morgan'})):''))+
     '<p>'+esc(owner)+' · '+esc(p.status)+' · Project Manager: Morgan</p>'+
