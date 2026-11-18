@@ -54,6 +54,10 @@ test('token errors never attempt a send or expose Microsoft response contents',a
   let requests=0;
   const result=await sendExchange(env,event,async()=>{requests++;return new Response('private token error',{status:401});});
   assert.equal(requests,1);assert.equal(result.state,'failed');assert.doesNotMatch(result.detail,/private token/);
+  const diagnostic=await sendExchange(env,event,async()=>new Response(JSON.stringify({error_codes:[7000215],error_description:'private credential details'}),{status:401}));
+  assert.match(diagnostic.detail,/AADSTS7000215/);assert.doesNotMatch(diagnostic.detail,/private credential/);
+  const malformed=await sendExchange(env,event,async()=>new Response(JSON.stringify({error_codes:['private value']}),{status:401}));
+  assert.doesNotMatch(malformed.detail,/private value|AADSTS/);
 });
 test('workflow mails require an explicit transition, never ordinary draft saves',()=>{
   const r={id:'training:message',kind:'communication',title:'Hello',revision:3,status:'Draft',fields:{}};

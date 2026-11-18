@@ -31,7 +31,12 @@ export async function sendExchange(env,notification,fetcher=fetch){
     const response=await fetcher('https://login.microsoftonline.com/'+encodeURIComponent(env.EXCHANGE_TENANT_ID)+'/oauth2/v2.0/token',{
       method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:env.EXCHANGE_CLIENT_ID,client_secret:env.EXCHANGE_CLIENT_SECRET,grant_type:'client_credentials',scope:'https://graph.microsoft.com/.default'}).toString(),signal:AbortSignal.timeout(15000)
     });
-    if(!response.ok)return {state:'failed',detail:'Microsoft sign-in failed. Check the app credentials and authorisation.'};
+    if(!response.ok){
+      // Only expose Microsoft's numeric diagnostic code, never its free-form response.
+      const failure=await response.json().catch(()=>null);
+      const code=Array.isArray(failure?.error_codes)?failure.error_codes.find(value=>Number.isSafeInteger(value)&&value>0&&value<100000000):null;
+      return {state:'failed',detail:'Microsoft sign-in failed'+(code?' (AADSTS'+code+')':'')+'. Check the app credentials and authorisation.'};
+    }
     token=(await response.json()).access_token;
     if(!token)return {state:'failed',detail:'Microsoft did not provide an access token.'};
   }catch{return {state:'failed',detail:'Could not connect to Microsoft. No email was sent.'};}
