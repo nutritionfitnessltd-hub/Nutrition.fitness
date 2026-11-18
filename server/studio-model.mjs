@@ -3,7 +3,7 @@ import { HttpError } from './platform.mjs';
 export const kinds = {
   programme:'Training programme', stage:'Training stage', structure:'Weekly schedule', session:'Workout',
   exercise:'Exercise', activity:'Activity or drill', recipe:'Recipe', mealplan:'Meal plan',
-  course:'Course', lesson:'Lesson', article:'Article', ebook:'E-book', challenge:'Challenge',
+  course:'Course', lesson:'Lesson', article:'Knowledge Centre article', ebook:'Book', leadmagnet:'Lead magnet', challenge:'Challenge',
   communication:'Coaching message', campaign:'Marketing content', workflow:'GHL workflow',
   asset:'Creative asset', rule:'Progression rule', review:'Check-in', learning:'Learning content'
 };
@@ -29,7 +29,8 @@ export function blankFields(kind){
     course:{audience:'',outcome:'',introduction:'',lessonIds:[]},
     lesson:{introduction:'',body:'',takeaway:'',activity:'',videoUrl:''},
     article:{introduction:'',body:'',takeaway:''},
-    ebook:{introduction:'',chapters:[{title:'',body:''}],coverUrl:''},
+    leadmagnet:{audience:'',purpose:'',headline:'',introduction:'',contentIds:[],callToAction:''},
+    ebook:{bookType:'Guide',introduction:'',chapters:[{title:'',body:''}],coverUrl:''},
     challenge:{audience:'',outcome:'',weeks:6,introduction:'',programmeIds:[],recipeIds:[]},
     communication:{channel:'WhatsApp',trigger:'',timing:'',subject:'',body:'',callToAction:'',replyPaths:[{reply:'',response:'',nextStep:''}]},
     campaign:{channel:'Email',audience:'',headline:'',body:'',callToAction:'',assetIds:[]},
