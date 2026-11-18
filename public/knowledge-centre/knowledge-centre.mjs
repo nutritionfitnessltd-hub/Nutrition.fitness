@@ -20,8 +20,8 @@ function render(mode='replace'){
  const selected=groups();const found=articles.filter(a=>textMatches(a)&&matches(a,selected));
  found.sort((a,b)=>sort.value==='az'?a.title.localeCompare(b.title,'en-GB'):sort.value==='za'?b.title.localeCompare(a.title,'en-GB'):sort.value==='newest'?String(b.publishedAt||'').localeCompare(a.publishedAt||''):a.priority-b.priority);
  const pages=Math.max(1,Math.ceil(found.length/pageSize));page=Math.min(page,pages);
- const shown=found.slice((page-1)*pageSize,page*pageSize);const ids=new Set(shown.map(a=>a.id));
- const ordered=found.map(a=>cards.find(c=>Number(c.dataset.articleId)===a.id));for(const c of cards)c.hidden=!ids.has(Number(c.dataset.articleId));for(const c of ordered)grid.append(c);
+ const shown=found.slice((page-1)*pageSize,page*pageSize);const ids=new Set(shown.map(a=>String(a.id)));
+ const ordered=found.map(a=>cards.find(c=>c.dataset.articleId===String(a.id)));for(const c of cards)c.hidden=!ids.has(c.dataset.articleId);for(const c of ordered)grid.append(c);
  const noun=articles.every(a=>a.status==='draft')?'planned guides':'guides';count.textContent=found.length?`${(page-1)*pageSize+1}–${Math.min(page*pageSize,found.length)} of ${found.length} ${noun}`:'0 matching guides';
  document.querySelector('#kc-empty').hidden=found.length>0;pager.hidden=found.length<=pageSize;document.querySelector('#kc-previous').disabled=page===1;document.querySelector('#kc-next').disabled=page===pages;document.querySelector('#kc-page-count').textContent=`Page ${page} of ${pages}`;
  for(const node of document.querySelectorAll('[data-count]')){const [key,value]=node.dataset.count.split(':');node.textContent=articles.filter(a=>textMatches(a)&&matches(a,selected,key)&&(key==='categories'?a.category===value:a[key].includes(value))).length;}
@@ -32,6 +32,7 @@ function render(mode='replace'){
 }
 async function init(){
  try{const response=await fetch('/knowledge-centre/articles.json');if(!response.ok)throw new Error('Guide index unavailable');articles=await response.json();}catch{count.textContent='Search is temporarily unavailable. You can still browse all guides below.';return;}
+ try{const response=await fetch('/api/content?view=studio-feed');if(response.ok){const saved=await response.json();for(const a of saved){const card=document.createElement('article');card.className='kc-card';card.dataset.articleId=a.id;const title=document.createElement('h2'),link=document.createElement('a'),summary=document.createElement('p');link.href=a.href;link.textContent=a.title;title.append(link);summary.textContent=a.summary;card.append(title,summary);grid.append(card);cards.push(card);}articles.push(...saved);}}catch{/* Existing guides remain available if the release feed is unavailable. */}
  document.body.classList.add('kc-enhanced');restore();render();
  document.querySelector('.kc-search').addEventListener('submit',e=>{e.preventDefault();page=1;render('push');});
  let timer;search.addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>{page=1;render()},180)});
