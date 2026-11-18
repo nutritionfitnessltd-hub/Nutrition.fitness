@@ -1,4 +1,5 @@
 import { workoutDays, workoutSession } from './studio-workouts.mjs';
+import { workspaceDashboard } from './studio-dashboard.mjs';
 import { workerStart } from './studio-workers.mjs';
 import { contentSections } from './studio-navigation.mjs';
 import { editorForm, referenceData, contentPreview, videoTools } from './studio-editor.mjs';
@@ -58,7 +59,7 @@ function workSummary(data){
     (projects.length?'<details class="panel"><summary>Continue your work</summary>'+list(projects.slice(0,6),p=>'<div><a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a><small>'+esc(data.people.find(x=>x.id===p.creator_id)?.name||'Assigned creator')+'</small></div>'+badge(p.status))+'</details>':'');
 }
 export function home(data,meta={}){
-  return library(new URLSearchParams({studio:'library'}),data,meta);
+  return workspaceDashboard(data);
 }
 function typeCards(sections,counts,bucket){
   return '<nav class="studio-cards studio-type-grid" aria-label="Content types">'+sections.map(([id,title])=>{
@@ -107,11 +108,10 @@ export function library(params,data,meta={}){
 export function createPage(params,data,values={}){
   if(params.get('template')==='mealplan')return mealPlanForm(data,values);
   const choice=params.get('template'),t=data.actor.role==='admin'?templates[choice]:null;
-  if(!t)return heading('Studio','Create from your originals, with the right worker for each job.',data.actor.role==='admin'?button('Saved worker requests',url('worker-requests')):'')+
-    (data.actor.role==='admin'?workerStart():'')+'<h2>Create manually</h2>'+
+  if(!t)return (data.actor.role==='admin'?workerStart():heading('What do you want to build today?','Choose a content type to begin.'))+'<details class="panel studio-manual"><summary>Create it myself</summary>'+
     '<div class="studio-cards studio-type-grid">'+contentSections.map(([kind,title])=>card(title,'',createLink(kind))).join('')+'</div>'+
     '<details class="panel"><summary>More content types</summary><div class="studio-actions">'+Object.entries(kinds).filter(([kind])=>!contentSections.some(([key])=>key===kind)).map(([kind,title])=>button(title,createLink(kind))).join('')+'</div></details>'+
-    '<div class="studio-actions">'+button('Use an original',url('archive'))+button('Import a file',url('import'))+'</div>'+
+    '<div class="studio-actions">'+button('Use an original',url('archive'))+button('Import a file',url('import'))+'</div></details>'+
     (data.actor.role==='admin'?'<details class="panel"'+(params.get('project')?' open':'')+'><summary>Plan a project with several items</summary><div class="studio-cards">'+Object.entries(templates).map(([kind,t])=>card(t.name,t.description,url('create',{template:kind}))).join('')+'</div></details>':'');
   return heading(t.name,'Tell us the idea and who will work on it. We’ll organise the steps.')+
     form('plan-preview',hidden('template',choice)+hidden('id',values.id||randomUUID())+hidden('rootId',values.rootId||'')+

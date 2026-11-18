@@ -53,8 +53,13 @@ test('one login protects all entry points and admin-created team users share it'
     assert.equal(denied.status,403);assert.ok(!denied.headers.has('set-cookie'));
     const login=await request('',{action:'sign-in',email:'admin@example.test',password:'fixture-admin-password'});
     assert.equal(login.status,303);const adminCookie=cookieOf(login);
-    assert.match(login.headers.get('location'),/studio=library/);
-    assert.equal((await request('',null,adminCookie)).status,303);
+    assert.match(login.headers.get('location'),/studio=home/);
+    const landing=await request('',null,adminCookie);assert.equal(landing.status,303);assert.match(landing.headers.get('location'),/studio=home/);
+    for(const path of ['?work=1','?work=1&studio=home']){
+      const dashboard=await request(path,null,adminCookie);assert.equal(dashboard.status,200);assert.match(await dashboard.text(),/<h1>Dashboard/);
+    }
+    const deepLogin=await request('?work=1&studio=builder&build=newsletter&source=archive%3Aone',{action:'sign-in',email:'admin@example.test',password:'fixture-admin-password'});
+    assert.match(deepLogin.headers.get('location'),/build=newsletter/);assert.match(deepLogin.headers.get('location'),/source=archive%3Aone/);
     const team=await request('?work=1&studio=team',null,adminCookie);
     assert.equal(team.status,200);assert.match(await team.text(),/Create user/);
     const created=await request('?work=1&studio=team',{action:'create-user',name:'Team member',email:'team@example.test',role:'admin'},adminCookie);

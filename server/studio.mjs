@@ -72,6 +72,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='article-image')return await sendArticleImage(req,res,params,data);
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
+      if(f.action==='worker-step'||params.get('flowBack')==='1'&&['worker-preview','worker-save'].includes(f.action))return write(res,200,builderPage(params,data,meta,f),'builder',actor,meta);
       if(f.action==='worker-preview')return write(res,200,workerPreview(f,data,meta),'builder',actor,meta);
       if(f.action==='worker-save'){
         const id=await saveWorkerRequest(f,data,meta,api);
@@ -189,7 +190,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         const editParams=new URLSearchParams(params);editParams.set('tab','edit');
         body+='<p>Your unsaved edits are shown below. For a version conflict, open the latest saved copy in another tab before combining changes.</p>'+itemPage(editParams,data);
       }catch{body+='<details><summary>Unsaved content</summary><pre class="source-text">'+esc(f.fields||'')+'</pre></details>';}
-    }else if(req.method==='POST'&&['worker-preview','worker-save'].includes(f.action)&&data?.actor.role==='admin'){
+    }else if(req.method==='POST'&&['worker-step','worker-preview','worker-save'].includes(f.action)&&data?.actor.role==='admin'){
       try{body+=f.action==='worker-save'?workerPreview(f,data,meta):builderPage(params,data,meta,f);}catch{body+=button('Choose original material',url('builder'));}
     }else if(req.method==='POST'&&f.action==='content-create'&&data){
       data.unsaved=true;body+=newItem(params,data,f);

@@ -28,10 +28,10 @@ test('newsletter suggests Nina, social suggests Rory, and missing source text is
  assert.match(html,/name="worker_newsletter"[\s\S]*?value="nina" selected/);
  assert.match(html,/name="worker_socials"[\s\S]*?value="rory" selected/);
  assert.match(html,/0 with saved text/);assert.match(html,/must open those originals/);
- assert.match(html,/Saving keeps this brief ready/);assert.match(html,/Save request/);
+ assert.match(html,/Saving keeps this brief ready/);assert.match(html,/Save plan to dashboard/);
  assert.doesNotMatch(html,/>Send to|In progress|Generated successfully/);
- const intake=builderPage(new URLSearchParams({source:'catalogue:challenge'}),data);
- assert.match(intake,/output_challenge[^>]*checked/);assert.match(intake,/Imogen suggested/);
+ const intake=builderPage(new URLSearchParams({source:'catalogue:challenge',build:'challenge'}),data);
+ assert.match(intake,/name="output_challenge" value="yes"/);assert.match(intake,/Suggested worker: Imogen/);
  assert.throws(()=>workerPreview({...values(),output_newsletter:'',output_socials:''},data),e=>e.status===400);
 });
 

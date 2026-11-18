@@ -88,7 +88,7 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     if(req.method==='POST'&&fields.email&&['sign-in','admin-login','staff-login'].includes(fields.action)){
       const target=new URLSearchParams(params);
       if(params.has('file')||params.has('preview'))target.set('reader','1');
-      else target.set('studio',[...params].length?'archive':'library');
+      else target.set('studio',[...params].length?'archive':'home');
       return handleLibraryWork(req,res,{env,load,params:target,apiFactory});
     }
     const config = env.NUFI_LIBRARY_PASSWORD_SHA256;
@@ -132,7 +132,7 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     try{actor=await libraryActor(req,res,env,apiFactory);}catch{return html(res,503,loginScreen('Sign-in could not be checked. Please try again.'));}
     if (!actor&&!validSession(req, key)) return html(res, 401, loginScreen());
     if(actor&&!params.has('file')&&!params.has('preview')){
-      const destination=new URLSearchParams(params);destination.set('work','1');destination.set('studio',[...params].length?'archive':'library');
+      const destination=new URLSearchParams(params);destination.set('work','1');destination.set('studio',[...params].length?'archive':'home');
       res.statusCode=303;res.setHeader('Location',path+'?'+destination);return res.end();
     }
     try {

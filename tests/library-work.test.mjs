@@ -29,7 +29,7 @@ test('work queue separates guest, admin and personal staff codes and scopes task
   };
   async function request(fields,cookie='',origin='https://example.test'){
     const headers={};const res={setHeader:(k,v)=>headers[k]=v,end(value){this.value=value;}};
-    await handleLibraryWork({method:fields?'POST':'GET',headers:{cookie,host:'example.test',origin},body:fields},res,{env,load:async()=>index,params:new URLSearchParams(),apiFactory:()=>api});
+    await handleLibraryWork({method:fields?'POST':'GET',headers:{cookie,host:'example.test',origin},body:fields},res,{env,load:async()=>index,params:new URLSearchParams({assignments:'1'}),apiFactory:()=>api});
     return {status:res.statusCode,html:res.value,cookie:headers['Set-Cookie']?.split(';')[0]};
   }
   assert.equal((await request(null,'__Host-nufi-library=guest')).status,401);
