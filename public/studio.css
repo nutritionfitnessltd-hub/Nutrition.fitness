@@ -40,6 +40,8 @@
 .studio .studio-subnav a { font-size:13px; padding:8px 12px; }
 .studio-subnav summary { padding:9px 12px; font-size:13px; }
 .studio .studio-subnav details>a,.studio .studio-subnav details>details{margin-inline-start:28px;}
+.article-image-editor{margin:20px 0;}.article-image-drop{border:2px dashed #9bb7bc;border-radius:10px;padding:20px;background:#f4f8f8;}.article-image-drop.is-dragging{border-color:#064c60;background:#e3f0ef;}.article-image-preview{display:block;width:100%;max-height:240px;object-fit:contain;margin:16px 0;border-radius:8px;}.article-image-preview[hidden]{display:none;}.article-image-editor>label{margin-top:12px;}
+.studio-article{max-width:900px;line-height:1.75;}.studio-article-intro{font-size:19px;color:var(--muted);}.studio-article figure{margin:24px 0;}.studio-article-photo{width:100%;height:300px;object-fit:cover;border-radius:12px;}.studio-article figcaption{font-size:12px;color:var(--muted);}.studio-article-body{overflow-x:auto;}.studio-article-body h2{margin-top:32px;}.studio-article-notes{max-width:900px;margin-top:24px;}.studio-article-notes[open]>summary{margin-bottom:20px;}
 .studio-workbar,.studio-programme-bar { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:0 0 24px; }
 .studio-workbar .btn { font-size:14px; }
 .studio-start-options { display:flex; flex-wrap:wrap; gap:24px; align-items:start; }
@@ -139,5 +141,3 @@
 @media(max-width:760px){.meal-plan-meals{grid-template-columns:1fr}.meal-plan-meal{display:grid;grid-template-columns:110px minmax(0,1fr);gap:14px}.meal-plan-meal:not(:has(img)){display:block}.meal-shopping{columns:1}}
 .studio-content-card:has(img[src*="book-file"])>img{object-fit:contain;background:#eaf0ef;padding:12px;}
 @media(max-width:480px){.studio-cards,.studio-content-grid,.studio .studio-simple-grid,.studio .studio-type-grid {grid-template-columns:1fr;}.studio-list>li {gap:8px;}.studio-card {min-height:130px;}.studio-book-cover{height:340px;}}
-
-.studio-article{max-width:900px;line-height:1.75;}.studio-article-intro{font-size:19px;color:var(--muted);}.studio-article figure{margin:24px 0;}.studio-article-photo{width:100%;height:300px;object-fit:cover;border-radius:12px;}.studio-article figcaption{font-size:12px;color:var(--muted);}.studio-article-body{overflow-x:auto;}.studio-article-body h2{margin-top:32px;}.studio-article-notes{max-width:900px;margin-top:24px;}.studio-article-notes[open]>summary{margin-bottom:20px;}
