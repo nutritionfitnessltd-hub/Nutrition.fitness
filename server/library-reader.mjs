@@ -9,7 +9,8 @@ import { unpackCatalogue, verifyReleaseProof } from './library-release.mjs';
 import { displayEntry } from './library-display.mjs';
 import { handleLibraryWork, libraryActor, clearLibraryCookies } from './library-work.mjs';
 import { libraryLogin } from './library-login.mjs';
-import { platform } from './platform.mjs';
+import { platform, cookies } from './platform.mjs';
+import { requireLibraryNda } from './library-nda.mjs';
 
 const path = '/content-library/';
 const cookieName = '__Host-nufi-library';
@@ -97,6 +98,7 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     if (!/^[a-f0-9]{64}$/.test(catalogueKey || '')) return html(res, 503, loginScreen('The library is being connected. Please try again later.'));
     const passwordHash = Buffer.from(config, 'hex');
     const key = createHmac('sha256', Buffer.from(catalogueKey, 'hex')).update('guest-session:v1:').update(passwordHash).digest();
+    const ndaActor=actor=>actor||{role:'guest',id:digest(cookies(req)[cookieName]).toString('hex')};
     if (params.get('release') === 'snapshot') {
       if (req.method !== 'GET' || !verifyReleaseProof(catalogueKey,req.headers['x-nufi-release-proof'])) {
         return html(res,401,loginScreen());
@@ -115,6 +117,11 @@ export function createLibraryReader({ env = process.env, load = readIndex,
         clearLibraryCookies(res);
         return redirect(res);
       }
+      if(fields.action==='accept-nda'){
+        let actor;try{actor=await libraryActor(req,res,env,apiFactory);}catch{return html(res,503,loginScreen('Sign-in could not be checked. Please try again.'));}
+        if(!actor&&!validSession(req,key))return html(res,401,loginScreen());
+        await requireLibraryNda(req,res,{actor:ndaActor(actor),api:apiFactory(env),params});return;
+      }
       const password = fields?.password;
       if (typeof password !== 'string' || password.length > 256 || !equal(digest(password), passwordHash)) {
         return html(res, 401, loginScreen('That password didn’t match. Please try again.'));
@@ -131,6 +138,7 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     let actor;
     try{actor=await libraryActor(req,res,env,apiFactory);}catch{return html(res,503,loginScreen('Sign-in could not be checked. Please try again.'));}
     if (!actor&&!validSession(req, key)) return html(res, 401, loginScreen());
+    if(await requireLibraryNda(req,res,{actor:ndaActor(actor),api:apiFactory(env),params}))return;
     if(actor&&!params.has('file')&&!params.has('preview')){
       const destination=new URLSearchParams(params);destination.set('work','1');destination.set('studio',[...params].length?'archive':'home');
       res.statusCode=303;res.setHeader('Location',path+'?'+destination);return res.end();

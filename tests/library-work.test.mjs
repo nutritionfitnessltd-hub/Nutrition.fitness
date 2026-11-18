@@ -1,3 +1,4 @@
+import {ndaDocument} from './nda-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID,createHash } from 'node:crypto';
@@ -20,6 +21,8 @@ test('work queue separates guest, admin and personal staff codes and scopes task
   const calls=[];
   const api=async(endpoint,opts={})=>{
     calls.push([endpoint,opts]);
+    if(endpoint.includes('nufi_library_nda_agreements'))return [ndaDocument];
+    if(endpoint.includes('nufi_library_nda_acceptances'))return [{id:'existing-test-acceptance'}];
     if(endpoint.includes('consume_password_attempt'))return {allowed:true,retry_after:0};
     if(endpoint.includes('grant_type=password'))return {user,access_token:'fixture'};
     if(endpoint.includes('nufi_members'))return [{user_id:owner,role:'admin',status:'active'}];
