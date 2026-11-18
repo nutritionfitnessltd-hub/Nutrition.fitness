@@ -6,7 +6,7 @@ export function contentWorker(record,byId=new Map(),seen=new Set()){
   seen.add(record.id);
   // An explicit assignment, including "none", wins over inherited attribution.
   if(Object.hasOwn(record,'workerId'))return workerKey(record.workerId);
-  for(const value of [record.workerSource?.workerId,record.workerSource?.worker,record.fields?.workerId,record.fields?.worker]){
+  for(const value of [record.workerSource?.workerId,record.workerSource?.worker,record.fields?.production?.worker,record.fields?.workerId,record.fields?.worker]){
     const id=workerKey(value);if(id)return id;
   }
   if(record.parent){const id=contentWorker(byId.get(record.parent),byId,seen);if(id)return id;}

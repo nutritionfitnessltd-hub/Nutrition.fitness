@@ -32,6 +32,7 @@ test('attribution respects explicit choices, inherited work and legacy Nina arti
  assert.equal(contentWorker(legacy),'nina');assert.equal(contentWorker({...legacy,workerId:'rory'}),'rory');
  assert.equal(contentWorker({...legacy,workerId:'none'}),'');assert.equal(contentWorker({id:'manual',kind:'article'}),'');
  assert.equal(contentWorker({id:'child',parent:'imogen'},d.byId),'imogen');
+ assert.equal(contentWorker({id:'produced-lesson',fields:{production:{worker:'Imogen'}}}),'imogen');
  const cycle=new Map([['a',{id:'a',parent:'b'}],['b',{id:'b',parent:'a'}]]);assert.equal(contentWorker(cycle.get('a'),cycle),'');
  d.items.push({...d.items[0],id:'archived',status:'Archived'});assert.equal(workerContent(d,'nina').length,1);
  d.actor.role='staff';assert.equal(workerContent(d,'nina').length,0);d.assigned.add('nina');assert.equal(workerContent(d,'nina').length,1);
