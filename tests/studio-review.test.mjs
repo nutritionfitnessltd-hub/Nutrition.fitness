@@ -30,6 +30,13 @@ test('article review window has one article and persistent controls without mana
  assert.doesNotMatch(html,/<iframe|Studio navigation|review-popup-header/);
  assert.equal((html.match(/<h1>/g)||[]).length,1);
 });
+test('draft preview provides Submit for review without approving the article',async()=>{
+ const f=fixture();f.data.byId.get('worker:sample').status='Draft';
+ assert.match(reviewWindowDocument(params,f.data),/>Submit for review</);
+ const result=await reviewDecision(params,{action:'review-decision',decision:'submit',revision:'1',reviewId:randomUUID()},f.data,f.api);
+ assert.equal(result.record.status,'In review');assert.equal(result.record.approval,undefined);assert.equal(result.record.fields.body,'Read the evidence.');
+ assert.doesNotMatch(reviewWindowDocument(params,{...f.data,byId:new Map([[result.id,result.record]])}),/>Submit for review</);
+});
 test('scheduling saves an editorial date, appears in calendar, preserves content and rejects stale or invalid dates',async()=>{
  const f=fixture(),result=await reviewDecision(params,{action:'review-schedule',revision:'1',scheduledDate:'2099-12-01'},f.data,f.api);
  assert.equal(result.record.publicationPlan.date,'2099-12-01');assert.equal(result.record.status,'In review');assert.equal(result.record.fields.body,'Read the evidence.');assert.equal(result.record.publication,undefined);
@@ -67,4 +74,10 @@ test('fragment failures retain typed feedback and GET previews do not write',asy
  let out=res();await handleStudio({method:'GET'},out,options);assert.equal(out.statusCode,200);assert.equal(f.writes,0);assert.equal(out.headers['Cache-Control'],'private, no-store');
  out=res();await handleStudio({method:'POST',body:{action:'review-decision',decision:'changes',revision:'0',reviewId:randomUUID(),feedback:'Keep my typed feedback'}},out,options);assert.equal(out.statusCode,409);assert.match(out.body,/Keep my typed feedback/);assert.equal(f.writes,0);
  out=res();await handleStudio({method:'GET'},out,{...options,actor:{role:'staff',id:'unassigned'}});assert.equal(out.statusCode,403);assert.doesNotMatch(out.body,/Read the evidence/);
+});
+test('article save-and-preview returns the saved revision and standalone URL, with stale failures as JSON',async()=>{
+ const f=fixture(),out=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},end(body){this.body=body;}}),opts={params:new URLSearchParams({studio:'item',id:'worker:sample'}),actor:f.data.actor,api:f.api,load:async()=>({records:[]}),env:{}};
+ const body={action:'content-save',intent:'preview',previewWindow:'yes',revision:'1',title:'Updated title',fields:JSON.stringify({body:'Saved edited content.'})};
+ let res=out();await handleStudio({method:'POST',body},res,opts);assert.equal(res.statusCode,200);const result=JSON.parse(res.body);assert.equal(result.record.revision,2);assert.equal(result.record.fields.body,'Saved edited content.');assert.match(result.previewUrl,/studio=review-preview/);
+ res=out();await handleStudio({method:'POST',body},res,opts);assert.equal(res.statusCode,409);assert.match(JSON.parse(res.body).error,/newer version/);assert.equal(f.writes,1);
 });

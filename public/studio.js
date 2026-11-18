@@ -1,4 +1,5 @@
 import {startWorkerUpdates} from './studio-worker-updates.mjs';
+import './studio-review.js';
 startWorkerUpdates();
 import { primaryFields, fieldLabel } from './studio-fields.mjs';
 const fieldsInput = document.querySelector('#studio-fields');
@@ -131,6 +132,27 @@ if(fieldsInput&&editor){
       if(values.imageCredit!==JSON.parse(fieldsInput.value).imageCredit)values.imageCreditUrl='';
     }
     fieldsInput.value=JSON.stringify(values);submitting=true;
+  });
+  form.addEventListener('submit',async event=>{
+    if(event.defaultPrevented||editor.dataset.kind!=='article'||!form.querySelector('[name=revision]')||event.submitter?.value!=='preview')return;
+    event.preventDefault();
+    const popup=window.open('about:blank','_blank','popup,width=1200,height=900,scrollbars=yes,resizable=yes');
+    if(popup)popup.opener=null;
+    const status=form.querySelector('[data-editor-status]'),submit=event.submitter,label=submit.textContent;
+    submit.disabled=true;submit.textContent='Saving…';status.textContent='Saving article for preview…';
+    try{
+      const body=new URLSearchParams(new FormData(form));body.set('intent','preview');body.set('previewWindow','yes');
+      const response=await fetch(form.getAttribute('action'),{method:'POST',body,credentials:'same-origin',headers:{Accept:'application/json'}});
+      const result=await response.json();if(!response.ok||!result.record||!result.previewUrl)throw new Error(result.error||'The save was not confirmed.');
+      const target=new URL(result.previewUrl,location.origin);if(target.origin!==location.origin)throw new Error('The preview destination could not be verified.');
+      savedValues=structuredClone(result.record.fields);values=structuredClone(savedValues);fieldsInput.value=fieldsInput.defaultValue=JSON.stringify(values);
+      form.querySelector('[name=revision]').value=result.record.revision;form.querySelector('[name=title]').defaultValue=result.record.title;
+      if(upload)upload.querySelector('[name=imageUpload]').value='';
+      dirty=false;submitting=false;status.textContent='All changes saved';
+      if(popup&&!popup.closed)popup.location.replace(target.href);
+      else{const link=document.createElement('a');link.href=target.href;link.target='_blank';link.rel='noopener';link.dataset.reviewPreview='';link.textContent='Open article preview';status.append(' · ',link);}
+    }catch(error){popup?.close();submitting=false;status.textContent=error.message||'Could not save. Your edits are still here.';}
+    finally{submit.disabled=false;submit.textContent=label;}
   });
 }
 

@@ -33,7 +33,7 @@ export async function saveArticleImage(params,f,data,api,env,{store=put,remove=d
  fields.imageAlt=cleanText(f.uploadAlt||f.title,500);fields.imageCredit=cleanText(f.uploadCredit||'',500);fields.imageCreditUrl='';
  const nextData={...data,byId:new Map(data.byId)};nextData.byId.set(r.id,{...r,workerImage:null,articleImage:asset});
  await store(pathname,bytes,{access:'private',contentType:'image/webp',addRandomSuffix:false,token:env.BLOB_READ_WRITE_TOKEN});
- try{return await changeStudio(params,{...f,fields:JSON.stringify(fields)},nextData,api);}
+ try{return await changeStudio(params,{...f,fields:JSON.stringify(fields)},nextData,api,{returnRecord:f.previewWindow==='yes'});}
  catch(error){try{await remove(pathname,{token:env.BLOB_READ_WRITE_TOKEN});}catch{}throw error;}
 }
 export async function sendArticleImage(req,res,params,data,fetchFile=name=>get(name,{access:'private'})){

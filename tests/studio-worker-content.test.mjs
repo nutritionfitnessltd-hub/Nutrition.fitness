@@ -15,7 +15,7 @@ test('every worker card links to their own saved content and its review editor',
  for(const id of ['nina','imogen','marcus','rory']){
   const card=html.split('dashboard-worker worker-'+id+'"')[1].split('</article>')[0];
   assert.match(card,new RegExp('>'+id+' content</a>'));assert.match(card,new RegExp('worker='+id));
-  assert.match(card,new RegExp('studio=item[^\"]*id='+id+'[^\"]*tab=edit'));
+  assert.match(card,new RegExp('studio=review-preview[^\"]*id='+id));
   for(const other of d.items.filter(r=>r.id!==id))assert.ok(!card.includes('>'+other.title+'</a>'));
  }
  assert.match(html,/1 awaiting approval/);
@@ -26,6 +26,15 @@ test('worker library keeps scope across status tabs, search and pagination',()=>
  assert.match(html,/Nina’s work/);assert.match(html,/name="worker" value="nina"/);assert.match(html,/worker=nina[^\"]*page=1/);
  assert.doesNotMatch(html,/imogen content|marcus content|rory content/);
  assert.match(library(new URLSearchParams({worker:'imogen',bucket:'checked'}),d),/Nothing here yet/);
+});
+test('approved Nina content leaves her dashboard card but stays in her checked library',()=>{
+ const d=fixture(),nina=d.byId.get('nina');nina.status='Approved';
+ let html=workspaceDashboard(d),card=html.split('dashboard-worker worker-nina"')[1].split('</article>')[0];
+ assert.doesNotMatch(card,/>nina content<|1 content items/);assert.match(card,/No unfinished content/);
+ assert.match(library(new URLSearchParams({worker:'nina',bucket:'checked'}),d),/nina content/);
+ assert.equal(workerContent(d,'nina').length,1,'Approval must not remove the saved content');
+ nina.status='Changes requested';html=workspaceDashboard(d);card=html.split('dashboard-worker worker-nina"')[1].split('</article>')[0];
+ assert.match(card,/>nina content</);assert.match(card,/1 drafts/);
 });
 test('attribution respects explicit choices, inherited work and legacy Nina articles without claiming manual content',()=>{
  const d=fixture(),legacy={id:'legacy',kind:'article',workerSource:{system:'Content Manager connector',kind:'article'}};
