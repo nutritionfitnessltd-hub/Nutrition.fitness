@@ -47,6 +47,12 @@ test('cook-once lunches reserve portions, avoid double counting and work across 
   assert.equal(plan.shoppingList.filter(i=>i.name==='Chicken breast').reduce((sum,i)=>sum+i.quantity,0),11000);
   assert.equal(plan.shoppingList.find(i=>i.week===1&&i.name==='Chicken breast').quantity,5800);
 });
+test('shared packs support counted breasts and explicit per-piece weights without guessing grams',()=>{
+ const rs=structuredClone(recipes);rs[1].fields.ingredients=[{name:'Chicken breast',quantity:2,unit:'',note:'125g per breast'}];rs[2].fields.ingredients=[{name:'Chicken breast',quantity:2,unit:'',note:'125g per breast'}];
+ const plan=buildMealPlan(proposal(),rs,options({servings:2}));assert.equal(plan.reuseLinks[0].grams,500);
+ rs[1].fields.ingredients[0].note='';rs[2].fields.ingredients[0].note='';
+ const counted=buildMealPlan(proposal(),rs,options({servings:2,chickenPackGrams:600}));assert.equal(counted.reuseLinks[0].grams,0);assert.match(counted.reuseLinks[0].note,/4 pieces/);assert.match(counted.reuseLinks[0].note,/Weigh/);assert.doesNotMatch(counted.reuseLinks[0].note,/600 g pack/);
+});
 test('recipe IDs, exclusions and library priority are enforced on model output',()=>{
   const bad=proposal();bad.days[0].dinner='invented';assert.throws(()=>buildMealPlan(bad,recipes,options()),/outside/);
   assert.throws(()=>buildMealPlan(proposal(),recipes,options({exclude:'chicken'})),/outside/);
@@ -99,6 +105,12 @@ test('manual edits recalculate shopping quantities and cannot forge image paths 
   assert.ok(write.fields.shoppingList.length);
   fields.days.pop();assert.throws(()=>refreshMealPlan(fields,d,old),/every requested day/);
 });
+test('a four-week shopping list over 500 entries remains editable and is recalculated',async()=>{
+ const d=data(),fields=buildMealPlan(proposal(28),recipes,options({days:28}));fields.shoppingList=Array.from({length:579},()=>({name:'Derived shopping row'}));
+ const r={id:'studio:long-plan',kind:'mealplan',title:'Plan',revision:1,status:'Draft',fields};d.byId.set(r.id,r);let saved;
+ await changeStudio(new URLSearchParams({id:r.id}),{action:'content-save',revision:1,title:r.title,fields:JSON.stringify(fields)},d,async(_,o)=>{saved=o.payload.document;return [1];});
+ assert.ok(saved.fields.shoppingList.length);assert.ok(saved.fields.shoppingList.every(i=>i.name!=='Derived shopping row'));
+});
 test('photo generation uses a natural recipe-specific brief and private checked image bytes',async()=>{
   const r={title:newRecipe.title,fields:newRecipe};let payload,stored;
   assert.match(mealPhotoPrompt(r),/Soft window light/);assert.match(mealPhotoPrompt(r),/White beans/);
@@ -112,4 +124,13 @@ test('private generated images require an assigned editor and a stored allowlist
   const d=data();d.actor.role='staff';d.byId.set('plan',{id:'plan',kind:'mealplan',fields:{generatedRecipes:[]}});
   await assert.rejects(sendMealPhoto({method:'GET'},response(),new URLSearchParams({id:'plan',recipe:'new-x'}),d),e=>e.status===403);
   d.assigned.add('plan');await assert.rejects(sendMealPhoto({method:'GET'},response(),new URLSearchParams({id:'plan',recipe:'new-x'}),d),e=>e.status===404);
+});
+test('generated recipe photos use one escaped private image URL in menu cards and full recipe',()=>{
+ const d=data(),p=proposal();p.generatedRecipes=[newRecipe];p.days[0].dinner=newRecipe.id;
+ const fields=buildMealPlan(p,recipes,options({recipeMode:'extend',images:'generated',reuse:'off'}));
+ fields.generatedRecipes[0].fields.imageAsset={pathname:'nutrition-library/meal-photos/v1/'+'a'.repeat(64)+'.webp',type:'image/webp'};
+ const record={id:'studio:plan',kind:'mealplan',title:'Plan',status:'Draft',revision:1,fields};d.byId.set(record.id,record);
+ const html=itemPage(new URLSearchParams({id:record.id}),d);
+ assert.equal((html.match(/src="\/content-library\/\?work=1&amp;studio=mealplan-image&amp;id=studio%3Aplan&amp;recipe=new-beans"/g)||[]).length,2);
+ assert.doesNotMatch(html,/amp;amp/);
 });

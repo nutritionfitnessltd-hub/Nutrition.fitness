@@ -82,7 +82,7 @@ export async function changeStudio(params,f,data,api){
       next.title=cleanText(f.title,200);if(!next.title)throw new HttpError(400,'Add a title.');
       try{next.fields=JSON.parse(f.fields);}catch{throw new HttpError(400,'The content fields could not be read.');}
       if(!next.fields||Array.isArray(next.fields)||typeof next.fields!=='object'||JSON.stringify(next.fields).length>500000)throw new HttpError(400,'Check the content fields and size.');
-      validateFields(next.fields);
+      validateFields(next.fields,0,next.kind==='mealplan'?2000:500);
       validateShape(next.kind,next.fields);
       if(next.kind==='mealplan'&&r.fields.plannerVersion===1){
         next.fields=refreshMealPlan(next.fields,data,r.fields);

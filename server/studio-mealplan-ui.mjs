@@ -22,7 +22,7 @@ export function mealPlanForm(data,values={},record=null){
       (record?'<p>Regenerating replaces this draft’s menu. The previous saved version stays in version history.</p>':''),
       {section:record?'item':'create',...(record?{id:record.id}:{template:'mealplan'})},record?'Regenerate meal plan':'Create meal plan draft');
 }
-const imageUrl=(record,recipe)=>recipe.fields.imageAsset?url('mealplan-image',{id:record.id,recipe:recipe.id}):recipeImage(recipe);
+const imageUrl=(record,recipe)=>recipe.fields.imageAsset?url('mealplan-image',{id:record.id,recipe:recipe.id}).replaceAll('&amp;','&'):recipeImage(recipe);
 export function mealPlanPage(params,data,record){
   const f=record.fields,canEdit=data.actor.role==='admin'||data.assigned.has(record.id);
   const recipes=new Map([...data.items,...(f.generatedRecipes||[])].map(r=>[r.id,r]));
@@ -45,7 +45,7 @@ export function mealPlanPage(params,data,record){
   if(f.reuseLinks?.length)out+='<details class="panel"><summary>Ingredient &amp; leftover plan</summary><ul>'+f.reuseLinks.map(l=>'<li>'+esc(l.note)+'</li>').join('')+'</ul></details>';
   if(f.reuse!=='off')out+='<p class="meta">Keep raw ingredients chilled and follow pack use-by dates and storage instructions. For cooked leftovers, cool and refrigerate within 1–2 hours and eat within 48 hours; cool rice within 1 hour and use within 24 hours. Reheat only once, until steaming hot throughout. <a href="https://www.food.gov.uk/safety-hygiene/chilling" target="_blank" rel="noopener">Food Standards Agency storage guidance</a>.</p>';
   if(f.generatedRecipes?.length)out+='<section><h2>New recipe drafts</h2>'+f.generatedRecipes.map(r=>'<section id="'+esc(r.id)+'" class="panel">'+recipePreview(r)+
-    (r.fields.imageAsset?'<figure><img class="meal-generated-photo" src="'+imageUrl(record,r)+'" alt="'+esc(r.title)+'"><figcaption>AI-generated serving suggestion. Review against the ingredients and method.</figcaption></figure>':canEdit&&f.imagePreference==='generated'?form('mealplan-image-generate',hidden('revision',record.revision)+hidden('recipe',r.id),{section:'item',id:record.id},'Generate a natural-style food image'):'')+'</section>').join('')+'</section>';
+    (r.fields.imageAsset?'<figure><img class="meal-generated-photo" src="'+esc(imageUrl(record,r))+'" alt="'+esc(r.title)+'"><figcaption>AI-generated serving suggestion. Review against the ingredients and method.</figcaption></figure>':canEdit&&f.imagePreference==='generated'?form('mealplan-image-generate',hidden('revision',record.revision)+hidden('recipe',r.id),{section:'item',id:record.id},'Generate a natural-style food image'):'')+'</section>').join('')+'</section>';
   out+='<details class="panel"><summary>Notes to check</summary><p>'+esc(f.notes||'')+'</p><ul>'+(f.reviewNotes||[]).map(n=>'<li>'+esc(n)+'</li>').join('')+'</ul></details>';
   if(canEdit)out+='<details class="panel"><summary>Change the plan settings</summary>'+mealPlanForm(data,{},record)+'</details>';
   return out;
