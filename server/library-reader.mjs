@@ -14,6 +14,7 @@ import { platform } from './platform.mjs';
 const path = '/content-library/';
 const cookieName = '__Host-nufi-library';
 const sessionSeconds = 8 * 60 * 60;
+const rememberedSeconds = 30 * 24 * 60 * 60;
 const indexPath = 'nutrition-library/v1/index.json.gz';
 const digest = input => createHash('sha256').update(input).digest();
 const equal = (a, b) => a.length === b.length && timingSafeEqual(a, b);
@@ -55,7 +56,7 @@ function validSession(req, key) {
   if (!token || token.length > 160) return false;
   const match = /^(\d{10})\.([\w-]{22})\.([\w-]{43})$/.exec(token);
   const now = Math.floor(Date.now() / 1000);
-  return !!match && Number(match[1]) > now && Number(match[1]) <= now + sessionSeconds &&
+  return !!match && Number(match[1]) > now && Number(match[1]) <= now + rememberedSeconds &&
     equal(Buffer.from(signature(key, match[1] + '.' + match[2])), Buffer.from(match[3]));
 }
 function redirect(res) {
@@ -118,8 +119,9 @@ export function createLibraryReader({ env = process.env, load = readIndex,
       if (typeof password !== 'string' || password.length > 256 || !equal(digest(password), passwordHash)) {
         return html(res, 401, loginScreen('That password didn’t match. Please try again.'));
       }
-      const payload = (Math.floor(Date.now() / 1000) + sessionSeconds) + '.' + randomBytes(16).toString('base64url');
-      res.setHeader('Set-Cookie', cookie(payload + '.' + signature(key, payload), sessionSeconds));
+      const lifetime = fields.remember === '1' ? rememberedSeconds : sessionSeconds;
+      const payload = (Math.floor(Date.now() / 1000) + lifetime) + '.' + randomBytes(16).toString('base64url');
+      res.setHeader('Set-Cookie', cookie(payload + '.' + signature(key, payload), lifetime));
       return redirect(res);
     }
     if (req.method !== 'GET') {

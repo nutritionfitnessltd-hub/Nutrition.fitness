@@ -34,10 +34,11 @@ function redirect(res,item) {
 function setWorkCookie(res,value,seconds) {
   res.setHeader('Set-Cookie',cookieName+'='+value+'; Secure; HttpOnly; Path=/; SameSite=Strict; Max-Age='+seconds);
 }
-function issue(res,key,claims) {
-  const expires=Math.floor(Date.now()/1000)+3600;
+function issue(res,key,claims,remember=false) {
+  const seconds=remember?30*24*60*60:3600;
+  const expires=Math.floor(Date.now()/1000)+seconds;
   const payload=Buffer.from(JSON.stringify({...claims,expires})).toString('base64url');
-  setWorkCookie(res,payload+'.'+sign(key,payload),3600);
+  setWorkCookie(res,payload+'.'+sign(key,payload),seconds);
 }
 function signInPage(res,status,item,destination={},error='') {
   res.statusCode=status;res.setHeader('Content-Type','text/html; charset=utf-8');
@@ -87,7 +88,7 @@ async function login(fields,res,api,env,key) {
     const supplied=fields.password??fields.code;
     const code=typeof supplied==='string'?supplied.trim():'';
     if(code.length>=20&&code.length<=128&&staff[0]?.code_hash&&same(hash(code),staff[0].code_hash)){
-      issue(res,key,{role:'staff',id:staff[0].id,generation:sign(key,staff[0].code_hash)});return;
+      issue(res,key,{role:'staff',id:staff[0].id,generation:sign(key,staff[0].code_hash)},fields.remember==='1');return;
     }
     if(fields.action==='staff-login')throw new HttpError(401,'The email or password was not recognised, or this account is not enabled.');
   }
@@ -100,7 +101,7 @@ async function login(fields,res,api,env,key) {
     if(result.access_token)try{await api('/auth/v1/logout?scope=local',{method:'POST',access:result.access_token});}catch{}
     throw new HttpError(401,'The email or password was not recognised, or this account is not enabled.');
   }
-  issue(res,key,{role:'admin',id:user.id});
+  issue(res,key,{role:'admin',id:user.id},fields.remember==='1');
 }
 async function teamScreen(api,actor){
   if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
