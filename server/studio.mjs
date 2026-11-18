@@ -1,3 +1,5 @@
+import {knowledgeDocument} from './knowledge-article.mjs';
+import {articleImage} from './studio-articles.mjs';
 import {publicationPanel,publishStudio} from './studio-publishing.mjs';
 import {sendWorkerImage} from './worker-images.mjs';
 import { authorizeStudioRequest, canAccess } from './library-permissions.mjs';
@@ -73,6 +75,10 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     meta=meta||{};
     data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');
     data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';
+    if(section==='item'&&params.get('tab')==='knowledge-document'){
+      const r=editable(data,params.get('id'));if(r.kind!=='article')throw new HttpError(404,'Choose an article to preview.');
+      res.statusCode=200;res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Robots-Tag','noindex, nofollow');return res.end(knowledgeDocument(r,{preview:true,image:articleImage(r)}));
+    }
     if(section==='book-file')return await sendBookFile(req,res,params,data);
     if(section==='article-image'){const r=data.byId.get(params.get('id'));if(r?.workerImage&&!r.articleImage)return await sendWorkerImage(res,r,env,fetcher);return await sendArticleImage(req,res,params,data);}
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);

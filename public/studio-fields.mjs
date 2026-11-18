@@ -2,7 +2,7 @@
 export const primaryFields = {
   campaign:['headline','body','callToAction','assetIds'],
   communication:['subject','body'],
-  article:['introduction','body','takeaway'], learning:['body','takeaway'],
+  article:['introduction','body','marginNote','takeaway'], learning:['body','takeaway'],
   lesson:['introduction','body','videoUrl','script','durationSeconds','takeaway','activity'],
   course:['introduction','outcome','lessonIds'],
   programme:['purpose','weeks','scheduleIds'],
@@ -18,7 +18,7 @@ export const primaryFields = {
   workflow:['trigger','steps'], rule:['instructions','repeatWhen','progressWhen'], review:['questions','nextStep']
 };
 export const fieldLabels = {
-  body:'Content', headline:'Headline', callToAction:'Button or link text', assetIds:'Images and files', assetId:'File',
+  marginNote:'Image caption (Kalam)', body:'Content', headline:'Headline', callToAction:'Button or link text', assetIds:'Images and files', assetId:'File',
   lessonIds:'Lessons in order', lessonId:'Lesson', programmeIds:'Programmes', programmeId:'Programme',
   contentIds:'Included content', contentId:'Content', scheduleIds:'Weekly plans', scheduleId:'Weekly plan',
   recipeIds:'Recipes', recipeId:'Recipe', sessionIds:'Workouts', sessionId:'Workout', stageIds:'Stages', stageId:'Stage',

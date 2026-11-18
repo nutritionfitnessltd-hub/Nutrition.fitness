@@ -60,5 +60,6 @@ export async function publishedContent(req,res,params,api,sendImage){
  if(mode==='studio-release-image')return sendImage(r);
  const image=r.workerImage||r.articleImage?'/api/content?view=studio-release-image&id='+encodeURIComponent(id):'';
  res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('X-Robots-Tag',environment==='test'?'noindex, nofollow':'index, follow');
+ if(r.kind==='article'){const {knowledgeDocument}=await import('./knowledge-article.mjs');return res.end(knowledgeDocument(r,{image}));}
  return res.end('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(r.title)+' | nutrition.fitness</title><link rel="stylesheet" href="/studio.css"></head><body><header class="panel"><a href="/">nutrition.fitness®</a>'+(environment==='test'?'<p>Test website · awaiting final live approval</p>':'')+'</header><main class="studio-article">'+releaseBody(r,image)+'<p><a href="/knowledge-centre/">Back to Knowledge Centre</a></p></main></body></html>');
 }

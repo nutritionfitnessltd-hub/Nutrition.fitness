@@ -22,7 +22,7 @@ export function dashboardWork(data){
 
 function workerCards(data){
   const requests=requestsFor(data);
-  return '<section class="dashboard-team" aria-labelledby="workers-title"><div class="dashboard-section-heading"><div><h2 id="workers-title">AI workers</h2><p>Your team’s saved content and planned work.</p></div>'+button('All worker plans',url('worker-requests'))+'</div>'+
+  return '<section data-worker-updates="cards" class="dashboard-team" aria-labelledby="workers-title"><div class="dashboard-section-heading"><div><h2 id="workers-title">AI workers</h2><p>Your team’s saved content and planned work.</p></div>'+button('All worker plans',url('worker-requests'))+'</div>'+
     '<p class="dashboard-connection">Plans are saved here. Automatic worker start and progress updates are not connected yet.</p><div class="dashboard-workers">'+Object.entries(workers).map(([id,w])=>{
       const content=workerContent(data,id),drafts=content.filter(r=>['Draft','Changes requested'].includes(r.status)).length,reviews=content.filter(r=>r.status==='In review').length;
       const plans=requests.flatMap(request=>(request.fields.outputs||[]).filter(o=>o.worker===id).map(output=>({request,output})));
@@ -50,13 +50,13 @@ export function workspaceDashboard(data){
   const {mine,reviews,ownProjects}=dashboardWork(data),admin=data.actor.role==='admin';
   const plans=admin?requestsFor(data).reduce((n,r)=>n+(r.fields.outputs||[]).length,0):0;
   return '<section class="dashboard-welcome"><div class="welcome-copy"><span class="studio-eyebrow">Made for real life. Created by your team.</span><h1>Dashboard</h1><p class="welcome-lead">Good ideas start here.</p><p>Your work, your team and what comes next. Turn your originals into something people will enjoy, use and come back to.</p><div class="studio-actions">'+button('Create content',url('create'),true)+button('Explore your library',url('library'))+'</div></div><div class="welcome-pictures"><a href="'+url('library',{kind:'recipe'})+'">'+contentPhoto('recipe','welcome-photo',true)+'<span>Food to enjoy ↗</span></a><a href="'+url('library',{kind:'programme'})+'">'+contentPhoto('programme','welcome-photo',true)+'<span>Movement for real life ↗</span></a></div></section>'+
-    '<nav class="dashboard-overview" aria-label="Work overview"><a href="#my-work"><strong>'+mine.length+'</strong><span>My open tasks</span></a><a href="#my-review"><strong>'+reviews.length+'</strong><span>'+(admin?'For my review':'Awaiting review')+'</span></a>'+(admin?'<a href="#workers-title"><strong>'+plans+'</strong><span>Planned with AI workers</span></a>':'')+'</nav>'+
+    '<nav data-worker-updates="overview" class="dashboard-overview" aria-label="Work overview"><a href="#my-work"><strong>'+mine.length+'</strong><span>My open tasks</span></a><a href="#my-review"><strong>'+reviews.length+'</strong><span>'+(admin?'For my review':'Awaiting review')+'</span></a>'+(admin?'<a href="#workers-title"><strong>'+plans+'</strong><span>Planned with AI workers</span></a>':'')+'</nav>'+
     '<div class="dashboard-work"><section class="panel" id="my-work"><div class="dashboard-section-heading"><h2>My work</h2>'+button('All work',url('projects'))+'</div>'+
     list(mine.slice(0,5),row,'No open tasks assigned to you.')+
     (mine.length>5?'<p class="meta">Showing 5 of '+mine.length+' open tasks.</p>':'')+
     (ownProjects.length?'<details><summary>My projects ('+ownProjects.length+')</summary>'+list(ownProjects,p=>'<div><a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a></div>'+badge(p.status))+'</details>':'')+
     '<a class="dashboard-secondary" href="/content-library/?work=1&amp;assignments=1&amp;staff='+encodeURIComponent(data.actor.id)+'">My assignments →</a></section>'+
-    '<section class="panel" id="my-review"><div class="dashboard-section-heading"><h2>'+(admin?'For my review':'Awaiting review')+'</h2>'+button('Open reviews',url('review'))+'</div>'+list(reviews.slice(0,5),row,admin?'Nothing needs your review right now.':'No submitted work awaiting review.')+(reviews.length>5?'<p class="meta">Showing 5 of '+reviews.length+' items.</p>':'')+'</section></div>'+
+    '<section data-worker-updates="reviews" class="panel" id="my-review"><div class="dashboard-section-heading"><h2>'+(admin?'For my review':'Awaiting review')+'</h2>'+button('Open reviews',url('review'))+'</div>'+list(reviews.slice(0,5),row,admin?'Nothing needs your review right now.':'No submitted work awaiting review.')+(reviews.length>5?'<p class="meta">Showing 5 of '+reviews.length+' items.</p>':'')+'</section></div>'+
     (admin?workerCards(data):'')+
     '<nav class="dashboard-shortcuts" aria-label="Workspace shortcuts">'+button('Content library',url('library'))+button('Browse originals',url('archive'))+button('Work calendar',url('calendar'))+'</nav>';
 }

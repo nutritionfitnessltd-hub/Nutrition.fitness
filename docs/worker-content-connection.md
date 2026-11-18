@@ -23,3 +23,11 @@ Edits invalidate draft approval without changing previous test/live snapshots. P
 Apply the two schema migrations before releasing the website UI. The Edge Function and Sites connector can be released independently; the old website already reads the restored draft records. The Vercel UI must be deployed to display the new stored photographs and release controls.
 
 Tests: `node --test tests/worker-drafts.test.mjs tests/studio*.test.mjs`, full `npm test`, and `npm run build`. The release SQL was also tested with a synthetic record inside a rolled-back transaction, including rejection of live release before testing. No real article was approved or released during verification.
+
+## Automatic worker delivery and private preview
+
+New connector saves persist `workerId` and `workerSource.workerId`. Set `fields.workerId` to `nina`, `imogen`, `marcus` or `rory` to identify the worker explicitly, including when one worker handles another role’s content type. Without an explicit value, the receiver routes output to the responsible role: Nina for articles, recipes and communications; Imogen for courses and lessons; Marcus for training; Rory for video. Existing explicit assignments survive subsequent saves. Imogen’s course-production endpoint retains its own attributed draft path. Workers can only return Draft content; review and approval remain administrator actions.
+
+Dashboard cards, review counts and library results refresh every 30 seconds while visible. Polling skips editors, open dialogs and focused inputs; authentication failures never replace the page with a login screen. This receives saved worker content; a saved plan does not start a ChatGPT worker, and a chat response alone does not save a draft.
+
+Article editors provide **Preview in Knowledge Centre** and **Save & preview**. Preview is authenticated, private and no-store, and uses the same article renderer and Knowledge Centre CSS as published worker articles. Photographs have editable `marginNote` captions in Kalam. Original image bytes are retained. Chat writing-block wrappers and a duplicate title are removed only for display, preserving the original saved prose.
