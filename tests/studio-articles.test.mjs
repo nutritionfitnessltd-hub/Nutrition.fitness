@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {articleHtml,articleImage,articleUrl} from '../server/studio-articles.mjs';
 import {itemPage,library} from '../server/studio-pages.mjs';
+import {readerDocument,articlePresentation} from '../server/article-reader.mjs';
 const articles=JSON.parse(fs.readFileSync(new URL('../src/knowledge-centre/articles.json',import.meta.url)));
 test('all website articles retain their full readable text, headings, tables and source links',()=>{
  for(const a of articles){
@@ -21,7 +22,8 @@ test('imported markup cannot introduce scripts, event handlers or unsafe links',
 test('published articles open as reading pages with notes collapsed and editing limited by role',()=>{
  const a=articles[0],r={id:'website-article:'+a.slug,kind:'article',title:a.title,status:'Approved',publication:{status:'published'},fields:{bodyFormat:'html',body:a.bodyHtml,shortAnswer:a.shortAnswer,imageUrl:'/assets/photos/knowledge-1.jpg',sources:a.sources,salesUse:a.salesUse}};
  const data={actor:{role:'staff'},assigned:new Set(),items:[r],byId:new Map([[r.id,r]]),projects:[],people:[]};
- const html=itemPage(new URLSearchParams({id:r.id}),data);assert.match(html,/<article class="studio-article">/);assert.match(html,/The short answer/);assert.match(html,/Sources and checks/);assert.match(html,/Sales &amp; sharing notes|Sales & sharing notes/);assert.doesNotMatch(html,/<form|Edit article|<details[^>]* open/);
+ const html=itemPage(new URLSearchParams({id:r.id}),data);assert.match(html,/<iframe[^>]+data-article-reader/);assert.match(html,/Open full-width preview/);assert.match(html,/Sales &amp; sharing notes|Sales & sharing notes/);assert.doesNotMatch(html,/<form|Edit article|<details[^>]* open/);
+ const reader=readerDocument(r,articleImage(r));assert.match(reader,/The short answer/);assert.match(reader,/Sources and checks/);assert.match(reader,/In this guide/);assert.match(reader,/knowledge-centre\/knowledge-centre.css/);assert.doesNotMatch(reader,/Sales &amp; sharing notes/);
  assert.match(library(new URLSearchParams({bucket:'published',kind:'article'}),data),/knowledge-1.jpg/);
  assert.doesNotMatch(library(new URLSearchParams({bucket:'drafts',kind:'article'}),data),new RegExp(a.slug));
  data.actor.role='admin';assert.match(itemPage(new URLSearchParams({id:r.id}),data),/Edit article/);

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {Writable} from 'node:stream';
 import {imageBytes,saveArticleImage,sendArticleImage} from '../server/studio-article-images.mjs';
 import {articleImage,articleImageEditor,articlePage} from '../server/studio-articles.mjs';
+import {readerDocument} from '../server/article-reader.mjs';
 import {library} from '../server/studio-pages.mjs';
 
 // A real 1x1 lossless WebP, also decoded by the browser verification.
@@ -27,7 +28,7 @@ test('one save keeps article edits, saves a private asset, and uses it for both 
  assert.equal(document.articleImage.pathname,stored);assert.equal(record.articleImage,undefined);assert.equal(record.fields.body,'Before');
  const src=articleImage(document);assert.match(src,/studio=article-image/);
  const escaped=src.replaceAll('&','&amp;');data.items=[document];data.byId.set(document.id,document);
- assert.ok(articlePage(document,data).includes('src="'+escaped+'"'));
+ assert.ok(readerDocument(document,articleImage(document)).includes('src="'+escaped+'"'));
  assert.ok(library(new URLSearchParams({kind:'article',bucket:'drafts'}),data).includes('src="'+escaped+'"'));
  assert.match(articleImageEditor(document),/data-article-upload/);
 });

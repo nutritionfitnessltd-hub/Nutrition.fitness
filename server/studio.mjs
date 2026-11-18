@@ -1,7 +1,7 @@
-import {knowledgeDocument} from './knowledge-article.mjs';
-import {articleImage} from './studio-articles.mjs';
 import {publicationPanel,publishStudio} from './studio-publishing.mjs';
 import {sendWorkerImage} from './worker-images.mjs';
+import {readerDocument} from './article-reader.mjs';
+import {articleImage} from './studio-articles.mjs';
 import { authorizeStudioRequest, canAccess } from './library-permissions.mjs';
 import { saveInlineWorkout } from './studio-workout-inline.mjs';
 import { brandPage, sendBrandFile } from './studio-brand.mjs';
@@ -75,12 +75,12 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     meta=meta||{};
     data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');
     data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';
-    if(section==='item'&&params.get('tab')==='preview'&&data.byId.get(params.get('id'))?.kind==='article'){
-      editable(data,params.get('id'));res.statusCode=303;res.setHeader('Location',url('item',{id:params.get('id'),tab:'knowledge-document'}).replaceAll('&amp;','&'));return res.end();
-    }
-    if(section==='item'&&params.get('tab')==='knowledge-document'){
-      const r=editable(data,params.get('id'));if(r.kind!=='article')throw new HttpError(404,'Choose an article to preview.');
-      res.statusCode=200;res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Robots-Tag','noindex, nofollow');return res.end(knowledgeDocument(r,{preview:true,image:articleImage(r)}));
+    if(section==='article-preview'||(section==='item'&&params.get('tab')==='knowledge-document')){
+      if(req.method!=='GET')throw new HttpError(405,'Use GET to open an article preview.');
+      const r=editable(data,params.get('id'));if(r?.kind!=='article')throw new HttpError(404,'Article unavailable.');
+      res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','private, no-store');
+      res.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'self'");
+      res.statusCode=200;return res.end(readerDocument(r,articleImage(r)));
     }
     if(section==='book-file')return await sendBookFile(req,res,params,data);
     if(section==='article-image'){const r=data.byId.get(params.get('id'));if(r?.workerImage&&!r.articleImage)return await sendWorkerImage(res,r,env,fetcher);return await sendArticleImage(req,res,params,data);}

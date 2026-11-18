@@ -1,4 +1,4 @@
-import { imageCaption, knowledgePreview } from './knowledge-article.mjs';
+import { imageCaption } from './knowledge-article.mjs';
 import { workerNames, workerContent } from './studio-worker-content.mjs';
 import { canAccess, canEditContent } from './library-permissions.mjs';
 import { canEditDays, workoutDaysEditor } from './studio-workout-days.mjs';
@@ -224,8 +224,7 @@ function programmePage(params,data,r){
 }
 export function itemPage(params,data){
   const r=data.byId.get(params.get('id'));if(!r)return heading('Content unavailable');
-  if(r.kind==='article'&&params.get('tab')==='preview')return knowledgePreview(r);
-  if(r.kind==='article'&&r.fields.bodyFormat==='html'&&params.get('tab')!=='edit')return articlePage(r,data);
+  if(r.kind==='article'&&params.get('tab')!=='edit')return articlePage(r,data);
   if(r.kind==='mealplan'&&r.fields.plannerVersion===1&&params.get('tab')!=='edit')return mealPlanPage(params,data,r);
   if(r.kind==='ebook'&&r.bookAssets&&params.get('tab')!=='edit')return bookPage(r,data);
   if(r.kind==='programme'&&!['edit','preview'].includes(params.get('tab')))return programmePage(params,data,r);

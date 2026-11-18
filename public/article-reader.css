@@ -1,0 +1,3 @@
+@font-face{font-family:"DM Sans";src:url("/assets/fonts/dm-sans-400.woff2") format("woff2");font-weight:400 900;font-display:swap}
+@font-face{font-family:"Kalam";src:url("/assets/fonts/kalam-400.woff2") format("woff2");font-weight:400;font-display:swap}
+.kc-article-header .kc-intro:empty{display:none}

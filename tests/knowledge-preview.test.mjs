@@ -8,8 +8,8 @@ const article={id:'sample',kind:'article',title:'Vitamin D questions',status:'Dr
 const fixture=()=>({actor:{role:'admin',id:'owner'},items:[article],byId:new Map([[article.id,article]]),assigned:new Set(),projects:[],tasks:[],people:[]});
 test('private preview uses Knowledge Centre styles and captions without chat wrappers or duplicated title',()=>{
  const html=knowledgeDocument(article,{preview:true,image:'/private-photo'});
- assert.match(html,/Private preview/);assert.match(html,/knowledge-centre.css/);assert.doesNotMatch(html,/fonts.googleapis/);
- assert.match(html,/class="kc-photo-note">Look a little closer/);assert.match(html,/<h3>A useful question/);assert.match(html,/<strong>the evidence/);
+ assert.match(html,/Private preview/);assert.match(html,/knowledge-centre.css/);assert.match(html,/article-reader.css/);
+ assert.match(html,/class="kc-photo-note">Look a little closer/);assert.match(html,/<h2 id="section-1">A useful question/);assert.match(html,/<strong>the evidence/);
  assert.doesNotMatch(html,/:::writing|title=&quot;Vitamin/);assert.equal((html.match(/<h1>/g)||[]).length,1);
  const unsafe=knowledgeArticle({...article,fields:{body:'<script>alert(1)</script>\n\n[bad](javascript:alert(1))',marginNote:'<img onerror=bad>'}},'/photo');
  assert.doesNotMatch(unsafe,/<script|<img onerror|href="javascript:/);
@@ -17,7 +17,7 @@ test('private preview uses Knowledge Centre styles and captions without chat wra
 });
 test('editor and library link the saved draft to its private preview and show a Kalam caption',()=>{
  const data=fixture(),html=itemPage(new URLSearchParams({id:'sample',tab:'preview'}),data);
- assert.match(html,/<iframe[^>]+Knowledge Centre article preview/);assert.match(html,/knowledge-document/);
+ assert.match(html,/<iframe[^>]+Website preview/);assert.match(html,/article-preview/);
  assert.match(itemPage(new URLSearchParams({id:'sample',tab:'edit'}),data),/Preview in Knowledge Centre/);
  assert.match(library(new URLSearchParams({kind:'article'}),data),/studio-photo-caption/);
 });
@@ -25,8 +25,7 @@ test('preview requests read the saved draft without writes and remain scoped to 
  const data=fixture();let writes=0;const api=async(path,o)=>{if(o?.method==='POST')writes++;return path.includes('nufi_studio_items')?[{id:article.id,payload:article,revision:1}]:[];};
  const res=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},end(body){this.body=body;}});
  const options={params:new URLSearchParams({studio:'item',id:'sample',tab:'knowledge-document'}),actor:data.actor,api,load:async()=>({records:[]}),env:{}};
- let redirected=res();await handleStudio({method:'GET'},redirected,{...options,params:new URLSearchParams({studio:'item',id:'sample',tab:'preview'})});assert.equal(redirected.statusCode,303);assert.match(redirected.headers.Location,/tab=knowledge-document/);
- let output=res();await handleStudio({method:'GET'},output,options);assert.equal(output.statusCode,200);assert.match(output.body,/Private preview/);assert.equal(output.headers['Cache-Control'],'private, no-store');assert.equal(writes,0);
+ let output=res();await handleStudio({method:'GET'},output,options);assert.equal(output.statusCode,200);assert.match(output.body,/class="shell kc-article"/);assert.equal(output.headers['Cache-Control'],'private, no-store');assert.match(output.headers['Content-Security-Policy'],/frame-ancestors 'self'/);assert.equal(writes,0);
  output=res();await handleStudio({method:'GET'},output,{...options,actor:{role:'staff',id:'unassigned'}});assert.equal(output.statusCode,403);assert.doesNotMatch(output.body,/Fixture photographer/);
 });
 test('future returned drafts always route to a worker, preserve assignment and cannot approve themselves',()=>{
