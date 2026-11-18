@@ -28,7 +28,10 @@ const api=async(endpoint,opts={})=>{
   if((old?.revision||0)!==p.expected)return [];
   const row={id:p.item,payload:p.document,revision:p.expected+1,updated_at:new Date().toISOString()};saved.set(row.id,row);return [row];
  }
- if(endpoint.includes('nufi_studio_items'))return [...saved.values()];
+ if(endpoint.includes('nufi_studio_items')){
+  const filter=new URL('http://fixture'+endpoint).searchParams.get('id');
+  return [...saved.values()].filter(row=>filter?.startsWith('eq.')?row.id===filter.slice(3):filter==='like.studio:notification:*'?row.id.startsWith('studio:notification:'):filter==='not.like.studio:notification:*'?!row.id.startsWith('studio:notification:'):true);
+ }
  return [];
 };
 const mime={'.html':'text/html','.css':'text/css','.js':'text/javascript','.mjs':'text/javascript','.json':'application/json','.webp':'image/webp','.jpg':'image/jpeg','.png':'image/png','.svg':'image/svg+xml','.woff2':'font/woff2'};
