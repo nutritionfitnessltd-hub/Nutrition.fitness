@@ -9,7 +9,7 @@ const element = (tag, text, className) => {
   return el;
 };
 if(fieldsInput&&editor){
-  const values=JSON.parse(fieldsInput.value);
+  let values=JSON.parse(fieldsInput.value),savedValues=structuredClone(values);
   const refs=JSON.parse(document.querySelector('#studio-reference-data')?.value||'[]');
   const form=document.querySelector('#studio-editor-form');
   let dirty=form.querySelector('[data-unsaved]')!==null,submitting=false;
@@ -77,7 +77,8 @@ if(fieldsInput&&editor){
     }
     if(value&&typeof value==='object'){
       const details=element('details',undefined,'field-object');details.open=depth<1;
-      details.append(element('summary',labelFor(key)));
+      const workoutTitle=form.hasAttribute('data-workout-inline')&&key==='blocks'?(refs.find(r=>r.id===value.referenceId||r.id==='training:'+value.referenceId)?.title||'Exercise or activity'):labelFor(key);
+      details.append(element('summary',workoutTitle));
       const inner=element('div',undefined,'field-object-body');
       for(const [child,v] of Object.entries(value))inner.append(draw(child,v,next=>value[child]=next,depth+1));
       details.append(inner);return details;
@@ -95,13 +96,32 @@ if(fieldsInput&&editor){
     control.addEventListener('input',()=>set(bool?control.checked:number?(control.value===''?0:Number(control.value)):control.value));
     label.append(control);return label;
   }
-  const messageOptions=document.querySelector('#studio-message-options');
-  const main=primaryFields[editor.dataset.kind]||Object.keys(values),details=messageOptions||element('details',undefined,'editor-details');
-  if(!messageOptions)details.append(element('summary','More details'));
-  const upload=document.querySelector('[data-article-upload]'),imageFields=upload?['imageUrl','imageAlt','imageCredit','imageCreditUrl']:[];
-  for(const key of main)if(Object.hasOwn(values,key)&&!imageFields.includes(key))editor.append(draw(key,values[key],next=>values[key]=next));
-  for(const [key,value] of Object.entries(values))if(!main.includes(key)&&!imageFields.includes(key))details.append(draw(key,value,next=>values[key]=next));
-  if(!messageOptions&&details.children.length>1)editor.append(details);
+  const upload=document.querySelector('[data-article-upload]');
+  function renderFields(){
+    editor.replaceChildren();
+    const messageOptions=document.querySelector('#studio-message-options');
+    const main=primaryFields[editor.dataset.kind]||Object.keys(values),details=messageOptions||element('details',undefined,'editor-details');
+    if(!messageOptions)details.append(element('summary','More details'));
+    const imageFields=upload?['imageUrl','imageAlt','imageCredit','imageCreditUrl']:[];
+    for(const key of main)if(Object.hasOwn(values,key)&&!imageFields.includes(key))editor.append(draw(key,values[key],next=>values[key]=next));
+    for(const [key,value] of Object.entries(values))if(!main.includes(key)&&!imageFields.includes(key))details.append(draw(key,value,next=>values[key]=next));
+    if(!messageOptions&&details.children.length>1)editor.append(details);
+  }
+  renderFields();
+  if(form.hasAttribute('data-workout-inline')){
+    const status=form.querySelector('[data-editor-status]');
+    form.addEventListener('studio-editor-serialize',()=>{fieldsInput.value=JSON.stringify(values);submitting=false;});
+    form.addEventListener('studio-editor-reset',()=>{
+      form.reset();values=structuredClone(savedValues);fieldsInput.value=JSON.stringify(values);dirty=false;submitting=false;renderFields();status.textContent='All changes saved';
+    });
+    form.addEventListener('studio-editor-error',()=>{submitting=false;});
+    form.addEventListener('studio-editor-saved',event=>{
+      savedValues=structuredClone(event.detail.fields);values=structuredClone(savedValues);
+      form.querySelector('[name=title]').value=form.querySelector('[name=title]').defaultValue=event.detail.title;
+      form.querySelector('[name=revision]').value=form.querySelector('[name=revision]').defaultValue=event.detail.revision;
+      fieldsInput.value=fieldsInput.defaultValue=JSON.stringify(values);dirty=false;submitting=false;renderFields();status.textContent='All changes saved';
+    });
+  }
   form.addEventListener('submit',event=>{
     if(event.defaultPrevented)return;
     if(upload){

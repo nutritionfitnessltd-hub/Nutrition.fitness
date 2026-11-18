@@ -1,3 +1,4 @@
+import { inlineWorkoutForm } from './studio-workout-inline.mjs';
 import { esc, url, button } from './studio-ui.mjs';
 import { fieldLabel } from '../public/studio-fields.mjs';
 
@@ -51,12 +52,12 @@ function exerciseRow(block, index, data) {
     (details.length ? '<details class="workout-details"><summary>Coaching &amp; alternatives</summary><dl>' + details.map(([k, v]) => '<dt>' + esc(({ ruleId: 'Training rule', commonError: 'What to avoid', stopRule: 'When to stop', approvedSwaps: 'Approved alternatives' })[k] || fieldLabel(k)) + '</dt><dd>' + valueHtml(v, data) + '</dd>').join('') + '</dl></details>' : '') + '</li>';
 }
 
-export function workoutSession(session, data, { standalone = false, dayName = '' } = {}) {
+export function workoutSession(session, data, { standalone = false, dayName = '', inline = false } = {}) {
   const f = session.fields || {}, blocks = Array.isArray(f.blocks) ? f.blocks : has(f.blocks) ? [f.blocks] : [];
   const canEdit = data.actor.role === 'admin' || data.assigned.has(session.id);
   const section = (title, value) => has(value) ? '<section class="workout-preparation"><h3>' + title + '</h3><div class="prose">' + valueHtml(value, data) + '</div></section>' : '';
   const extra = Object.fromEntries(Object.entries(f).filter(([k, v]) => !['duration','introduction','warmup','blocks','cooldown','adjustmentRuleIds'].includes(k) && has(v)));
-  return '<div class="workout-session">' + (!standalone ? '<header class="workout-header"><div><h3>' + esc(session.title) + '</h3><p>' + [has(f.duration) ? esc(f.duration) + ' min' : '', blocks.length + (blocks.length === 1 ? ' exercise / activity' : ' exercises / activities')].filter(Boolean).join(' · ') + '</p></div>' + (canEdit ? button(dayName ? 'Edit ' + dayName + ' workout' : 'Edit workout', url('item', { id: session.id, tab: 'edit' })) : '') + '</header>' : has(f.duration) ? '<p class="workout-duration">' + esc(f.duration) + ' min</p>' : '') +
+  return '<div class="workout-session">' + (!standalone ? '<header class="workout-header"><div><h3>' + esc(session.title) + '</h3><p>' + [has(f.duration) ? esc(f.duration) + ' min' : '', blocks.length + (blocks.length === 1 ? ' exercise / activity' : ' exercises / activities')].filter(Boolean).join(' · ') + '</p></div>' + (canEdit ? (inline ? '<button type="button" data-workout-edit>' + esc(dayName ? 'Edit ' + dayName + ' workout' : 'Edit workout') + '</button>' : button(dayName ? 'Edit ' + dayName + ' workout' : 'Edit workout', url('item', { id: session.id, tab: 'edit' }))) : '') + '</header>' : has(f.duration) ? '<p class="workout-duration">' + esc(f.duration) + ' min</p>' : '') +
     (has(f.introduction) ? '<div class="workout-introduction prose">' + valueHtml(f.introduction, data) + '</div>' : '') +
     section('Warm-up', f.warmup) + '<section class="workout-main"><h3>Main work</h3>' + (blocks.length ? '<ol class="workout-exercises">' + blocks.map((b, i) => exerciseRow(b, i, data)).join('') + '</ol>' : '<p>No exercises have been added yet.</p>') + '</section>' +
     section('Cool-down', f.cooldown) + (Object.keys(extra).length ? '<details class="workout-guidance"><summary>Coaching &amp; session guidance</summary>' + valueHtml(extra, data) + '</details>' : '') + '</div>';
@@ -65,6 +66,6 @@ export function workoutSession(session, data, { standalone = false, dayName = ''
 export function workoutDays(params, data, sessions, href, labels = []) {
   if (!sessions.length) return '<p class="studio-empty">No workouts have been added to this week yet.</p>';
   const requested = Number(params.get('day')), day = Number.isInteger(requested) && requested >= 1 && requested <= sessions.length ? requested : 1;
-  return '<nav class="workout-days" aria-label="Workout days">' + sessions.map((s, i) => '<a href="' + href(i + 1) + '#workout"' + (i + 1 === day ? ' aria-current="page"' : '') + '><span>Day ' + (i + 1) + (labels[i] ? ' · ' + esc(labels[i]) : '') + '</span><strong>' + esc(s?.title.split(' — ').at(-1) || 'Session unavailable') + '</strong>' + (has(s?.fields.duration) ? '<small>' + esc(s.fields.duration) + ' min</small>' : '') + '</a>').join('') + '</nav>' +
-    '<section id="workout" class="workout-selected" aria-label="Day ' + day + ' workout"><p class="workout-day-label">Day ' + day + ' of ' + sessions.length + '</p>' + (sessions[day - 1] ? workoutSession(sessions[day - 1], data, {dayName:'Day ' + day}) : '<p class="studio-empty">This session is unavailable. Choose another day or check the linked workout.</p>') + '</section>';
+  return '<nav class="workout-days" aria-label="Workout days">' + sessions.map((s, i) => '<a data-session-id="' + esc(s?.id || '') + '" href="' + href(i + 1) + '#workout"' + (i + 1 === day ? ' aria-current="page"' : '') + '><span>Day ' + (i + 1) + (labels[i] ? ' · ' + esc(labels[i]) : '') + '</span><strong>' + esc(s?.title.split(' — ').at(-1) || 'Session unavailable') + '</strong>' + (has(s?.fields.duration) ? '<small>' + esc(s.fields.duration) + ' min</small>' : '') + '</a>').join('') + '</nav>' +
+    '<section id="workout" class="workout-selected" aria-label="Day ' + day + ' workout"><p class="workout-day-label">Day ' + day + ' of ' + sessions.length + '</p>' + (sessions[day - 1] ? '<div data-workout-preview>'+workoutSession(sessions[day - 1], data, {dayName:'Day ' + day,inline:true})+'</div><p role="status" data-workout-saved></p>'+inlineWorkoutForm(sessions[day - 1],data,'Day ' + day) : '<p class="studio-empty">This session is unavailable. Choose another day or check the linked workout.</p>') + '</section>';
 }

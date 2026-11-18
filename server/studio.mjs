@@ -1,3 +1,5 @@
+import { saveInlineWorkout } from './studio-workout-inline.mjs';
+import { workoutSession } from './studio-workouts.mjs';
 import { workoutDaysEditor } from './studio-workout-days.mjs';
 import { builderPage, workerPreview, saveWorkerRequest, workerRequestsPage } from './studio-workers.mjs';
 import { randomUUID } from 'node:crypto';
@@ -73,6 +75,12 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='article-image')return await sendArticleImage(req,res,params,data);
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
+      if(f.action==='workout-inline-save'){
+        const dayName=cleanText(f.dayName||'Workout',40);
+        const record=await saveInlineWorkout(params,f,data,api);
+        res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');
+        return res.end(JSON.stringify({record,preview:workoutSession(record,data,{dayName,inline:true})}));
+      }
       if(f.action==='worker-step'||params.get('flowBack')==='1'&&['worker-preview','worker-save'].includes(f.action))return write(res,200,builderPage(params,data,meta,f),'builder',actor,meta);
       if(f.action==='worker-preview')return write(res,200,workerPreview(f,data,meta),'builder',actor,meta);
       if(f.action==='worker-save'){
@@ -182,6 +190,10 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }
     return write(res,200,body,section,actor,meta);
   }catch(error){
+    if(req.method==='POST'&&f.action==='workout-inline-save'){
+      res.statusCode=error instanceof HttpError?error.status:503;res.setHeader('Content-Type','application/json; charset=utf-8');
+      return res.end(JSON.stringify({error:error instanceof HttpError?error.message:'Could not save the workout. Your edits are still here.'}));
+    }
     let body='<p role="alert">'+esc(error instanceof HttpError?error.message:'The studio could not complete this request. Please try again.')+'</p>';
     if(req.method==='POST'&&f.action==='content-save'&&data?.byId.has(params.get('id'))){
       try{
