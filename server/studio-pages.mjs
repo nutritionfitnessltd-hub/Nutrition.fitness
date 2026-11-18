@@ -1,3 +1,4 @@
+import { imageCaption } from './knowledge-article.mjs';
 import { workerNames, workerContent } from './studio-worker-content.mjs';
 import { canAccess, canEditContent } from './library-permissions.mjs';
 import { canEditDays, workoutDaysEditor } from './studio-workout-days.mjs';
@@ -105,11 +106,11 @@ export function library(params,data,meta={}){
 
   return (!exercise?'<a class="back" href="'+url('library',{bucket})+'">← Content types</a>':'')+heading(worker?workerNames[worker]+'’s work':exercise?'Exercises & drills':kind==='ebook'&&params.get('bookType')?params.get('bookType')+'s':collections[kind]?.[0]||'All content',worker?'Open content to edit, submit for approval or approve a submitted draft.':exercise?'Find instructions, coaching cues and demonstrations.':collections[kind]?.[1]||'Your working Nutrition.fitness content.',(canAccess(data.actor,'studio')?button(kind?'Create '+(kinds[kind]||'content').toLowerCase():'Create content',url('new',{kind:kind||(exercise?'exercise':'article')}),true):''))+lifecycle+filter+
     (!rows.length?'<p class="studio-empty">'+(q||state?'No content matches these filters.':(bucket==='published'?'Nothing has been published here yet. Checked content is kept separately.':'Nothing here yet. Create an item or import an original.'))+'</p>':'')+
-    pages(params,rows,rs=>'<div class="studio-content-grid">'+rs.map(r=>{
+    '<div data-worker-updates="library">'+pages(params,rows,rs=>'<div class="studio-content-grid">'+rs.map(r=>{
       const preview=meta.training?.[r.id]||meta.assets?.[r.id]?.preview||meta.training?.[r.parent];
       const photo=r.kind==='ebook'&&r.bookAssets?.front?bookAssetUrl(r.id,'front').replaceAll('&amp;','&'):recipeImage(r)||articleImage(r);
-      return '<a class="studio-content-card" href="'+url('item',{id:r.id})+'">'+(photo?'<img src="'+esc(photo)+'" alt="" loading="lazy">':preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(r.kind==='programme-family'?'Training programmes':kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks · '+(r.id==='training:nufi365'?'Year-round programme':'Standalone programme')+'</p>':r.kind==='programme-family'?'<p>Start · Progress · Develop · Own It</p>':'')+badge(published(r)?'Published':r.status)+'</div></a>';
-    }).join('')+'</div>');
+      return '<a class="studio-content-card" href="'+url('item',{id:r.id})+'">'+(photo?'<span class="studio-card-photo"><img src="'+esc(photo)+'" alt="" loading="lazy">'+(r.kind==='article'&&imageCaption(r)?'<span class="studio-photo-caption">'+esc(imageCaption(r))+'</span>':'')+'</span>':preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(r.kind==='programme-family'?'Training programmes':kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks · '+(r.id==='training:nufi365'?'Year-round programme':'Standalone programme')+'</p>':r.kind==='programme-family'?'<p>Start · Progress · Develop · Own It</p>':'')+badge(published(r)?'Published':r.status)+'</div></a>';
+    }).join('')+'</div>')+'</div>';
 }
 export function createPage(params,data,values={}){
   if(params.get('template')==='mealplan')return mealPlanForm(data,values);

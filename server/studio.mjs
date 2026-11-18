@@ -75,9 +75,9 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     meta=meta||{};
     data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');
     data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';
-    if(section==='article-preview'){
+    if(section==='article-preview'||(section==='item'&&params.get('tab')==='knowledge-document')){
       if(req.method!=='GET')throw new HttpError(405,'Use GET to open an article preview.');
-      const r=data.byId.get(params.get('id'));if(r?.kind!=='article')throw new HttpError(404,'Article unavailable.');
+      const r=editable(data,params.get('id'));if(r?.kind!=='article')throw new HttpError(404,'Article unavailable.');
       res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','private, no-store');
       res.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'self'");
       res.statusCode=200;return res.end(readerDocument(r,articleImage(r)));

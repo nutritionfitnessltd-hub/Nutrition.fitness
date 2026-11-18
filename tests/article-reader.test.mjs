@@ -27,4 +27,5 @@ test('private article preview is read-only and uses the same article body as a r
  assert.equal(/<main[\s\S]*<\/main>/.exec(output)[0],privateMain);
  await handleStudio({method:'POST',body:{}},res,{actor,api,load:async()=>({records:[]}),env:{},params:new URLSearchParams({studio:'article-preview',id:record.id})});assert.equal(res.statusCode,405);
  let reads=0;await handleStudio({method:'GET'},res,{actor:{role:'staff',access:{library:false}},api:async()=>{reads++;},load:async()=>{reads++;},env:{},params:new URLSearchParams({studio:'article-preview',id:record.id})});assert.equal(res.statusCode,403);assert.equal(reads,0);
+ await handleStudio({method:'GET'},res,{actor:{id:'unassigned',role:'staff'},api,load:async()=>({records:[]}),env:{},params:new URLSearchParams({studio:'article-preview',id:record.id})});assert.equal(res.statusCode,403);assert.doesNotMatch(output,/class="kc-article-header"/);
 });

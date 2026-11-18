@@ -4,6 +4,13 @@ import {esc} from './studio-ui.mjs';
 
 const labels={cost:'Cost & prices',problems:'Problems & solutions',confidence:'Confidence & concerns',comparisons:'Comparisons',reviews:'Reviews',food:'Food & meal planning',workouts:'Workouts',supplements:'Supplements',habits:'Motivation & habits',nufi:'NUFI'};
 const clean=text=>String(text||'').replace(/\uE200[\s\S]*?\uE201/g,'').trim();
+export function imageCaption(r){
+ const f=r.fields||{};
+ if(typeof f.marginNote==='string')return f.marginNote.trim().slice(0,160);
+ if(typeof f.imageCaption==='string')return f.imageCaption.trim().slice(0,160);
+ const notes=[[/magnesium/i,'Magnesium and vitamin D.'],[/red wine/i,'Wine and heart health.'],[/light on/i,'Light, sleep and your heart.'],[/breast cancer/i,'HRT and breast cancer.'],[/dementia/i,'HRT and memory.']];
+ return notes.find(([pattern])=>pattern.test(r.title))?.[1]||'Let’s look a little closer.';
+}
 function inline(text){
  return clean(text).split(/(\[[^\]\n]+\]\([^\s)]+\)|https:\/\/[^\s<>]+)/g).map(part=>{
   const link=/^\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
@@ -49,13 +56,14 @@ export function articlePresentation(record){
   if(sources){sourcesMarkdown=body.slice(sources.index+sources[0].length);body=body.slice(0,sources.index);}
  }
  return {title:record.title,category:f.category||metadata.category||'problems',topics:Array.isArray(f.topics)?f.topics:(metadata.topics||'').split(',').map(v=>v.trim()).filter(Boolean),
-  summary:f.introduction||f.summary||metadata.summary||'',shortAnswer:f.shortAnswer||metadata['short answer']||'',marginNote:f.marginNote||metadata['margin note']||metadata['proposed margin note']||'',
+  summary:f.introduction||f.summary||metadata.summary||'',shortAnswer:f.shortAnswer||metadata['short answer']||'',marginNote:typeof f.marginNote==='string'||typeof f.imageCaption==='string'?imageCaption(record):metadata['margin note']||metadata['proposed margin note']||imageCaption(record),
   publishedAt:/^\d{4}-\d{2}-\d{2}$/.test(f.publishedAt||'')&&!Number.isNaN(Date.parse(f.publishedAt))?f.publishedAt:'',status:record.status,bodyHtml:f.bodyFormat==='html'?articleHtml(body):markdownArticle(body),
   sources:Array.isArray(f.sources)?f.sources.filter(s=>s&&articleUrl(s.url)).map(s=>({...s,url:articleUrl(s.url)})):[],sourcesMarkdown,
   imageAlt:f.imageAlt||metadata.imagealt||'',imageCredit:f.imageCredit||metadata.imagecredit||metadata['image credit']||'',imageCreditUrl:articleUrl(f.imageCreditUrl||metadata.imagecrediturl||'')};
 }
 export function readerMain(record,image=''){
  const a=articlePresentation(record);a.image=image;
+ if(record.fields?.takeaway)a.bodyHtml+='<aside class="kc-quick-answer"><strong>The takeaway</strong><p>'+esc(record.fields.takeaway)+'</p></aside>';
  if(a.sourcesMarkdown&&!a.sources.length)a.bodyHtml+='<section class="kc-sources"><h2>Sources and checks</h2>'+markdownArticle(a.sourcesMarkdown)+'</section>';
  return knowledgeArticle(a,{label:(_,id)=>labels[id]||id,photograph:()=>'<img src="'+esc(image)+'" alt="'+esc(a.imageAlt)+'" width="1200" height="750" fetchpriority="high" decoding="async">',photoCredit:()=>a.imageCreditUrl?'<a href="'+esc(a.imageCreditUrl)+'" target="_blank" rel="noopener noreferrer">'+esc(a.imageCredit)+'</a>':esc(a.imageCredit)});
 }
