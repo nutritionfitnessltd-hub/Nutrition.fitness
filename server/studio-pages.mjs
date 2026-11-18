@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { recipeImage, recipePreview } from './studio-recipes.mjs';
+import { mealPlanForm, mealPlanPage } from './studio-mealplan-ui.mjs';
 import { bookAssetUrl, bookPage } from './studio-books.mjs';
 import { kinds, templates, blankFields, references, descendants, issues } from './studio-model.mjs';
 import { projectFor } from './studio-store.mjs';
@@ -89,6 +90,7 @@ export function library(params,data,meta={}){
     }).join('')+'</div>');
 }
 export function createPage(params,data,values={}){
+  if(params.get('template')==='mealplan')return mealPlanForm(data,values);
   const choice=params.get('template'),t=data.actor.role==='admin'?templates[choice]:null;
   if(!t)return heading('What would you like to create?','Choose a type. Start fresh or use something from the Reference Library.')+
     '<div class="studio-cards studio-simple-grid">'+Object.values(shelves).map(c=>card(c.title,c.description,createLink(c.create,data.actor.role==='admin'))).join('')+'</div>'+
@@ -199,6 +201,7 @@ function programmePage(params,data,r){
 }
 export function itemPage(params,data){
   const r=data.byId.get(params.get('id'));if(!r)return heading('Content unavailable');
+  if(r.kind==='mealplan'&&r.fields.plannerVersion===1&&params.get('tab')!=='edit')return mealPlanPage(params,data,r);
   if(r.kind==='ebook'&&r.bookAssets&&params.get('tab')!=='edit')return bookPage(r,data);
   if(r.kind==='programme'&&!['edit','preview'].includes(params.get('tab')))return programmePage(params,data,r);
   if(r.kind==='programme-family'){
@@ -232,7 +235,7 @@ export function itemPage(params,data){
       (checks.length?'<ul>'+checks.map(c=>'<li>'+esc(c)+'</li>').join('')+'</ul>':'<p>The required fields are complete.</p>')+
       form('content-review',hidden('revision',r.revision)+select('status','Next status',Object.fromEntries((admin?['In review','Changes requested','Approved','Archived']:['In review']).map(s=>[s,s])))+
         textarea('feedback','Review note'),state,admin?'Save review':'Submit for review')+
-      '<details><summary>Draft with AI</summary>'+(data.aiReady?form('ai-draft',hidden('revision',r.revision)+textarea('prompt','What would you like to create or improve?'),state,'Generate a draft for review'):'<p>The OpenAI account connection is being completed.</p>')+'</details>'+
+      '<details><summary>'+(r.kind==='mealplan'?'Generate a meal plan':'Draft with AI')+'</summary>'+(r.kind==='mealplan'?mealPlanForm(data,{},r):data.aiReady?form('ai-draft',hidden('revision',r.revision)+textarea('prompt','What would you like to create or improve?'),state,'Generate a draft for review'):'<p>The OpenAI account connection is being completed.</p>')+'</details>'+
       '<details><summary>Feedback</summary>'+list(r.comments||[],c=>'<div><p>'+esc(c.body)+'</p><small>'+esc(c.author)+' · '+esc(c.at.slice(0,10))+'</small></div>','No feedback yet.')+
       form('content-comment',hidden('revision',r.revision)+textarea('comment','Add feedback'),state,'Add feedback')+'</details>'+
       button('Version history',url('history',{id:r.id}))+
@@ -246,6 +249,7 @@ export function itemPage(params,data){
 }
 export function newItem(params,data){
   const kind=Object.hasOwn(kinds,params.get('kind'))?params.get('kind'):'article';
+  if(kind==='mealplan')return mealPlanForm(data,{project:params.get('project')||''});
   return heading('Create '+kinds[kind].toLowerCase(),'Start with a clear title, then develop and review the content.')+
     form('content-create',hidden('id','studio:'+randomUUID())+hidden('entry',params.get('entry')||'')+input('title','Title',params.get('title')||'','text','required maxlength="200"')+
       select('kind','Content type',kinds,kind)+select('project','Project',data.actor.role==='admin'?projectChoices(data):Object.fromEntries(data.projects.map(p=>[p.id,p.name])),params.get('project')||''),

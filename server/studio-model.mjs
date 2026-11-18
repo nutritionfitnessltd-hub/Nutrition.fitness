@@ -100,7 +100,7 @@ export function issues(record,records){
   const required={
     programme:['purpose','audience'],stage:['entryCriteria','exitCriteria'],structure:['spacing','weeks'],
     session:['warmup','blocks','cooldown'],exercise:['movement','equipment','instructions','cues'],
-    recipe:['ingredients','instructions'],course:['outcome'],lesson:['body'],article:['body'],
+    recipe:['ingredients','instructions'],mealplan:['days'],course:['outcome'],lesson:['body'],article:['body'],
     communication:['channel','trigger','timing','body'],campaign:['body'],workflow:['trigger','steps'],asset:['brief']
   };
   for(const key of required[record.kind]||[])if(!present(d[key]))out.push('Add '+key.replace(/([A-Z])/g,' $1').toLowerCase()+'.');

@@ -4,7 +4,8 @@ const fieldLabels = {
   repMin:'Minimum reps',repMax:'Maximum reps',referenceId:'Exercise or activity',restSeconds:'Rest in seconds',
   effortValue:'Effort target',effortType:'Effort scale',perSide:'Per side',sessionIds:'Workouts',stageIds:'Stages',
   easierId:'Easier exercise',harderId:'Harder exercise',videoUrl:'Demonstration video URL',thumbnailUrl:'Image URL',
-  sourceText:'Original source text',busyWeek:'Busy week option',warmup:'Warm-up',cooldown:'Cool-down'
+  sourceText:'Original source text',busyWeek:'Busy week option',warmup:'Warm-up',cooldown:'Cool-down',
+  durationDays:'Plan length in days',cookServings:'Portions to cook',leftoverFromDay:'Leftovers from day',recipeId:'Recipe',imagePreference:'Recipe picture preference'
 };
 const labelFor = key => fieldLabels[key] || key.replace(/([A-Z])/g,' $1').replace(/^./,s=>s.toUpperCase());
 const element = (tag, text, className) => {

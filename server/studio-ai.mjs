@@ -12,7 +12,7 @@ const baseInstructions = [
   'Avoid repetitive coaching messages and jargon such as hypoxia. Explain the member action and the reason for it.',
   'Return fieldsJson as a JSON object matching the supplied content field shape, and notes as review guidance.'
 ].join('\n');
-export async function generateDraft({env,record,prompt,standards,exercises=[],fetcher=fetch}){
+export async function generateDraft({env,record,prompt,standards,exercises=[],context={},maxOutputTokens=10000,fetcher=fetch}){
   if(!env.OPENAI_API_KEY)throw new HttpError(503,'The OpenAI account connection is still being completed. You can continue editing and importing content.');
   if(!prompt.trim())throw new HttpError(400,'Describe what you want the draft to do.');
   const schema={type:'object',additionalProperties:false,properties:{
@@ -24,8 +24,8 @@ export async function generateDraft({env,record,prompt,standards,exercises=[],fe
       method:'POST',headers:{Authorization:'Bearer '+env.OPENAI_API_KEY,'Content-Type':'application/json'},
       body:JSON.stringify({model:env.OPENAI_STUDIO_MODEL||'gpt-5-mini',store:false,
         instructions:baseInstructions+'\nBrand guidance\n'+(standards||''),
-        input:JSON.stringify({request:prompt,kind:record.kind,title:record.title,fields:{...blankFields(record.kind),...record.fields},source:record.source?.text||'',exercises}),
-        text:{format:{type:'json_schema',name:'content_draft',strict:true,schema}},max_output_tokens:10000}),
+        input:JSON.stringify({request:prompt,kind:record.kind,title:record.title,fields:{...blankFields(record.kind),...record.fields},source:record.source?.text||'',exercises,context}),
+        text:{format:{type:'json_schema',name:'content_draft',strict:true,schema}},max_output_tokens:maxOutputTokens}),
       signal:AbortSignal.timeout(180000)
     });
   }catch{throw new HttpError(503,'The draft request could not finish. Your saved content is available to continue editing.');}
