@@ -24,6 +24,9 @@ test('website edits and release metadata survive; stale workers and forged appro
 test('newsletters, recipes, courses, programmes and video assets share the draft workflow',()=>{
  for(const kind of workerKinds){const record=draftDocument({...input,kind,fields:{introduction:'Context'}},null,namespace);assert.equal(record.status,'Draft');assert.equal(record.fields.introduction,'Context');}
  const recipe=draftDocument({...input,kind:'recipe',ingredients:['Oats'],method:['Cook'],servings:2},null,namespace);assert.deepEqual(recipe.fields.instructions,['Cook']);assert.equal(recipe.fields.sourceText,input.body);
+ const newsletter={...draftDocument({...input,kind:'newsletter'},null,namespace),revision:1};const data={actor:{role:'admin'},projects:[]};
+ assert.match(editorForm(newsletter,data),/Submit for Approval/);assert.doesNotMatch(editorForm(newsletter,data),/value="approve"/);
+ assert.match(editorForm({...newsletter,status:'In review'},data),/Approve content/);
 });
 function fixture(){const record={...draftDocument(input,null,namespace),revision:1};const actor={role:'admin',id:'human'};return {record,data:{actor,byId:new Map([[record.id,record]]),items:[record],assigned:new Set([record.id]),projects:[],releases:[]},params:new URLSearchParams({id:record.id})};}
 test('submit for approval and approval are separate and preserve the saved article',async()=>{

@@ -32,7 +32,7 @@ function messageEditorForm(r,data,{create,project,entry,unsaved}){
       '<button type="submit" name="intent" value="preview">Preview</button><button class="primary" type="submit" name="intent" value="draft">Save</button></div></div>'+
     '<details class="message-options"><summary>Options</summary><div id="studio-message-options"></div>'+
     (create?'<label>Project<select name="project">'+(data.actor.role==='admin'?'<option value="">None</option>':'')+data.projects.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===project?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></label>':
-      '<div class="studio-actions"><button type="submit" name="intent" value="'+(data.actor.role==='admin'?'approve':'review')+'">'+(data.actor.role==='admin'?'Mark checked':'Send for checking')+'</button>'+button('History',url('history',{id:r.id}))+'</div>')+
+      '<div class="studio-actions"><button type="submit" name="intent" value="review">Submit for Approval</button>'+(data.actor.role==='admin'&&r.status==='In review'?'<button type="submit" name="intent" value="approve">Approve content</button>':'')+button('History',url('history',{id:r.id}))+'</div>')+
     '</details></form>';
 }
 export function contentPreview(r,data,readable){

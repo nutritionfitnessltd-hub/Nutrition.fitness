@@ -26,7 +26,7 @@ export async function studioData(api,actor,load){
     allRows(api,projectTable+'?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&creator_id=eq.'+actor.id)),
     allRows(api,'/rest/v1/nufi_library_tasks?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&staff_id=eq.'+actor.id)),
     actor.role==='admin'?api('/rest/v1/nufi_library_staff?select=id,name,email&order=name',service):Promise.resolve([{id:actor.id,name:actor.name}]),
-    allRows(api,'/rest/v1/nufi_studio_releases?select=item_id,environment,source_revision,published_at&order=item_id')
+    actor.role==='admin'?allRows(api,'/rest/v1/nufi_studio_releases?select=item_id,environment,source_revision,published_at&order=item_id'):Promise.resolve([])
   ]);
   const records=new Map(index.records.filter(r=>r.id.startsWith('training:')||r.fields?.recipeText).map(r=>[r.id,canonical(r)]));
   for(const row of overlays.filter(row=>actor.role==='admin'||row.payload.kind!=='worker-request'))records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
