@@ -185,7 +185,7 @@ if(fileInput){
 
 document.querySelectorAll('form[method=post]').forEach(form=>{
   form.addEventListener('submit',event=>{
-    if(event.defaultPrevented)return;
+    if(event.defaultPrevented||form.hasAttribute('data-team-welcome'))return;
     // Keep the clicked button's name/value in the request (disabled buttons are omitted).
     const submit=event.submitter;
     if(submit){submit.setAttribute('aria-disabled','true');submit.textContent='Saving…';}

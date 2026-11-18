@@ -24,6 +24,12 @@ The sender should be in scope and the unrelated mailbox out of scope. Check for 
 
 ## Events and failure handling
 
+Team & permissions sends welcome emails directly through this Microsoft 365 connection. Each administrator form has a stable request ID, and the recipient is loaded from the enabled team account on the server. The browser retains edited text after failures. Only a confirmed rejection can be retried; an accepted or uncertain send is not repeated.
+
+Welcome message bodies can contain newly issued passwords. They are AES-256-GCM encrypted before being placed in the outbox, using a separate key derived from the server catalogue key and authenticated account/event metadata. The normal activity view contains only the subject, recipient and delivery status. The current row's encrypted body is removed after acceptance, cancellation or an uncertain result; historical revisions may retain ciphertext. A password reset or account disable invalidates pending welcome emails, including retries from Connections. No plaintext password is written to the outbox or notification revisions.
+
+A Graph 403 after a successful token request means mailbox sending is not authorised. The page includes an allowlisted Graph diagnostic code where available, never arbitrary upstream text. Verify the scoped Exchange role assignment; having the three Vercel credentials alone does not establish sending permission. A failed test is titled “Content Manager email test” and is never described as proof of a connected sender.
+
 New or reassigned projects notify their assigned creator. Explicit review requests notify the configured reviewer (default Kasia). Review decisions notify creators of linked projects. Draft saves, preview saves, comments, brand settings and notification settings do not send mail.
 
 Settings and notification records reuse the existing service-only `nufi_studio_items` storage and optimistic-locking RPC. Notification rows are excluded from general workspace loads. Each workflow version and recipient has a stable hashed event ID. An atomic revision claim moves the notification to `sending` before calling Graph. Concurrent and repeated requests cannot resend the same event. A known rejection may be retried explicitly. Timeouts, server errors, or a process ending after the claim remain uncertain and are never automatically resent; check Sent Items first.
