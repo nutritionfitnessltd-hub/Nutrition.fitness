@@ -9,6 +9,9 @@ test('draft books show front/back covers, existing PDF and missing print edition
  const d=data('admin'),html=itemPage(new URLSearchParams({id:r.id}),d);
  for(const text of ['Front cover','Back cover','Reading PDF','Print PDF','Not available yet','Draft'])assert.ok(html.includes(text));
  assert.ok(!html.includes('asset=print'));assert.match(html,/asset=digital/);
+ assert.match(html,/<iframe class="studio-book-reader"/);assert.match(html,/Open full screen/);
+ assert.ok(html.indexOf('<iframe')<html.indexOf('Book details &amp; files'));
+ assert.doesNotMatch(html,/<details[^>]* open|<form|<summary>Contents|Linked recipes/);
  const cards=library(new URLSearchParams({bucket:'drafts',kind:'ebook'}),d);
  assert.match(cards,/studio=book-file&amp;id=book%3Afixture&amp;asset=front/);assert.doesNotMatch(cards,/amp;amp/);
  const published=library(new URLSearchParams({bucket:'published',kind:'ebook'}),d);assert.doesNotMatch(published,/Fixture book/);
