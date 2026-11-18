@@ -22,7 +22,7 @@ export function archivePage(params,data,meta={}){
     return attribute+'="'+target+'"';
   });
   body=body.replace('<form class="filters" action="/content-library/">','<form class="filters" action="/content-library/">'+hidden('work','1')+hidden('studio','archive'));
-  return heading('Archive','Your original library, organised by its existing shelves and collections.',button('Import a PDF or text',url('import')))+navigation+
+  return heading('Reference Library','Your original library, organised by its existing shelves and collections.',button('Import a PDF or text',url('import')))+navigation+
     (record?'<div class="studio-workbar">'+button('Use as a starting point',url('import',{source:record.id}),true)+button('Original assets',link({work:'1',assets:record.id}))+'</div>':'')+body;
 }
 export function importPage(params,data,error='',values={}){
