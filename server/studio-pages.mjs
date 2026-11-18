@@ -1,3 +1,4 @@
+import { workoutDays, workoutSession } from './studio-workouts.mjs';
 import { contentSections } from './studio-navigation.mjs';
 import { editorForm, referenceData, contentPreview, videoTools } from './studio-editor.mjs';
 import { fieldLabel } from '../public/studio-fields.mjs';
@@ -170,14 +171,14 @@ function weeklyPlan(params,data,schedules,owner){
   const chosen=schedules.find(x=>x.id===params.get('schedule'))||schedules[0];
   if(!chosen)return '<p class="studio-empty">No weekly plan has been added yet.</p>';
   const weeks=Array.isArray(chosen.fields.weeks)?chosen.fields.weeks:[],week=weeks.find(w=>String(w.number)===params.get('week'))||weeks[0];
-  const href=(schedule,w)=>url('item',{id:owner?.id||schedule.id,...(owner?{tab:'plan',schedule:schedule.id}:{}),week:w});
+  const href=(schedule,w,day)=>url('item',{id:owner?.id||schedule.id,...(owner?{tab:'plan',schedule:schedule.id}:{}),week:w,...(day?{day}:{})});
   let out='<nav class="tabs" aria-label="Training days">'+schedules.map(x=>'<a href="'+href(x,week?.number||1)+'"'+(x.id===chosen.id?' aria-current="page"':'')+'>'+esc(x.fields.frequency)+' days'+(schedules.filter(y=>y.fields.frequency===x.fields.frequency).length>1?' · '+esc(x.title):'')+'</a>').join('')+'</nav>'+
     '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','item')+hidden('id',owner?.id||chosen.id)+hidden('tab','plan')+hidden('schedule',chosen.id)+select('week','Week',Object.fromEntries(weeks.map(w=>[w.number,'Week '+w.number+(w.title?' · '+w.title:'')])),week?.number||1)+'<button>Open week</button></form>';
   if(week){
     const sessions=(week.sessionIds||[]).map(id=>data.byId.get(id)||data.byId.get('training:'+id));
-    const row=(title,key)=>'<tr><th scope="row">'+title+'</th>'+sessions.map(s=>'<td>'+(s?readable(s.fields[key],data):'Session unavailable')+'</td>').join('')+'</tr>';
-    out+='<h2>Week '+esc(week.number)+' · '+esc(week.title||'')+'</h2><p class="prose">'+esc(week.message||'')+'</p><p class="prose">'+esc(week.progression||'')+'</p>'+
-      '<div class="week-scroll" tabindex="0" role="region" aria-label="Weekly workouts; scroll sideways to see every day"><table><thead><tr><th>Workout</th>'+sessions.map((s,i)=>'<th>Day '+(i+1)+(s?'<br>'+itemLink(s):'')+'</th>').join('')+'</tr></thead><tbody>'+row('Warm-up','warmup')+row('Main work','blocks')+row('Cool-down','cooldown')+'</tbody></table></div>';
+    out+='<div class="workout-week-intro"><h2>Week '+esc(week.number)+(week.title?' · '+esc(week.title):'')+'</h2>'+(week.message?'<p class="prose">'+esc(week.message)+'</p>':'')+
+      (week.progression?'<details><summary>This week’s progression</summary><p class="prose">'+esc(week.progression)+'</p></details>':'')+'</div>'+
+      workoutDays(params,data,sessions,day=>href(chosen,week.number,day));
   }
   return out+'<details class="panel"><summary>Spacing, recovery & busy weeks</summary>'+readable({spacing:chosen.fields.spacing||'',rest:chosen.fields.restRules||'',busyWeek:chosen.fields.busyWeek||{}},data)+button('Edit this schedule',url('item',{id:chosen.id,tab:'edit'}))+'</details>';
 }
@@ -224,7 +225,7 @@ export function itemPage(params,data){
   const admin=data.actor.role==='admin',canEdit=admin||data.assigned.has(r.id),state={section:'item',id:r.id,tab:'edit'};
   const children=data.items.filter(x=>(x.parent===r.id||(r.fields.sharedContentIds||[]).includes(x.id))&&x.status!=='Archived'),refs=references(r,data.byId).map(id=>data.byId.get(id)).filter(Boolean);
   const parents=data.items.filter(x=>x.id!==r.id&&(x.id===r.parent||references(x,data.byId).includes(r.id)));
-  const checks=issues(r,data.items),preview=params.get('tab')==='preview'||!canEdit||(!params.has('tab')&&['course','recipe'].includes(r.kind)),schedule=r.kind==='structure'&&params.get('tab')!=='edit'&&!preview;
+  const checks=issues(r,data.items),preview=params.get('tab')==='preview'||!canEdit||(!params.has('tab')&&['course','recipe','session'].includes(r.kind)),schedule=r.kind==='structure'&&params.get('tab')!=='edit'&&!preview;
   let out='<a class="back" href="'+(r.kind==='programme'?url('item',{id:r.id}):url('library',{kind:r.kind}))+'">← '+esc(r.kind==='programme'?'Programme overview':collections[r.kind]?.[0]||'Content library')+'</a>'+
     heading(r.title,kinds[r.kind]||r.kind,preview||schedule?(canEdit?button('Edit content',url('item',{id:r.id,tab:'edit'}),true):''):'')+
     '<p>'+badge(r.publication?.status==='published'?'Published':r.status)+' <span class="meta">'+(r.updatedAt?'Saved '+esc(new Date(r.updatedAt).toLocaleDateString('en-GB')):'')+'</span></p>';
@@ -234,7 +235,7 @@ export function itemPage(params,data){
     return out+weeklyPlan(selected,data,frequencies);
   }
   if(preview){
-    out+=videoTools(r)+(r.kind==='recipe'?recipePreview(r):contentPreview(r,data,readable));
+    out+=videoTools(r)+(r.kind==='recipe'?recipePreview(r):r.kind==='session'?workoutSession(r,data,{standalone:true}):contentPreview(r,data,readable));
     const included=r.kind==='course'?(r.fields.lessonIds||[]).map(id=>data.byId.get(id)||data.byId.get('training:'+id)).filter(Boolean):children;
     const unique=[...new Map([...included,...children].map(x=>[x.id,x])).values()];
     if(unique.length)out+='<section class="panel"><h2>'+ (r.kind==='course'?'Lessons & supporting content':'Included content')+'</h2>'+list(unique,contentRow)+'</section>';

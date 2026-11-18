@@ -75,7 +75,7 @@ test('programme dashboard switches week and frequency without losing workout sec
   for(const days of [3,4,5]){
     const html=itemPage(new URLSearchParams({id:programme.id,tab:'plan',schedule:'training:plan-'+days,week:'2'}),data);
     assert.match(html,/Coach note 2/);
-    assert.equal((html.match(/<th>Day /g)||[]).length,days);
+    assert.equal((html.match(/<span>Day /g)||[]).length,days);
     for(const label of ['Warm-up','Main work','Cool-down'])assert.ok(html.includes(label));
     assert.match(html,/Chair stand/);
     assert.match(html,/schedule=training%3Aplan-/);
