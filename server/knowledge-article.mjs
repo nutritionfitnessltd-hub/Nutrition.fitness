@@ -11,7 +11,9 @@ export function imageCaption(r){
 }
 export function cleanArticleBody(body,title=''){
  let text=String(body||'').trim();
- if(/^:::writing\{[^\n]*\}\s*\n/.test(text))text=text.replace(/^:::writing\{[^\n]*\}\s*\n/,'').replace(/\n:::\s*$/,'');
+ const block=/^:::writing\{[^\n]*\}[^\n]*\n([\s\S]*?)^:::[ \t]*$/m.exec(text);
+ if(block){const after=text.slice(block.index+block[0].length);const sources=/^#{2,3} Sources(?: checked)?[^\n]*\n[\s\S]*/m.exec(after)?.[0]||'';text=block[1]+'\n\n'+sources.split(/\n#{2,3} Proposed /)[0];}
+ text=text.replace(/\uE200genui\uE202[\s\S]*?\uE201/g,'');
  const lines=text.split('\n');if(lines[0]?.replace(/^#\s+/,'').trim()===title.trim())lines.shift();
  return lines.join('\n').trim();
 }
@@ -25,8 +27,8 @@ export function knowledgeArticle(r,image=''){
  (sources.length?'<section class="kc-sources"><h2>Sources and checks</h2><ul>'+sources.map(s=>'<li><a href="'+esc(s.url)+'" rel="noopener noreferrer">'+esc(s.title||s.url)+'</a></li>').join('')+'</ul></section>':'')+'</article><aside class="kc-article-aside"><h2>A little more support</h2><p>Practical answers for real life.</p><a href="/knowledge-centre/">Explore the Knowledge Centre →</a></aside></div></main>';
 }
 export function knowledgeDocument(r,{preview=false,image=''}={}){
- return '<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>'+esc(r.title)+' | Nutrition.Fitness</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Kalam:wght@400&display=swap"><link rel="stylesheet" href="/base.css"><link rel="stylesheet" href="/site.css"><link rel="stylesheet" href="/knowledge-centre/knowledge-centre.css"><link rel="stylesheet" href="/knowledge-preview.css"></head><body class="kc-page">'+
- '<header class="knowledge-brand"><a href="/">nutrition.fitness®</a><a href="/knowledge-centre/">Knowledge Centre</a></header>'+(preview?'<p class="knowledge-preview-notice">Private preview · saved draft · not published</p>':'')+knowledgeArticle(r,image)+'</body></html>';
+ return '<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>'+esc(r.title)+' | Nutrition.Fitness</title><link rel="stylesheet" href="/base.css"><link rel="stylesheet" href="/site.css"><link rel="stylesheet" href="/knowledge-centre/knowledge-centre.css"><link rel="stylesheet" href="/knowledge-preview.css"></head><body class="kc-page">'+
+ '<header class="knowledge-brand"><a href="/">nutrition.fitness®</a><a href="/knowledge-centre/">Knowledge Centre</a></header>'+(preview?'<div class="knowledge-preview-notice"><a href="'+url('item',{id:r.id,tab:'edit'})+'">← Back to editor</a><span>Private preview · saved draft · not published</span></div>':'')+knowledgeArticle(r,image)+'</body></html>';
 }
 export function knowledgePreview(r){
  const source=url('item',{id:r.id,tab:'knowledge-document'});
