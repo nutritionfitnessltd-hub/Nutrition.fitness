@@ -27,8 +27,8 @@ export async function studioData(api,actor,load){
     actor.role==='admin'?api('/rest/v1/nufi_library_staff?select=id,name,email&order=name',service):Promise.resolve([{id:actor.id,name:actor.name}])
   ]);
   const records=new Map(index.records.filter(r=>r.id.startsWith('training:')||r.fields?.recipeText).map(r=>[r.id,canonical(r)]));
-  for(const row of overlays)records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
-  const items=[...records.values()];
+  for(const row of overlays.filter(row=>actor.role==='admin'||row.payload.kind!=='worker-request'))records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
+  const items=[...records.values()].filter(r=>r.kind!=='worker-request');
   const assigned=actor.role==='admin'?new Set(items.map(r=>r.id)):descendants([
     ...tasks.map(t=>t.record_id),
   ],index.records);
