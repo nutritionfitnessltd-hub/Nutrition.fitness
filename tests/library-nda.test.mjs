@@ -5,10 +5,11 @@ import {Writable} from 'node:stream';
 import {createLibraryReader} from '../server/library-reader.mjs';
 import {ndaVersion,ndaHash,ndaText,ndaDocument} from './nda-fixture.mjs';
 
+function fixtureImage(){const b=Buffer.alloc(30);b.write('RIFF');b.writeUInt32LE(22,4);b.write('WEBPVP8X',8);b.writeUInt32LE(10,16);b.writeUIntLE(639,24,3);b.writeUIntLE(399,27,3);return 'data:image/webp;base64,'+b.toString('base64');}
 function fixture(){
   const staffId=randomUUID(),adminId=randomUUID(),receipts=[],calls=[];
   const password='fixture-password-for-nda-only';
-  let outage=false,loads=0,document={...ndaDocument};
+  let outage=false,loads=0,document={...ndaDocument,requires_identity:true};
   const hash=s=>createHash('sha256').update(s).digest('hex');
   const env={NUFI_LIBRARY_PASSWORD_SHA256:hash(password),NUFI_LIBRARY_CATALOGUE_KEY:'a'.repeat(64),SUPABASE_URL:'https://invalid.test',SUPABASE_ANON_KEY:'fixture',SUPABASE_SERVICE_ROLE_KEY:'fixture',SITE_URL:'https://example.test'};
   const api=async(path,options={})=>{
@@ -21,7 +22,9 @@ function fixture(){
         if(!receipts.some(r=>r.actor_id===p.actor_id&&r.actor_role===p.actor_role&&r.document_hash===p.document_hash))receipts.push({...p,id:randomUUID(),accepted_at:'2026-11-18T12:00:00.000Z'});
         return null;
       }
-      return receipts.filter(r=>['id','actor_id','actor_role','document_hash'].every(k=>!q.has(k)||q.get(k).slice(3)===r[k]));
+      const rows=receipts.filter(r=>['id','actor_id','actor_role','document_hash'].every(k=>!q.has(k)||q.get(k).slice(3)===r[k]));
+      if(options.method==='PATCH')for(const row of rows)Object.assign(row,options.payload);
+      return rows;
     }
     if(path.includes('consume_password_attempt'))return {allowed:true,retry_after:0};
     if(path.includes('nufi_library_staff'))return q.get('email')==='eq.admin@example.test'?[]:[{id:staffId,name:'Fixture colleague',email:'staff@example.test',code_hash:hash(password)}];
@@ -38,7 +41,7 @@ function fixture(){
     return {status:res.statusCode,html:Buffer.concat(chunks).toString(),headers,cookie:headers['set-cookie']?.split?.(';')[0]};
   }
   const signIn=async(role='staff')=>(await request('',{action:'sign-in',password,...(role==='guest'?{}:{email:role+'@example.test'})})).cookie;
-  const accept=(extra={})=>({action:'accept-nda',full_name:'Test Signer',email:'guest@example.test',agree:'1',version:ndaVersion,document_hash:ndaHash,...extra});
+  const accept=(extra={})=>{const fields={action:'accept-nda',full_name:'Test Signer',email:'guest@example.test',agree:'1',version:ndaVersion,document_hash:ndaHash,address_line:'1 Example Street',address_city:'Test City',address_postcode:'AB1 2CD',address_country:'United Kingdom',signature_method:'typed',identity_image:fixtureImage(),...extra};if(fields.signature_name===undefined)fields.signature_name=fields.full_name;return fields;};
   return {request,signIn,accept,receipts,calls,staffId,adminId,setOutage:v=>outage=v,setDocument:v=>document=v,loads:()=>loads};
 }
 test('unaccepted staff cannot browse, download, fetch previews or mutate content',async()=>{
@@ -101,4 +104,36 @@ test('missing or tampered private agreement blocks even accepted users',async()=
  const f=fixture(),cookie=await f.signIn();await f.request('?work=1',f.accept(),cookie);
  for(const document of [null,{...ndaDocument,document_text:'Changed terms without a matching digest'}]){f.setDocument(document);assert.equal((await f.request('?work=1&studio=library',null,cookie)).status,503);}
  assert.equal(f.loads(),0);
+});
+
+test('address, explicit signature and ID are required together and saved with the signed agreement',async()=>{
+ const f=fixture(),cookie=await f.signIn();
+ for(const patch of [{address_line:''},{address_city:''},{address_country:''},{signature_method:'none'},{signature_name:'Someone else'},{identity_image:''},{identity_image:'data:image/svg+xml;base64,PHN2Zz4='},{signature_method:'drawn',signature_strokes:'[]'}]){
+  assert.equal((await f.request('?work=1',f.accept(patch),cookie)).status,400);assert.equal(f.receipts.length,0);
+ }
+ assert.equal((await f.request('?work=1',f.accept(),cookie)).status,303);
+ const record=f.receipts[0];assert.equal(record.signed_details,true);assert.match(record.postal_address,/1 Example Street/);assert.equal(record.signature_method,'typed');assert.equal(record.identity_received,true);assert.equal(record.identity_sha256.length,64);
+ const page=await f.request('?work=1&nda=record',null,cookie);assert.match(page.html,/NDA reference/);assert.match(page.html,/1 Example Street/);assert.match(page.html,/Test Signer/);assert.match(page.html,/ID supplied/);assert.doesNotMatch(page.html,/data:image/);
+ const image=await f.request('?work=1&nda=identity',null,cookie);assert.equal(image.headers['content-type'],'image/webp');
+ assert.ok(f.calls.filter(([url])=>url.includes('document_hash=eq.')).every(([url])=>url.includes('select=id,signed_details')));
+});
+test('drawn signature is bounded numeric data and shown in the signed record',async()=>{
+ const f=fixture(),cookie=await f.signIn();
+ const strokes=[[[10,10],[60,40],[90,15],[150,80]]];
+ assert.equal((await f.request('?work=1',f.accept({signature_method:'drawn',signature_strokes:JSON.stringify(strokes)}),cookie)).status,303);
+ assert.deepEqual(f.receipts[0].signature_strokes,strokes);
+ assert.match((await f.request('?work=1&nda=record',null,cookie)).html,/Recorded handwritten signature/);
+ assert.match((await f.request('?work=1&nda=copy',null,cookie)).html,/<polyline/);
+});
+test('only administrators may remove ID; signed wording, signature and proof of receipt remain',async()=>{
+ const f=fixture(),cookie=await f.signIn();await f.request('?work=1',f.accept(),cookie);
+ const record=f.receipts[0],original=record.document_text,receipt=record.id,fields={action:'remove-nda-id',receipt,confirm_remove:'1'};
+ assert.equal((await f.request('?work=1&studio=nda',fields,cookie)).status,403);
+ const admin=await f.signIn('admin');await f.request('?work=1',f.accept({full_name:'Admin Fixture'}),admin);
+ assert.equal((await f.request('?work=1&studio=nda',{...fields,confirm_remove:'0'},admin)).status,400);
+ assert.equal((await f.request('?work=1&studio=nda',fields,admin,'https://other.test')).status,403);
+ assert.equal((await f.request('?work=1&studio=nda',fields,admin)).status,303);
+ assert.equal(record.identity_image,null);assert.equal(record.identity_received,true);assert.equal(record.document_text,original);assert.equal(record.signature_name,'Test Signer');assert.equal(record.identity_removed_by,f.adminId);
+ assert.match((await f.request('?work=1&nda=record',null,cookie)).html,/ID image removed/);
+ assert.equal((await f.request('',null,cookie)).status,303);
 });
