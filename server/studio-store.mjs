@@ -1,3 +1,4 @@
+import { requireAccess } from './library-permissions.mjs';
 import { HttpError } from './platform.mjs';
 import { canonical, descendants } from './studio-model.mjs';
 
@@ -21,7 +22,7 @@ export async function allRows(api,url){
 }
 export async function studioData(api,actor,load){
   const [index,overlays,projects,tasks,people,releases]=await Promise.all([
-    load(),allRows(api,itemTable+'?select=id,payload,revision,updated_at&order=id'),
+    load(),allRows(api,itemTable+'?select=id,payload,revision,updated_at&order=id&id=not.like.studio:notification:*'),
     allRows(api,projectTable+'?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&creator_id=eq.'+actor.id)),
     allRows(api,'/rest/v1/nufi_library_tasks?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&staff_id=eq.'+actor.id)),
     actor.role==='admin'?api('/rest/v1/nufi_library_staff?select=id,name,email&order=name',service):Promise.resolve([{id:actor.id,name:actor.name}]),
@@ -53,6 +54,7 @@ export function projectFor(data,id){
   return p;
 }
 export async function saveRecord(api,actor,record,expected){
+  requireAccess(actor,'library','edit');
   const rows=await api('/rest/v1/rpc/nufi_studio_save',{service:true,method:'POST',payload:{
     item:record.id,expected,document:record,editor_name:actor.role+':'+actor.id
   }});
@@ -60,6 +62,7 @@ export async function saveRecord(api,actor,record,expected){
   return rows[0];
 }
 export async function saveProject(api,actor,p,update){
+  requireAccess(actor,'work','edit');
   const rows=await api(projectTable+'?id=eq.'+p.id+'&revision=eq.'+p.revision+(actor.role==='admin'?'':'&creator_id=eq.'+actor.id),{
     service:true,method:'PATCH',headers:{Prefer:'return=representation'},payload:{...update,revision:p.revision+1}
   });

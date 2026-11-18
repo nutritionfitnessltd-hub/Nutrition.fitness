@@ -266,6 +266,20 @@
 .workout-selected [hidden] { display:none !important; }
 @media(max-width:760px){.workout-inline-editor .field-object-body { grid-template-columns:1fr; }.workout-inline-editor .studio-save-bar { position:static; }}
 
+.studio-brand-grid { display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+.studio-brand-grid .panel { margin:0 0 20px; }
+.studio-brand-logo img { display:block; width:min(100%,360px); height:auto; margin:28px 0; }
+.studio-brand-font { font-size:32px; font-weight:700; margin:12px 0; }
+.studio-brand-themes { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin:20px 0; }
+.studio-brand-theme { padding:18px; border-radius:8px; border-top:5px solid; color:#092A3E; }
+.studio-brand-theme h3 { font-size:17px; margin:0 0 14px; }
+.studio-brand-theme span { display:block; font-size:14px; margin:6px 0; }
+.studio-brand-theme code { white-space:nowrap; }
+.studio-brand-palette { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-top:20px; }
+.studio-brand-palette>div { display:flex; align-items:center; gap:10px; font-size:14px; }
+.studio-brand-swatch { width:36px; height:36px; border:1px solid #C7D0D5; border-radius:6px; flex-shrink:0; }
+@media(max-width:900px){.studio-brand-themes { grid-template-columns:repeat(2,minmax(0,1fr)); }}
+@media(max-width:640px){.studio-brand-grid,.studio-brand-themes { grid-template-columns:1fr; }}
 /* A warmer workspace: real content imagery and recognisable teammates. */
 .studio { background:#faf8f3; --line:#dddcd4; }
 .studio .side { background:#fffdf8; border-right:1px solid #e4ded2; }
@@ -322,3 +336,20 @@
 @media(max-width:760px){.dashboard-welcome { padding:24px; gap:22px; }.studio .studio-type-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.dashboard-worker header { margin:-24px -24px 0; }.studio .welcome-copy h1 { font-size:30px; }}
 @media(max-width:600px){.dashboard-worker header { margin:-20px -20px 0; padding:18px 20px; }.worker-portrait { width:76px; height:76px; flex-basis:76px; border-radius:20px; }.welcome-pictures { gap:8px; }.welcome-pictures>a { min-height:154px; }.welcome-pictures span { font-size:13px; left:12px; bottom:14px; }.studio-chosen-build { align-items:start; gap:14px; }.studio .studio-build-choice { padding:0 20px 38px; }.studio-build-choice .build-photo { width:calc(100% + 40px); margin:0 -20px; }.studio-type-card.has-photo h2 { font-size:18px; }.studio-type-photo { height:106px; }}
 @media(prefers-reduced-motion:reduce){.studio *, .studio *:before,.studio *:after { scroll-behavior:auto!important; transition:none!important; }}
+
+.team-member { border-bottom:1px solid #d6dedb; padding-bottom:20px; margin-bottom:20px; }
+.team-member:last-child { margin-bottom:0; }
+.team-member .team-row { border:0; padding-bottom:12px; }
+.team-welcome-details { background:#f3f6f5; border-radius:10px; padding:16px 20px; }
+.team-welcome-details>summary { cursor:pointer; font-weight:600; }
+.team-welcome { max-width:820px; margin-top:20px; }
+.team-welcome label { display:grid; gap:6px; margin:16px 0; font-weight:500; }
+.team-welcome input,.team-welcome textarea { width:100%; min-width:0; box-sizing:border-box; }
+.team-welcome textarea { line-height:1.65; resize:vertical; }
+.team-welcome input[readonly] { background:#f3f6f5; }
+.team-welcome [data-welcome-status]:empty { display:none; }
+.team-welcome .studio-actions { flex-wrap:wrap; }
+@media(max-width:600px){.team-welcome-details { padding:14px; }.team-welcome .studio-actions>* { width:100%; text-align:center; }}
+
+/* Per-person access settings */
+.team-access{margin:20px 0;padding:16px;border:1px solid #d1dddd;border-radius:10px}.team-access-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.team-access-option{display:flex!important;align-items:flex-start;gap:10px;cursor:pointer}.team-access-option input[type=checkbox]{width:18px;height:18px;flex:none;margin-top:3px;accent-color:#064e63}.team-access-option small{display:block;font-weight:400;color:#526778;margin-top:4px}.team-member{padding:16px 0;border-bottom:1px solid #d1dddd}.team-member summary{cursor:pointer;font-weight:600;padding:12px 0}.team-member .edit-form{max-width:none}.team-member .team-row{border:0;padding-bottom:8px}@media(max-width:640px){.team-access-grid{grid-template-columns:1fr}}

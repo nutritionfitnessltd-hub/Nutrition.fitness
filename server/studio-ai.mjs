@@ -1,4 +1,5 @@
 import { HttpError } from './platform.mjs';
+import { brandInstructions } from './studio-brand.mjs';
 import { blankFields, validateFields, validateShape } from './studio-model.mjs';
 
 const baseInstructions = [
@@ -26,7 +27,7 @@ export async function generateDraft({env,record,prompt,standards,exercises=[],co
     response=await fetcher('https://api.openai.com/v1/responses',{
       method:'POST',headers:{Authorization:'Bearer '+env.OPENAI_API_KEY,'Content-Type':'application/json'},
       body:JSON.stringify({model:env.OPENAI_STUDIO_MODEL||'gpt-5-mini',store:false,
-        instructions:baseInstructions+(fieldSchema?'\nFor this request return fields as the structured object required by the schema, not fieldsJson.':'')+'\nBrand guidance\n'+(standards||''),
+        instructions:baseInstructions+(fieldSchema?'\nFor this request return fields as the structured object required by the schema, not fieldsJson.':'')+'\nBrand guidance\n'+brandInstructions(standards),
         input:JSON.stringify({request:prompt,kind:record.kind,title:record.title,fields:{...blankFields(record.kind),...record.fields},source:record.source?.text||'',exercises,context}),
         text:{format:{type:'json_schema',name:'content_draft',strict:true,schema}},max_output_tokens:maxOutputTokens}),
       signal:AbortSignal.timeout(180000)

@@ -1,6 +1,9 @@
 import {publicationPanel,publishStudio} from './studio-publishing.mjs';
 import {sendWorkerImage} from './worker-images.mjs';
+import { authorizeStudioRequest, canAccess } from './library-permissions.mjs';
 import { saveInlineWorkout } from './studio-workout-inline.mjs';
+import { brandPage, sendBrandFile } from './studio-brand.mjs';
+import { connectionsPage, changeNotifications, workflowNotifications, notifyWorkflow } from './studio-notifications.mjs';
 import { workoutSession } from './studio-workouts.mjs';
 import { workoutDaysEditor } from './studio-workout-days.mjs';
 import { builderPage, workerPreview, saveWorkerRequest, workerRequestsPage } from './studio-workers.mjs';
@@ -30,12 +33,6 @@ function planPreview(f,data){
       '<div class="panel"><p>Creator: '+esc(data.people.find(p=>p.id===project.creator_id)?.name||'Assigned creator')+' · '+project.entries.length+' tasks</p><details><summary>See the steps</summary>'+list(project.entries,e=>'<div><strong>'+esc(e.title)+'</strong><small>'+(e.week?'Week '+e.week:'Preparation')+' · '+esc(e.notes)+'</small></div>')+'</details></div>',
       {section:'create'},'Start this work');
 }
-function standardsPage(data,env){
-  const r=data.byId.get('studio:standards');
-  return heading('Brand & standards','Save guidance that will accompany future AI drafts.')+
-    form('standards-save',hidden('revision',r?.revision||0)+textarea('guidance','Nutrition.fitness writing and content guidance',r?.fields.guidance||'Use clear, friendly British English. Explain the next useful action. Use our approved programmes as references. Keep coaching notes varied and specific to the week.',12),{section:'standards'},'Save guidance')+
-    '<section class="panel"><h2>Connections</h2><p>OpenAI drafting · '+(env.OPENAI_API_KEY?'Connected':'Awaiting API-key setup')+'</p><p>App publishing · Import format awaiting confirmation</p><p>Canva · Open the original design and import its PDF export</p></section>';
-}
 async function history(params,data,api){
   const r=editable(data,params.get('id'));
   const versions=await api('/rest/v1/nufi_studio_versions?item_id=eq.'+encodeURIComponent(r.id)+'&select=revision,payload,created_at&order=revision.desc&limit=50',{service:true});
@@ -62,7 +59,9 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
   let data,meta;
   const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
   try{
+    authorizeStudioRequest(actor,section,req.method,f,params);
     if(Buffer.byteLength(JSON.stringify(f))>1200000)throw new HttpError(413,'Import a smaller section of this document.');
+    if(section==='brand-file')return await sendBrandFile(req,res,params,actor);
     if(section==='media'){
       if(req.method!=='GET')throw new HttpError(405,'Use GET to open a preview.');
       const id=params.get('preview')||'';
@@ -72,12 +71,16 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }
     [data,meta]=await Promise.all([studioData(api,actor,load),displayEntry(env,'shelves').catch(()=>({}))]);
     meta=meta||{};
-    data.aiReady=Boolean(env.OPENAI_API_KEY);
+    data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');
     data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';
     if(section==='book-file')return await sendBookFile(req,res,params,data);
     if(section==='article-image'){const r=data.byId.get(params.get('id'));if(r?.workerImage&&!r.articleImage)return await sendWorkerImage(res,r,env,fetcher);return await sendArticleImage(req,res,params,data);}
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
+      if(f.action?.startsWith('notifications-')){
+        const result=await changeNotifications(f,data,api,env,fetcher);
+        res.statusCode=303;res.setHeader('Location',url('connections',result).replaceAll('&amp;','&'));return res.end();
+      }
       if(f.action==='workout-inline-save'){
         const dayName=cleanText(f.dayName||'Workout',40);
         const record=await saveInlineWorkout(params,f,data,api);
@@ -136,7 +139,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       }
       if(f.action==='standards-save'){
         if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
-        await saveRecord(api,actor,{id:'studio:standards',kind:'settings',title:'Brand & standards',status:'Draft',fields:{guidance:cleanText(f.guidance,12000)}},Number(f.revision));
+        await saveRecord(api,actor,{id:'studio:standards',kind:'settings',title:'Brand guide',status:'Draft',fields:{...data.byId.get('studio:standards')?.fields,guidance:cleanText(f.guidance,12000)}},Number(f.revision));
         res.statusCode=303;res.setHeader('Location',url('standards').replaceAll('&amp;','&'));return res.end();
       }
       if(f.action==='ai-draft'){
@@ -150,7 +153,10 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         await saveRecord(api,actor,draft,r.revision);
         res.statusCode=303;res.setHeader('Location',url('item',{id:r.id}).replaceAll('&amp;','&'));return res.end();
       }
+      let notifications=[],notificationError=false;
+      try{notifications=workflowNotifications(params,f,data,env);}catch{notificationError=true;}
       const next=await (['publish-test','publish-live'].includes(f.action)?publishStudio(params,f,data,api):f.action==='content-save'&&f.imageUpload?saveArticleImage(params,f,data,api,env):changeStudio(params,f,data,api));
+      if(notificationError||await notifyWorkflow(notifications,{api,actor,env,fetcher}))next.notification='pending';
       res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();
     }
     let body;
@@ -175,10 +181,11 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       case 'settings':
         if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
         body=heading('Settings','Manage your team, brand guidance and connections.')+'<div class="studio-cards">'+
-          button('Team & permissions',url('team'))+button('Brand & connections',url('standards'))+'</div>';break;
+          button('Team & permissions',url('team'))+button('Brand guide',url('standards'))+button('Connections',url('connections'))+'</div>';break;
       case 'standards':
         if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
-        body=standardsPage(data,env);break;
+        body=brandPage(data);break;
+      case 'connections':body=await connectionsPage(data,env,api,params);break;
       case 'project-from':{
         if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
         const r=data.byId.get(params.get('id'));if(!r)throw new HttpError(404,'Content unavailable.');
@@ -191,6 +198,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       }
       default:throw new HttpError(404,'This studio page is unavailable.');
     }
+    if(params.get('notification')==='pending')body='<p role="status">Your changes were saved, but an email needs attention. '+(actor.role==='admin'?button('Check email activity',url('connections')):'Please ask your administrator to check Connections.')+'</p>'+body;
     return write(res,200,body,section,actor,meta);
   }catch(error){
     if(req.method==='POST'&&f.action==='workout-inline-save'){

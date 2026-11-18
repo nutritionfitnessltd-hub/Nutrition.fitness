@@ -1,3 +1,4 @@
+import { canAccess, canEditContent } from './library-permissions.mjs';
 import { inlineWorkoutForm } from './studio-workout-inline.mjs';
 import { esc, url, button } from './studio-ui.mjs';
 import { fieldLabel } from '../public/studio-fields.mjs';
@@ -54,7 +55,7 @@ function exerciseRow(block, index, data) {
 
 export function workoutSession(session, data, { standalone = false, dayName = '', inline = false } = {}) {
   const f = session.fields || {}, blocks = Array.isArray(f.blocks) ? f.blocks : has(f.blocks) ? [f.blocks] : [];
-  const canEdit = data.actor.role === 'admin' || data.assigned.has(session.id);
+  const canEdit = canEditContent(data,session.id);
   const section = (title, value) => has(value) ? '<section class="workout-preparation"><h3>' + title + '</h3><div class="prose">' + valueHtml(value, data) + '</div></section>' : '';
   const extra = Object.fromEntries(Object.entries(f).filter(([k, v]) => !['duration','introduction','warmup','blocks','cooldown','adjustmentRuleIds'].includes(k) && has(v)));
   return '<div class="workout-session">' + (!standalone ? '<header class="workout-header"><div><h3>' + esc(session.title) + '</h3><p>' + [has(f.duration) ? esc(f.duration) + ' min' : '', blocks.length + (blocks.length === 1 ? ' exercise / activity' : ' exercises / activities')].filter(Boolean).join(' · ') + '</p></div>' + (canEdit ? (inline ? '<button type="button" data-workout-edit>' + esc(dayName ? 'Edit ' + dayName + ' workout' : 'Edit workout') + '</button>' : button(dayName ? 'Edit ' + dayName + ' workout' : 'Edit workout', url('item', { id: session.id, tab: 'edit' }))) : '') + '</header>' : has(f.duration) ? '<p class="workout-duration">' + esc(f.duration) + ' min</p>' : '') +
