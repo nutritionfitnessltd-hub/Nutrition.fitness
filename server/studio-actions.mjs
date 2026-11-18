@@ -66,7 +66,7 @@ export async function createItem(record,projectId,entryId,data,api){
   await api('/rest/v1/rpc/nufi_studio_attach_item',{service:true,method:'POST',payload:{project_id:p.id,expected:p.revision,document:record,entry:{...entry,replaces:chosen?.id||null},editor_name:data.actor.role+':'+data.actor.id}});
   p.revision++;p.entries.push(entry);
 }
-export async function changeStudio(params,f,data,api){
+export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
   const action=f.action;
   if(action==='workout-days-save')return saveWorkoutDays(params,f,data,api);
   if(action==='project-create'){
@@ -115,7 +115,7 @@ export async function changeStudio(params,f,data,api){
       const body=cleanText(f.comment||'',4000);if(!body)throw new HttpError(400,'Write your feedback first.');
       next.comments=[...(next.comments||[]),{id:randomUUID(),body,author:data.actor.name||'Administrator',at:new Date().toISOString()}];
     }else throw new HttpError(400,'Choose a valid content action.');
-    await saveRecord(api,data.actor,next,r.revision);return {section:'item',id:r.id,...(action==='content-save'?{tab:f.intent==='preview'||f.intent==='approve'?'preview':'edit'}:{})};
+    const saved=await saveRecord(api,data.actor,next,r.revision);return {section:'item',id:r.id,...(returnRecord?{record:{...next,revision:saved.revision??r.revision+1}}:{}),...(action==='content-save'?{tab:f.intent==='preview'||f.intent==='approve'?'preview':'edit'}:{})};
   }
   if(['task-save','task-add','task-attach','project-save'].includes(action)){
     const p=projectFor(data,params.get('project'));verifyRevision(p,f.projectRevision);
