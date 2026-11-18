@@ -97,10 +97,18 @@ if(fieldsInput&&editor){
   }
   const main=primaryFields[editor.dataset.kind]||Object.keys(values),details=element('details',undefined,'editor-details');
   details.append(element('summary','More details'));
-  for(const key of main)if(Object.hasOwn(values,key))editor.append(draw(key,values[key],next=>values[key]=next));
-  for(const [key,value] of Object.entries(values))if(!main.includes(key))details.append(draw(key,value,next=>values[key]=next));
+  const upload=document.querySelector('[data-article-upload]'),imageFields=upload?['imageUrl','imageAlt','imageCredit','imageCreditUrl']:[];
+  for(const key of main)if(Object.hasOwn(values,key)&&!imageFields.includes(key))editor.append(draw(key,values[key],next=>values[key]=next));
+  for(const [key,value] of Object.entries(values))if(!main.includes(key)&&!imageFields.includes(key))details.append(draw(key,value,next=>values[key]=next));
   if(details.children.length>1)editor.append(details);
-  form.addEventListener('submit',()=>{fieldsInput.value=JSON.stringify(values);submitting=true;});
+  form.addEventListener('submit',event=>{
+    if(event.defaultPrevented)return;
+    if(upload){
+      values.imageAlt=upload.querySelector('[name=uploadAlt]').value;values.imageCredit=upload.querySelector('[name=uploadCredit]').value;
+      if(values.imageCredit!==JSON.parse(fieldsInput.value).imageCredit)values.imageCreditUrl='';
+    }
+    fieldsInput.value=JSON.stringify(values);submitting=true;
+  });
 }
 
 document.querySelectorAll('[data-copy-script]').forEach(button=>button.addEventListener('click',async()=>{
