@@ -2,7 +2,9 @@ import {HttpError} from './platform.mjs';
 import {editable} from './studio-store.mjs';
 import {issues} from './studio-model.mjs';
 import {esc,url,form,hidden,button,heading} from './studio-ui.mjs';
-import {articleHtml} from './studio-articles.mjs';
+import {articleHtml} from './article-format.mjs';
+import {readerDocument,markdownArticle} from './article-reader.mjs';
+export {markdownArticle} from './article-reader.mjs';
 
 export const testOrigin='https://nutrition-fitness-website-2.vercel.app';
 export const liveOrigin='https://nutrition.fitness';
@@ -35,13 +37,6 @@ export async function publishStudio(params,f,data,api){
  await api('/rest/v1/rpc/nufi_studio_release',{service:true,method:'POST',payload:{item:r.id,expected:r.revision,target,approved_by:data.actor.id}});
  return {section:'item',id:r.id,notice:target==='test'?'test-published':'live-published'};
 }
-export function markdownArticle(text){
- // Imported prose stays data: HTML is escaped, and only HTTPS links are rendered.
- return String(text||'').split(/\n\s*\n/).map(p=>{
-  const content=esc(p).replace(/\[([^\]]+)\]\((https:\/\/[^\s)]+)\)/g,'<a href="$2" rel="noopener noreferrer">$1</a>').replace(/\*\*([^*]+)\*\*/g,'<strong>$1</strong>');
-  const h=/^(#{1,4}) (.*)$/.exec(content);return h?'<h'+Math.min(4,h[1].length+1)+'>'+h[2]+'</h'+Math.min(4,h[1].length+1)+'>':'<p>'+content.replaceAll('\n','<br>')+'</p>';
- }).join('');
-}
 export function releaseBody(r,image=''){
  const f=r.fields||{};let content='';
  if(r.kind==='recipe')content='<h2>Ingredients</h2><ul>'+(f.ingredients||[]).map(v=>'<li>'+esc(v)+'</li>').join('')+'</ul><h2>Method</h2><ol>'+(f.instructions||[]).map(v=>'<li>'+esc(v)+'</li>').join('')+'</ol>';
@@ -60,5 +55,6 @@ export async function publishedContent(req,res,params,api,sendImage){
  if(mode==='studio-release-image')return sendImage(r);
  const image=r.workerImage||r.articleImage?'/api/content?view=studio-release-image&id='+encodeURIComponent(id):'';
  res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('X-Robots-Tag',environment==='test'?'noindex, nofollow':'index, follow');
+ if(r.kind==='article')return res.end(readerDocument(r,image,environment==='test'?'Test website · awaiting final live approval':'',environment!=='live'));
  return res.end('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(r.title)+' | nutrition.fitness</title><link rel="stylesheet" href="/studio.css"></head><body><header class="panel"><a href="/">nutrition.fitness®</a>'+(environment==='test'?'<p>Test website · awaiting final live approval</p>':'')+'</header><main class="studio-article">'+releaseBody(r,image)+'<p><a href="/knowledge-centre/">Back to Knowledge Centre</a></p></main></body></html>');
 }

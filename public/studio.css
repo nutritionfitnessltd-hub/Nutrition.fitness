@@ -147,6 +147,8 @@
 .studio label small { display:block; color:var(--muted); font-weight:400; margin:5px 0; }
 .check { display:flex; align-items:center; gap:10px; }
 .check input { min-height:18px; width:18px; height:18px; }
+.studio-article-frame{display:block;width:100%;min-height:900px;border:1px solid var(--line,#d5dfe2);border-radius:10px;background:white;margin:24px 0}
+.studio-article-notes pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit;font-size:14px}
 .notification-reviewers { border:0; padding:0; margin:24px 0; min-width:0; }
 .notification-reviewers legend { font-weight:600; padding:0; }
 .notification-reviewer-options { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr)); gap:12px; margin:12px 0 18px; }
