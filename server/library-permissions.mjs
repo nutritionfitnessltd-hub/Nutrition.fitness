@@ -37,7 +37,7 @@ export function accessFromForm(fields) {
 }
 
 const routes = {
-  home: [], library: ['library'], exercises: ['library'], item: ['library'], history: ['library'],
+  home: [], assets: [], 'brand-media': ['library'], 'workspace-archive': [], library: ['library'], exercises: ['library'], item: ['library'], history: ['library'],
   'book-file': ['library'], 'article-image': ['library'], 'article-preview': ['library'], 'mealplan-image': ['library'],
   archive: ['originals'], create: ['studio'], new: ['studio'], import: ['studio', 'originals'],
   builder: ['studio'], 'worker-requests': ['studio'], projects: ['work'], project: ['work'],

@@ -1,3 +1,4 @@
+import { assetsPage, brandMediaPage, workspaceArchive, softwareReleases, saveSoftwareRelease } from './team-workspace.mjs';
 import {publicationPanel,publishStudio} from './studio-publishing.mjs';
 import {sendWorkerImage} from './worker-images.mjs';
 import {readerDocument} from './article-reader.mjs';
@@ -86,6 +87,10 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='article-image'){const r=data.byId.get(params.get('id'));if(r?.workerImage&&!r.articleImage)return await sendWorkerImage(res,r,env,fetcher);return await sendArticleImage(req,res,params,data);}
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
+      if(f.action==='software-release-save'){
+        await saveSoftwareRelease(f,data,api);
+        res.statusCode=303;res.setHeader('Location',url('software-releases').replaceAll('&amp;','&'));return res.end();
+      }
       if(f.action?.startsWith('notifications-')){
         const result=await changeNotifications(f,data,api,env,fetcher);
         res.statusCode=303;res.setHeader('Location',url('connections',result).replaceAll('&amp;','&'));return res.end();
@@ -171,6 +176,12 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     let body;
     switch(section){
       case 'home':body=home(data,meta);break;
+      case 'assets':body=assetsPage(data);break;
+      case 'brand-media':body=brandMediaPage(data);break;
+      case 'workspace-archive':body=workspaceArchive(params,data);break;
+      case 'software-releases':
+        if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
+        body=softwareReleases(params,data);break;
       case 'library':case 'exercises':body=library(params,data,meta||{});break;
       case 'create':body=createPage(params,data);break;
       case 'builder':body=builderPage(params,data,meta);break;

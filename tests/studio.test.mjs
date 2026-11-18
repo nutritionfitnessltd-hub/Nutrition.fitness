@@ -27,8 +27,8 @@ test('library retains separate content types while creation and programme naviga
   const frame=studioFrame(html,'library',admin);
   const nav=frame.match(/aria-label="Studio navigation">(.*?)<\/nav>/s)[1];
   assert.equal((nav.match(/class="studio-nav-section"/g)||[]).length,6);
-  assert.ok(nav.indexOf('Content library')<nav.indexOf('Originals'));
-  for(const label of ['Dashboard','Studio','Work','Settings'])assert.ok(nav.includes(label));
+  assert.ok(nav.indexOf('Projects')<nav.indexOf('Assets'));
+  for(const label of ['Home','Projects','Assets','Content Studio','Content Library','Brand & Media','Software Releases','Team','Archive'])assert.ok(nav.includes(label));
   assert.doesNotMatch(nav,/Published|Drafts/); // Status controls have one home, in the library.
   assert.match(html,/<summary>More content types<\/summary>/);
   const create=createPage(new URLSearchParams(),data);
@@ -174,7 +174,7 @@ test('studio pages render repository data and export excludes internal comments'
     const res={headers:{},setHeader(k,v){this.headers[k]=v;},end(v){this.body=v;}};
     await handleStudio({method:'GET'},res,{params:new URLSearchParams({studio:section,project:project.id,id:session.id}),actor:admin,api,load,env:{}});
     assert.equal(res.statusCode,200,section);
-    assert.match(res.body,/Content workspace/);
+    assert.match(res.body,/Team Workspace/);
   }
   const res={setHeader(){},end(v){this.body=v;}};
   await handleStudio({method:'GET'},res,{params:new URLSearchParams({studio:'export',project:project.id,mode:'review'}),actor:admin,api,load,env:{}});
