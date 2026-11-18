@@ -1,3 +1,5 @@
+import {startWorkerUpdates} from './studio-worker-updates.mjs';
+startWorkerUpdates();
 import { primaryFields, fieldLabel } from './studio-fields.mjs';
 const fieldsInput = document.querySelector('#studio-fields');
 const editor = document.querySelector('#studio-editor');

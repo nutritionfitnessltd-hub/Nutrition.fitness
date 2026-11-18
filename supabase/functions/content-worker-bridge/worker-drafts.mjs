@@ -1,7 +1,23 @@
 // Shared by the website tests and the authenticated worker ingress.
 export class DraftError extends Error { constructor(status,message){super(message);this.status=status;} }
-export const workerKinds=['article','recipe','lesson','email','newsletter','marketing','asset','video','course','programme','challenge','mealplan','ebook'];
+export const workerKinds=['article','recipe','lesson','email','newsletter','marketing','asset','video','course','programme','challenge','mealplan','ebook','stage','structure','session','exercise','activity','rule','review','learning','communication','campaign'];
 const mapped={email:'communication',newsletter:'communication',marketing:'campaign',video:'asset'};
+const workerIds=['nina','imogen','marcus','rory'];
+export function draftWorker(input,current){
+ const named=input.fields?.workerId??input.fields?.worker;
+ if(named!==undefined){
+  const id=typeof named==='string'?named.toLowerCase():'';
+  if(!workerIds.includes(id))throw new DraftError(400,'Set fields.workerId to nina, imogen, marcus or rory.');
+  return id;
+ }
+ if(current?.payload.workerId)return current.payload.workerId;
+ if(workerIds.includes(current?.payload.workerSource?.workerId))return current.payload.workerSource.workerId;
+ // Route unnamed connector deliveries to the role responsible for the requested output.
+ if(['course','lesson','challenge'].includes(input.kind))return 'imogen';
+ if(['programme','stage','structure','session','exercise','activity','rule','review'].includes(input.kind))return 'marcus';
+ if(['video','asset'].includes(input.kind)||input.fields?.type==='Video'||input.fields?.channel==='Social')return 'rory';
+ return 'nina';
+}
 export function draftId(id,namespace){
   if(typeof id!=='string'||!/^[a-zA-Z0-9_-]{1,160}$/.test(id))throw new DraftError(400,'Use a stable content ID with letters, numbers, hyphens or underscores.');
   return namespace+id;
@@ -37,15 +53,16 @@ export function draftDocument(input,current,namespace){
   }
   if(kind==='communication')fields.channel=input.kind==='newsletter'?'Email':fields.channel||'Email';
   if(input.kind==='video'){fields.type='Video';fields.brief=fields.brief||body;}
-  const document={...previous,id,title,kind,fields,status:'Draft',parent:previous.parent||null,comments:previous.comments||[],
-    workerSource:{...(previous.workerSource||{}),system:'Content Manager connector',id:input.id,kind:input.kind,programmeId:input.programmeId||'',sourceId:input.sourceId||'',receivedAt:new Date().toISOString()}};
+  const workerId=draftWorker(input,current);
+  const document={...previous,id,title,kind,fields,workerId,status:'Draft',parent:previous.parent||null,comments:previous.comments||[],
+    workerSource:{...(previous.workerSource||{}),workerId,system:'Content Manager connector',id:input.id,kind:input.kind,programmeId:input.programmeId||'',sourceId:input.sourceId||'',receivedAt:new Date().toISOString()}};
   // Incoming workers cannot grant approval, publish, replace stored images or edit other records.
   delete document.approval;delete document.revision;delete document.updatedAt;
   return document;
 }
 export function draftResult(row,website){
   const r=row.payload,f=r.fields||{};
-  return {id:r.workerSource.id,revision:row.revision,kind:r.workerSource.kind,title:r.title,
+  return {id:r.workerSource.id,revision:row.revision,kind:r.workerSource.kind,title:r.title,workerId:r.workerId||r.workerSource.workerId||draftWorker({kind:r.workerSource.kind,fields:f}),
     body:r.kind==='recipe'?f.sourceText||f.body||'':f.body||'',fields:f,assetUrls:f.assetUrls||[],
     ...(r.kind==='recipe'?{ingredients:f.ingredients||[],method:f.instructions||[],allergens:f.allergens||[],servings:f.servings}:{}),
     status:({'Draft':'draft','In review':'review','Changes requested':'changes_requested','Approved':'approved','Archived':'archived'})[r.status]||'draft',

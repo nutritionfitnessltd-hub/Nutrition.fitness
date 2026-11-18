@@ -1,6 +1,6 @@
 import {DraftError,draftDocument,draftResult,draftId} from './worker-drafts.mjs';
 const base=Deno.env.get('SUPABASE_URL')!,key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const website='https://nutrition-fitness-website-2.vercel.app';
+const website='https://team.nutrition.fitness';
 const headers={apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'};
 async function api(path:string,method='GET',payload?:unknown){
  const res=await fetch(base+path,{method,headers,body:payload===undefined?undefined:JSON.stringify(payload)});
