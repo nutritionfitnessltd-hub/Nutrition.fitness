@@ -15,7 +15,7 @@ test('every worker card links to their own saved content and its review editor',
  for(const id of ['nina','imogen','marcus','rory']){
   const card=html.split('dashboard-worker worker-'+id+'"')[1].split('</article>')[0];
   assert.match(card,new RegExp('>'+id+' content</a>'));assert.match(card,new RegExp('worker='+id));
-  assert.match(card,new RegExp('studio=item[^\"]*id='+id+'[^\"]*tab=edit'));
+  assert.match(card,id==='imogen'?new RegExp('studio=review-preview[^\"]*id='+id):new RegExp('studio=item[^\"]*id='+id+'[^\"]*tab=edit'));
   for(const other of d.items.filter(r=>r.id!==id))assert.ok(!card.includes('>'+other.title+'</a>'));
  }
  assert.match(html,/1 awaiting approval/);

@@ -6,15 +6,15 @@ import { esc, url, heading, button, list, badge } from './studio-ui.mjs';
 
 const complete=status=>['Done','Complete','Archived'].includes(status);
 const requestsFor=data=>[...data.byId.values()].filter(r=>r.kind==='worker-request').sort((a,b)=>(b.fields?.createdAt||'').localeCompare(a.fields?.createdAt||''));
-const row=r=>'<div><a href="'+r.href+'">'+esc(r.title)+'</a><small>'+esc(r.context||'')+'</small></div>'+badge(r.status);
+const row=r=>'<div><a '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.title)+'</a><small>'+esc(r.context||'')+'</small></div>'+badge(r.status);
 
 export function dashboardWork(data){
   const ownProjects=data.projects.filter(p=>p.creator_id===data.actor.id&&!complete(p.status));
   const assigned=data.tasks.filter(t=>t.staff_id===data.actor.id&&!complete(t.status)).map(t=>({title:t.title,status:t.status,context:t.record_title,href:'/content-library/?work=1&assignments=1&staff='+encodeURIComponent(data.actor.id)}));
   const projectTasks=ownProjects.flatMap(p=>(p.entries||[]).filter(e=>!complete(e.status)).map(e=>({title:e.title,status:e.status,context:p.name+(e.week?' · Week '+e.week:' · Preparation'),href:url('project',{project:p.id,week:e.week||0})})));
-  const reviews=data.items.filter(r=>r.status==='In review'&&(data.actor.role==='admin'||data.assigned.has(r.id))).map(r=>({title:r.title,status:r.status,context:'Content',href:url('item',{id:r.id})}));
+  const reviews=data.items.filter(r=>r.status==='In review'&&(data.actor.role==='admin'||data.assigned.has(r.id))).map(r=>({title:r.title,status:r.status,context:'Content',review:true,recordId:r.id,href:url('review-preview',{id:r.id})}));
   if(data.actor.role==='admin'){
-    for(const p of data.projects.filter(p=>!complete(p.status)))for(const e of (p.entries||[]).filter(e=>e.status==='Ready for review'&&!reviews.some(r=>r.href===url('item',{id:e.record}))))reviews.push({title:e.title,status:e.status,context:p.name,href:url('project',{project:p.id,week:e.week||0})});
+    for(const p of data.projects.filter(p=>!complete(p.status)))for(const e of (p.entries||[]).filter(e=>e.status==='Ready for review'&&!reviews.some(r=>r.recordId===e.record)))reviews.push({title:e.title,status:e.status,context:p.name,review:Boolean(data.byId.get(e.record)),recordId:e.record,href:data.byId.has(e.record)?url('review-preview',{id:e.record}):url('project',{project:p.id,week:e.week||0})});
     for(const t of data.tasks.filter(t=>t.status==='Ready for review'))reviews.push({title:t.title,status:t.status,context:t.record_title,href:'/content-library/?work=1&assignments=1&status=Ready+for+review'});
   }
   return {mine:[...assigned,...projectTasks],reviews,ownProjects};
@@ -28,7 +28,7 @@ function workerCards(data){
       const plans=requests.flatMap(request=>(request.fields.outputs||[]).filter(o=>o.worker===id).map(output=>({request,output})));
       return '<article class="dashboard-worker worker-'+id+'"><header>'+workerPortrait(w)+'<div><h3>'+w.name+'</h3><p>'+esc(w.role)+'</p></div></header><p class="worker-state">'+(content.length?content.length+' content items · '+drafts+' drafts · '+reviews+' awaiting approval':plans.length?plans.length+' planned · not started':'No work planned')+'</p>'+
         (['alex','andy','martina'].includes(id)?'<section class="worker-idea-summary"><strong>Daily ideas · 9 am London</strong>'+(data.hqIdeas?.[id]?'<p><a href="'+url('worker-chat',{worker:id})+'">'+esc(data.hqIdeas[id].title)+'</a></p><p>'+esc(({pending:'Awaiting your approval',scoping:'Preparing scope',scoped:'Scope ready to review',active:'Plan in progress',done:'Plan completed',rejected:'New idea due tomorrow',superseded:'Newer proposal available'})[data.hqIdeas[id].state]||'Open for review')+'</p>':'<p>Your first proposal will appear after HQ processes the queued work.</p>')+'</section>':'')+
-        (content.length?'<ul class="worker-content-list">'+content.slice(0,5).map(r=>'<li><a href="'+url('item',{id:r.id,tab:'edit'})+'">'+esc(r.title)+'</a>'+badge(r.publication?.status==='published'?'Published':r.status)+'</li>').join('')+'</ul>':'')+
+        (content.length?'<ul class="worker-content-list">'+content.slice(0,5).map(r=>'<li><a '+(r.status==='In review'?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+(r.status==='In review'?url('review-preview',{id:r.id}):url('item',{id:r.id,tab:'edit'}))+'">'+esc(r.title)+'</a>'+badge(r.publication?.status==='published'?'Published':r.status)+'</li>').join('')+'</ul>':'')+
         button('Open '+w.name+'’s work',url('library',{worker:id,view:'all'}))+
         button('Message '+w.name+(['alex','andy','martina'].includes(id)?' & review ideas':''),url('worker-chat',{worker:id}))+
         (w.setupNote?'<p class="worker-empty">'+esc(w.setupNote)+'</p>':'')+

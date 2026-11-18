@@ -24,6 +24,7 @@ const records=[
 records.push({id:'catalogue:challenge',kind:'Challenge guide',group:'Challenges',title:'Six-week challenge',fields:{collection:'Six-week challenge'},files:[]});
 records.push({id:'catalogue:programme',kind:'Workout programme',group:'Programs',title:'Starter strength programme',fields:{body:'Original programme overview: three training sessions per week.'},files:[]});
 const index={records,files:{}},saved=new Map();
+for(const record of records.filter(r=>r.id.startsWith('worker:')))saved.set(record.id,{id:record.id,payload:record,revision:1,updated_at:new Date().toISOString()});
 const api=async(endpoint,opts={})=>{
  if(endpoint.includes('rpc/nufi_studio_save')){
   const p=opts.payload,old=saved.get(p.item);
