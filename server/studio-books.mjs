@@ -3,7 +3,7 @@ import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 import {HttpError} from './platform.mjs';
 import {editable} from './studio-store.mjs';
-import {esc,url,heading,button,badge} from './studio-ui.mjs';
+import {esc,url,button,badge} from './studio-ui.mjs';
 
 export const bookAssetUrl=(id,asset)=>url('book-file',{id,asset});
 export function bookFile(params,data){
@@ -31,9 +31,12 @@ export function bookPage(r,data){
  const asset=(key,title)=>'<section class="panel"><h2>'+title+'</h2>'+(r.bookAssets?.[key]?'<a href="'+bookAssetUrl(r.id,key)+'" target="_blank" rel="noopener"><img class="studio-book-cover" src="'+bookAssetUrl(r.id,key)+'" alt="'+esc(r.title+' — '+title)+'" loading="lazy"></a>':'<p>Not added yet.</p>')+'</section>';
  const edition=(key,title,note)=>'<section class="panel"><h2>'+title+'</h2><p>'+esc(note)+'</p>'+(r.bookAssets?.[key]?(allowed?'<a class="btn" href="'+bookAssetUrl(r.id,key)+'" target="_blank" rel="noopener">Open '+title+'</a>':'<p>Available to administrators and the team assigned to this book.</p>'):'<p class="studio-status">Not available yet</p>')+'</section>';
  const reading=r.bookAssets?.digital&&allowed;
- return '<a class="back" href="'+url('library',{bucket:r.publication?.status==='published'?'published':'drafts',kind:'ebook'})+'">← Books</a>'+heading(r.title,'',reading?'<a class="btn" href="'+bookAssetUrl(r.id,'digital')+'" target="_blank" rel="noopener">Open full screen</a>':'')+
- '<p>'+badge(r.status)+(f.pageCount?' · '+esc(f.pageCount)+' pages':'')+'</p>'+
- (reading?'<iframe class="studio-book-reader" src="'+bookAssetUrl(r.id,'digital')+'#view=FitH" title="'+esc('Read '+r.title)+'"></iframe>':'<p>'+(r.bookAssets?.digital?'Available to administrators and the team assigned to this book.':'The reading PDF has not been added yet.')+'</p>')+
+ const pdf=bookAssetUrl(r.id,'digital')+'#view=Fit&amp;pagemode=none';
+ return '<a class="back" href="'+url('library',{bucket:r.publication?.status==='published'?'published':'drafts',kind:'ebook'})+'">← Books</a>'+
+ '<header class="studio-book-banner">'+(r.bookAssets?.front?'<img class="studio-book-banner-cover" src="'+bookAssetUrl(r.id,'front')+'" alt="'+esc(r.title+' cover')+'">':'')+
+ '<div class="studio-book-banner-title"><p class="studio-book-eyebrow">'+esc(f.bookType||'Book')+'</p><h1>'+esc(r.title)+'</h1><p>'+badge(r.status)+(f.pageCount?' · '+esc(f.pageCount)+' pages':'')+'</p></div>'+
+ (reading?'<a class="btn primary" href="'+pdf+'" target="_blank" rel="noopener">Open full screen</a>':'')+'</header>'+
+ (reading?'<iframe class="studio-book-reader" src="'+pdf+'" title="'+esc('Read '+r.title)+'"></iframe>':'<p>'+(r.bookAssets?.digital?'Available to administrators and the team assigned to this book.':'The reading PDF has not been added yet.')+'</p>')+
  '<details class="panel studio-book-details"><summary>Book details &amp; files</summary>'+
  (f.editionNote?'<p class="prose">'+esc(f.editionNote)+'</p>':'')+
  '<div class="studio-columns">'+asset('front','Front cover')+asset('back','Back cover')+'</div>'+
