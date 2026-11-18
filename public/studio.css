@@ -39,7 +39,7 @@
 .studio-subnav { margin:4px 0 14px 14px; border-left:1px solid var(--line); padding-left:8px; }
 .studio .studio-subnav a { font-size:13px; padding:8px 12px; }
 .studio-subnav summary { padding:9px 12px; font-size:13px; }
-.studio .studio-subnav details>a,.studio .studio-subnav details>details{margin-inline-start:16px;}
+.studio .studio-subnav details>a,.studio .studio-subnav details>details{margin-inline-start:28px;}
 .studio-workbar,.studio-programme-bar { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:0 0 24px; }
 .studio-workbar .btn { font-size:14px; }
 .studio-start-options { display:flex; flex-wrap:wrap; gap:24px; align-items:start; }
