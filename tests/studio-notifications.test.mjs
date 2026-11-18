@@ -85,7 +85,7 @@ test('routes split settings, preserve saved brand guidance, and serve a private 
     return {res,headers,output};
   };
   const settings=await request('settings');assert.match(settings.output,/Brand guide/);assert.match(settings.output,/studio=connections/);assert.doesNotMatch(settings.output,/Brand &amp; connections/);
-  const brand=await request('standards');assert.match(brand.output,/Open full guide/);assert.match(brand.output,/#06475E/);assert.match(brand.output,/Download SVG/);assert.doesNotMatch(brand.output,/<h2>Connections/);
+  const brand=await request('standards');assert.match(brand.output,/Open full guide/);assert.match(brand.output,/#06475E/);assert.match(brand.output,/Download SVG/);assert.doesNotMatch(brand.output,/<h2>Connections/);assert.doesNotMatch(brand.output,/ style=/); // Production CSP allows external stylesheets only.
   const connection=await request('connections');assert.match(connection.output,/Not connected/);assert.match(connection.output,/notifications@nutrition.fitness/);assert.match(connection.output,/kasia@nutrition.fitness/);
   rows.set('studio:standards',{id:'studio:standards',revision:1,payload:{fields:{guidance:'Original',retained:'keep'}}});
   assert.equal((await request('standards',{action:'standards-save',revision:'1',guidance:'Updated voice'})).res.statusCode,303);

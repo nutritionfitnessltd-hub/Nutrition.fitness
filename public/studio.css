@@ -278,6 +278,34 @@
 .studio-brand-palette { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:16px; margin-top:20px; }
 .studio-brand-palette>div { display:flex; align-items:center; gap:10px; font-size:14px; }
 .studio-brand-swatch { width:36px; height:36px; border:1px solid #C7D0D5; border-radius:6px; flex-shrink:0; }
+.studio-brand-theme:nth-child(1) { background:#E3EDF0; border-top-color:#06475E; }
+.studio-brand-theme:nth-child(2) { background:#DFE5D0; border-top-color:#376747; }
+.studio-brand-theme:nth-child(3) { background:#E9EEDF; border-top-color:#376747; }
+.studio-brand-theme:nth-child(4) { background:#F2DFD2; border-top-color:#9A4936; }
+.studio-brand-theme:nth-child(5) { background:#F6ECD7; border-top-color:#805C19; }
+.studio-brand-theme:nth-child(6) { background:#E8D8E0; border-top-color:#863954; }
+.studio-brand-swatch-0 { background:#092A3E; }
+.studio-brand-swatch-1 { background:#06475E; }
+.studio-brand-swatch-2 { background:#05394C; }
+.studio-brand-swatch-3 { background:#863954; }
+.studio-brand-swatch-4 { background:#FFFFFF; }
+.studio-brand-swatch-5 { background:#FAF6EF; }
+.studio-brand-swatch-6 { background:#E3EDF0; }
+.studio-brand-swatch-7 { background:#F9E7E3; }
+.studio-brand-swatch-8 { background:#DFE5D0; }
+.studio-brand-swatch-9 { background:#F2DFD2; }
+.studio-brand-swatch-10 { background:#D6DDD9; }
+.studio-brand-swatch-11 { background:#536572; }
+.studio-brand-swatch-12 { background:#E9EEDF; }
+.studio-brand-swatch-13 { background:#376747; }
+.studio-brand-swatch-14 { background:#E8D8E0; }
+.studio-brand-swatch-15 { background:#9A4936; }
+.studio-brand-swatch-16 { background:#F6ECD7; }
+.studio-brand-swatch-17 { background:#805C19; }
+.studio-brand-swatch-18 { background:#FBE9E7; }
+.studio-brand-swatch-19 { background:#C7D0D5; }
+.studio-brand-swatch-20 { background:#962F2F; }
+.studio-brand-swatch-21 { background:#2B5238; }
 @media(max-width:900px){.studio-brand-themes { grid-template-columns:repeat(2,minmax(0,1fr)); }}
 @media(max-width:640px){.studio-brand-grid,.studio-brand-themes { grid-template-columns:1fr; }}
 /* A warmer workspace: real content imagery and recognisable teammates. */
