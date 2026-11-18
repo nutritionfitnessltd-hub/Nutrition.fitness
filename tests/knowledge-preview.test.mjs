@@ -8,7 +8,7 @@ const article={id:'sample',kind:'article',title:'Vitamin D questions',status:'Dr
 const fixture=()=>({actor:{role:'admin',id:'owner'},items:[article],byId:new Map([[article.id,article]]),assigned:new Set(),projects:[],tasks:[],people:[]});
 test('private preview uses Knowledge Centre styles and captions without chat wrappers or duplicated title',()=>{
  const html=knowledgeDocument(article,{preview:true,image:'/private-photo'});
- assert.match(html,/Private preview/);assert.match(html,/knowledge-centre.css/);assert.match(html,/family=Kalam/);
+ assert.match(html,/Private preview/);assert.match(html,/knowledge-centre.css/);assert.doesNotMatch(html,/fonts.googleapis/);
  assert.match(html,/class="kc-photo-note">Look a little closer/);assert.match(html,/<h3>A useful question/);assert.match(html,/<strong>the evidence/);
  assert.doesNotMatch(html,/:::writing|title=&quot;Vitamin/);assert.equal((html.match(/<h1>/g)||[]).length,1);
  const unsafe=knowledgeArticle({...article,fields:{body:'<script>alert(1)</script>\n\n[bad](javascript:alert(1))',marginNote:'<img onerror=bad>'}},'/photo');
@@ -25,6 +25,7 @@ test('preview requests read the saved draft without writes and remain scoped to 
  const data=fixture();let writes=0;const api=async(path,o)=>{if(o?.method==='POST')writes++;return path.includes('nufi_studio_items')?[{id:article.id,payload:article,revision:1}]:[];};
  const res=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},end(body){this.body=body;}});
  const options={params:new URLSearchParams({studio:'item',id:'sample',tab:'knowledge-document'}),actor:data.actor,api,load:async()=>({records:[]}),env:{}};
+ let redirected=res();await handleStudio({method:'GET'},redirected,{...options,params:new URLSearchParams({studio:'item',id:'sample',tab:'preview'})});assert.equal(redirected.statusCode,303);assert.match(redirected.headers.Location,/tab=knowledge-document/);
  let output=res();await handleStudio({method:'GET'},output,options);assert.equal(output.statusCode,200);assert.match(output.body,/Private preview/);assert.equal(output.headers['Cache-Control'],'private, no-store');assert.equal(writes,0);
  output=res();await handleStudio({method:'GET'},output,{...options,actor:{role:'staff',id:'unassigned'}});assert.equal(output.statusCode,403);assert.doesNotMatch(output.body,/Fixture photographer/);
 });
@@ -38,3 +39,5 @@ test('future returned drafts always route to a worker, preserve assignment and c
  assert.equal(draftDocument(input,null,'worker:test:').workerId,'imogen');
  assert.throws(()=>draftDocument({...input,fields:{workerId:'unknown'}},null,'worker:test:'),/fields.workerId/);
 });
+
+test('editorial preface and embedded chat citations do not leak into the public article body',()=>{const raw='EDITORIAL WORKFLOW STATUS: private\n\n**Proposed title:** Example\n\n:::writing{title="Example"}\n# Example\n\nArticle prose.\n:::\n\n### Sources checked today\n\n- [Source](https://example.test) \uE200genui\uE202{"citation":{}}\uE201\n\n### Proposed real hero photograph\nImage metadata';const text=cleanArticleBody(raw,'Example');assert.match(text,/Article prose/);assert.match(text,/Sources checked/);assert.doesNotMatch(text,/EDITORIAL|Proposed|Image metadata|genui|writing/);});

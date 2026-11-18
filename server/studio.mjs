@@ -75,6 +75,9 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     meta=meta||{};
     data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');
     data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';
+    if(section==='item'&&params.get('tab')==='preview'&&data.byId.get(params.get('id'))?.kind==='article'){
+      editable(data,params.get('id'));res.statusCode=303;res.setHeader('Location',url('item',{id:params.get('id'),tab:'knowledge-document'}).replaceAll('&amp;','&'));return res.end();
+    }
     if(section==='item'&&params.get('tab')==='knowledge-document'){
       const r=editable(data,params.get('id'));if(r.kind!=='article')throw new HttpError(404,'Choose an article to preview.');
       res.statusCode=200;res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Robots-Tag','noindex, nofollow');return res.end(knowledgeDocument(r,{preview:true,image:articleImage(r)}));
