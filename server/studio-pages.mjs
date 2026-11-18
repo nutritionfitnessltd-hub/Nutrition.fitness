@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { recipeImage, recipePreview } from './studio-recipes.mjs';
 import { mealPlanForm, mealPlanPage } from './studio-mealplan-ui.mjs';
 import { bookAssetUrl, bookPage } from './studio-books.mjs';
+import { articleImage, articlePage } from './studio-articles.mjs';
 import { kinds, templates, blankFields, references, descendants, issues } from './studio-model.mjs';
 import { projectFor } from './studio-store.mjs';
 import { icons } from './library-icons.mjs';
@@ -85,7 +86,7 @@ export function library(params,data,meta={}){
     (!rows.length?'<p class="studio-empty">'+(q||state?'No content matches these filters.':(bucket==='published'?'No content has been published here yet. Approved drafts stay under Drafts until they are released.':'Nothing here yet. Create the first item or import a starting point from the Reference Library.'))+'</p>':'')+
     pages(params,rows,rs=>'<div class="studio-content-grid">'+rs.map(r=>{
       const preview=meta.training?.[r.id]||meta.assets?.[r.id]?.preview||meta.training?.[r.parent];
-      const photo=r.kind==='ebook'&&r.bookAssets?.front?bookAssetUrl(r.id,'front').replaceAll('&amp;','&'):recipeImage(r);
+      const photo=r.kind==='ebook'&&r.bookAssets?.front?bookAssetUrl(r.id,'front').replaceAll('&amp;','&'):recipeImage(r)||articleImage(r);
       return '<a class="studio-content-card" href="'+url('item',{id:r.id})+'">'+(photo?'<img src="'+esc(photo)+'" alt="" loading="lazy">':preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(r.kind==='programme-family'?'Training programmes':kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks · '+(r.id==='training:nufi365'?'Year-round programme':'Standalone programme')+'</p>':r.kind==='programme-family'?'<p>Start · Progress · Develop · Own It</p>':'')+badge(r.status)+'</div></a>';
     }).join('')+'</div>');
 }
@@ -202,6 +203,7 @@ function programmePage(params,data,r){
 export function itemPage(params,data){
   const r=data.byId.get(params.get('id'));if(!r)return heading('Content unavailable');
   if(r.kind==='mealplan'&&r.fields.plannerVersion===1&&params.get('tab')!=='edit')return mealPlanPage(params,data,r);
+  if(r.kind==='article'&&r.fields.bodyFormat==='html'&&params.get('tab')!=='edit')return articlePage(r,data);
   if(r.kind==='ebook'&&r.bookAssets&&params.get('tab')!=='edit')return bookPage(r,data);
   if(r.kind==='programme'&&!['edit','preview'].includes(params.get('tab')))return programmePage(params,data,r);
   if(r.kind==='programme-family'){
