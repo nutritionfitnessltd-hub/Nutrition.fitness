@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {reviewDecision,reviewPreview} from '../server/studio-review.mjs';
-import {reviewPage} from '../server/studio-pages.mjs';
+import {reviewDecision,reviewPreview,reviewWindowDocument} from '../server/studio-review.mjs';
+import {reviewPage,calendar} from '../server/studio-pages.mjs';
 import {draftDocument,draftResult,reviewGuidance} from '../server/worker-drafts.mjs';
 import {handleStudio} from '../server/studio.mjs';
 
@@ -19,9 +19,23 @@ const fixture=()=>{
 const params=new URLSearchParams({studio:'review-preview',id:'worker:sample'});
 test('review list opens accessible preview with saved revision and two clear decisions',()=>{
  const f=fixture(),list=reviewPage(new URLSearchParams({studio:'review'}),f.data),preview=reviewPreview(params,f.data);
- assert.match(list,/data-review-preview/);assert.match(list,/<dialog[^>]+aria-labelledby="review-popup-title"/);
+ assert.match(list,/data-review-preview target="_blank" rel="noopener"/);assert.doesNotMatch(list,/<dialog/);
  assert.match(preview,/Website preview/);assert.match(preview,/>Approve</);assert.match(preview,/>Request changes</);
  assert.match(preview,/What needs changing/);assert.match(preview,/Remember for future work/);assert.match(preview,/Nina/);
+});
+test('article review window has one article and persistent controls without manager navigation or nested frames',()=>{
+ const f=fixture(),html=reviewWindowDocument(params,f.data);
+ assert.match(html,/article-review-window/);assert.match(html,/review-window-controls/);
+ for(const label of ['Approve','Schedule','Edit','Request changes'])assert.ok(html.includes('>'+label+'<'));
+ assert.doesNotMatch(html,/<iframe|Studio navigation|review-popup-header/);
+ assert.equal((html.match(/<h1>/g)||[]).length,1);
+});
+test('scheduling saves an editorial date, appears in calendar, preserves content and rejects stale or invalid dates',async()=>{
+ const f=fixture(),result=await reviewDecision(params,{action:'review-schedule',revision:'1',scheduledDate:'2099-12-01'},f.data,f.api);
+ assert.equal(result.record.publicationPlan.date,'2099-12-01');assert.equal(result.record.status,'In review');assert.equal(result.record.fields.body,'Read the evidence.');assert.equal(result.record.publication,undefined);
+ f.data.items=[result.record];assert.match(calendar(f.data),/2099-12-01/);assert.match(calendar(f.data),/Planned publication/);
+ for(const scheduledDate of ['2020-01-01','2099-02-30','bad'])await assert.rejects(reviewDecision(params,{action:'review-schedule',revision:'1',scheduledDate},fixture().data,fixture().api));
+ await assert.rejects(reviewDecision(params,{action:'review-schedule',revision:'0',scheduledDate:'2099-12-01'},f.data,f.api),/changed/);
 });
 test('change request is versioned, persists guidance and survives an unavailable HQ connection',async()=>{
  const f=fixture(),reviewId=randomUUID(),result=await reviewDecision(params,{action:'review-decision',decision:'changes',revision:'1',reviewId,feedback:'Shorten the introduction.',guidance:'Explain technical words.'},f.data,f.api);

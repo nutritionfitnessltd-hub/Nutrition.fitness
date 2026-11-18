@@ -282,15 +282,15 @@ export function newItem(params,data,values={}){
 export function reviewPage(params,data){
   const rows=data.items.filter(r=>['In review','Changes requested'].includes(r.status)&&(data.actor.role==='admin'||data.assigned.has(r.id)));
   return heading('Needs checking','Preview the saved work, approve it or request changes.')+
-    pages(params,rows,rs=>list(rs,r=>'<div><a data-review-preview href="'+url('review-preview',{id:r.id})+'">'+esc(r.title)+'</a><small>'+esc(kinds[r.kind]||r.kind)+'</small></div>'+badge(r.status),'There is no content waiting for review.'))+
-    '<dialog class="review-popup" data-review-dialog aria-labelledby="review-popup-title"><div data-review-mount></div></dialog><script type="module" src="/studio-review.js"></script>';
+    pages(params,rows,rs=>list(rs,r=>'<div><a data-review-preview target="_blank" rel="noopener" href="'+url('review-preview',{id:r.id})+'">'+esc(r.title)+'</a><small>'+esc(kinds[r.kind]||r.kind)+'</small></div>'+badge(r.status),'There is no content waiting for review.'))+
+    '<script type="module" src="/studio-review.js"></script>';
 }
 export function calendar(data){
   const events=data.projects.flatMap(p=>[
     ...(p.studio.launchDate?[{date:p.studio.launchDate,title:p.name+' · Launch',id:p.id}]:[]),
     ...p.entries.filter(e=>e.due).map(e=>({date:e.due,title:e.title,id:p.id,week:e.week}))
-  ]).sort((a,b)=>a.date.localeCompare(b.date));
-  return heading('Content calendar','Launches and task deadlines across your projects.')+list(events,e=>'<time>'+esc(e.date)+'</time><a href="'+url('project',{project:e.id,week:e.week||0})+'">'+esc(e.title)+'</a>','Set a launch date or task deadline in a project to populate the calendar.');
+  ]).concat(data.items.filter(r=>r.publicationPlan?.date&&r.status!=='Archived'&&(data.actor.role==='admin'||data.assigned.has(r.id))).map(r=>({date:r.publicationPlan.date,title:r.title+' · Planned publication',contentId:r.id}))).sort((a,b)=>a.date.localeCompare(b.date));
+  return heading('Content calendar','Planned articles, launches and task deadlines.')+list(events,e=>'<time>'+esc(e.date)+'</time><a href="'+(e.contentId?url('review-preview',{id:e.contentId}):url('project',{project:e.id,week:e.week||0}))+'">'+esc(e.title)+'</a>','Set a publication date, launch date or task deadline to populate the calendar.');
 }
 export function journey(params,data){
   const p=projectFor(data,params.get('project'));
