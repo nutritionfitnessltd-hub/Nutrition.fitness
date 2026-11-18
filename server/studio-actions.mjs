@@ -3,6 +3,7 @@ import { HttpError, uuid } from './platform.mjs';
 import { kinds, templates, blankFields, cleanText, validateFields, validateShape, issues, makeProjectPlan, descendants } from './studio-model.mjs';
 import { editable, projectFor, saveRecord, saveProject } from './studio-store.mjs';
 import { extractDrafts } from './studio-import.mjs';
+import { refreshMealPlan } from './studio-mealplans.mjs';
 
 const adminOnly=data=>{if(data.actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');};
 function number(value,min,max){
@@ -42,7 +43,7 @@ function readFields(raw,kind){
   let fields;
   try{fields=JSON.parse(raw);}catch{throw new HttpError(400,'The content fields could not be read.');}
   if(!fields||Array.isArray(fields)||typeof fields!=='object'||JSON.stringify(fields).length>500000)throw new HttpError(400,'Check the content fields and size.');
-  validateFields(fields);validateShape(kind,fields);return fields;
+  validateFields(fields,0,kind==='mealplan'?2000:500);validateShape(kind,fields);return fields;
 }
 function reviewRecord(next,status,f,data,revision){
   if(!['In review','Changes requested','Approved','Archived'].includes(status))throw new HttpError(400,'Choose a review status.');
@@ -98,6 +99,7 @@ export async function changeStudio(params,f,data,api){
       next.title=cleanText(f.title,200);if(!next.title)throw new HttpError(400,'Add a title.');
       if(f.intent&&!['draft','preview','approve','review'].includes(f.intent))throw new HttpError(400,'Choose a save action.');
       next.fields=readFields(f.fields,next.kind);
+      if(next.kind==='mealplan'&&r.fields.plannerVersion===1)next.fields=refreshMealPlan(next.fields,data,r.fields);
       if(next.source&&f.sourceChecked==='yes')next.source.needsChecking=false;
       next.status='Draft';delete next.approval;
       if(f.intent==='approve'||f.intent==='review')reviewRecord(next,f.intent==='approve'?'Approved':'In review',f,data,r.revision);
@@ -105,6 +107,7 @@ export async function changeStudio(params,f,data,api){
         next.comments=[...(next.comments||[]),{id:randomUUID(),body:cleanText(f.feedback,4000),author:data.actor.name||'Administrator',at:new Date().toISOString()}];
       }
     }else if(action==='content-review'){
+      if(next.kind==='mealplan'&&next.fields.plannerVersion===1)next.fields=refreshMealPlan(next.fields,data,r.fields);
       reviewRecord(next,f.status,f,data,r.revision);
     }else if(action==='content-comment'){
       const body=cleanText(f.comment||'',4000);if(!body)throw new HttpError(400,'Write your feedback first.');

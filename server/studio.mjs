@@ -6,7 +6,10 @@ import { studioData, editable, projectFor, saveRecord, mergeStudioRecord } from 
 import { templates, blankFields, issues, descendants, cleanText } from './studio-model.mjs';
 import { home, library, createPage, projectList, projectPage, itemPage, newItem, reviewPage, calendar, journey, releasePage } from './studio-pages.mjs';
 import { archivePage, importPage, extractDrafts, importPreview } from './studio-import.mjs';
-import { changeStudio, projectDraft } from './studio-actions.mjs';
+import { changeStudio, projectDraft, createItem } from './studio-actions.mjs';
+import { mealPlanOptions, generateMealPlan } from './studio-mealplans.mjs';
+import { mealPlanForm } from './studio-mealplan-ui.mjs';
+import { generateMealPhoto, sendMealPhoto } from './studio-mealplan-images.mjs';
 import { generateDraft, generateProjectOutline } from './studio-ai.mjs';
 import { esc, url, heading, button, hidden, input, textarea, select, form, list, studioFrame } from './studio-ui.mjs';
 
@@ -47,7 +50,7 @@ function exportPackage(params,data,res){
   res.setHeader('Content-Disposition','attachment; filename="nutrition-fitness-'+(approved?'release':'review')+'.json"');
   res.statusCode=200;res.end(JSON.stringify(payload,null,2));
 }
-export async function handleStudio(req,res,{params,actor,api,load,env}){
+export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fetch,imageStore}){
   const section=params.get('studio')||'home';
   let data,meta;
   const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
@@ -63,7 +66,40 @@ export async function handleStudio(req,res,{params,actor,api,load,env}){
     [data,meta]=await Promise.all([studioData(api,actor,load),displayEntry(env,'shelves').catch(()=>({}))]);
     data.aiReady=Boolean(env.OPENAI_API_KEY);
     if(section==='book-file')return await sendBookFile(req,res,params,data);
+    if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
+      if(f.action==='mealplan-generate'){
+        const current=params.get('id')?editable(data,params.get('id')):null;
+        if(current&&(current.kind!=='mealplan'||current.revision!==Number(f.revision)))throw new HttpError(409,'Reopen the latest meal plan before generating it again.');
+        if(!current&&actor.role!=='admin'){
+          if(!f.project)throw new HttpError(403,'Choose an assigned project for this meal plan.');
+          projectFor(data,f.project);
+        }
+        const id=current?.id||'studio:'+String(f.id||'').replace(/^studio:/,'');
+        if(!current&&!/^studio:[0-9a-f-]{36}$/i.test(id))throw new HttpError(400,'Reopen the meal planner and try again.');
+        if(!current&&data.byId.has(id)){
+          res.statusCode=303;res.setHeader('Location',url('item',{id}).replaceAll('&amp;','&'));return res.end();
+        }
+        const result=await generateMealPlan({env,data,options:mealPlanOptions(f),fetcher});
+        const draft={...current,id,kind:'mealplan',title:result.title,fields:result.fields,status:'Draft',parent:current?.parent||null,comments:[...(current?.comments||[]),{id:randomUUID(),body:result.notes||'Meal plan drafted from the recipe library for review.',author:'Drafting assistant',at:new Date().toISOString()}]};
+        delete draft.approval;delete draft.revision;delete draft.updatedAt;
+        if(current)await saveRecord(api,actor,draft,current.revision);
+        else await createItem(draft,f.project,f.entry,data,api);
+        res.statusCode=303;res.setHeader('Location',url('item',{id}).replaceAll('&amp;','&'));return res.end();
+      }
+      if(f.action==='mealplan-image-generate'){
+        const r=editable(data,params.get('id'));
+        if(r.kind!=='mealplan'||r.revision!==Number(f.revision))throw new HttpError(409,'Reopen the latest meal plan before generating an image.');
+        const draft=structuredClone(r),recipe=draft.fields.generatedRecipes?.find(x=>x.id===f.recipe);
+        if(!recipe||draft.fields.imagePreference!=='generated')throw new HttpError(400,'Enable generated images and choose a new recipe draft.');
+        if(!recipe.fields.imageAsset){
+          recipe.fields.imageAsset=await generateMealPhoto({env,recipe,fetcher,store:imageStore});
+          recipe.fields.imageNote='AI-generated serving suggestion. Review against the recipe before publishing.';
+          draft.status='Draft';delete draft.approval;delete draft.revision;delete draft.updatedAt;
+          await saveRecord(api,actor,draft,r.revision);
+        }
+        res.statusCode=303;res.setHeader('Location',(url('item',{id:r.id})+'#'+recipe.id).replaceAll('&amp;','&'));return res.end();
+      }
       if(f.action==='plan-preview'){
         projectDraft(f,data);
         if(f.assist==='yes'){
@@ -83,6 +119,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env}){
       }
       if(f.action==='ai-draft'){
         const r=editable(data,params.get('id'));
+        if(r.kind==='mealplan')throw new HttpError(400,'Use the meal plan settings to generate a complete menu with library recipes.');
         if(r.revision!==Number(f.revision))throw new HttpError(409,'Reopen the latest version before drafting.');
         const result=await generateDraft({env,record:r,prompt:cleanText(f.prompt,8000),standards:data.byId.get('studio:standards')?.fields.guidance,
           exercises:data.items.filter(x=>x.kind==='exercise'&&x.status==='Approved').map(x=>({id:x.id,title:x.title,equipment:x.fields.equipment}))});
@@ -143,6 +180,10 @@ export async function handleStudio(req,res,{params,actor,api,load,env}){
       }catch{body+='<details><summary>Unsaved content</summary><pre class="source-text">'+esc(f.fields||'')+'</pre></details>';}
     }else if(req.method==='POST'&&f.action==='content-create'&&data){
       data.unsaved=true;body+=newItem(params,data,f);
+    }else if(req.method==='POST'&&f.action==='mealplan-generate'&&data){
+      body+=mealPlanForm(data,f,params.get('id')?data.byId.get(params.get('id')):null);
+    }else if(req.method==='POST'&&f.action==='mealplan-image-generate'&&data){
+      body+=button('Back to the saved meal plan',url('item',{id:params.get('id')}));
     }else if(req.method==='POST'&&f.action==='plan-preview'&&data){
       body+=createPage(new URLSearchParams({template:f.template}),data,f);
     }else if(req.method==='POST'&&['import-preview','import-save'].includes(f.action)&&data){

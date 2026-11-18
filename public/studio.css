@@ -168,6 +168,9 @@
  .studio .studio-picker { padding:16px; }
  .studio .studio-content-preview { padding:20px; }
 }
+.meal-plan-builder{max-width:960px}.meal-plan-builder .studio-form{gap:20px}.meal-plan-builder details{border-top:1px solid #d1dcdc;padding:16px 0}.meal-plan-builder summary{cursor:pointer}.meal-plan-builder .meta{margin-top:0}
+.meal-plan-days{display:grid;gap:16px}.meal-plan-day h2{font-size:21px;margin:0 0 18px}.meal-plan-meals{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}.meal-plan-meal{min-width:0}.meal-plan-meal img{width:100%;aspect-ratio:3/2;object-fit:cover;border-radius:8px;margin-bottom:12px}.meal-plan-meal h3{font-size:18px;line-height:1.4;margin:4px 0 8px}.meal-slot{text-transform:capitalize;color:#546977;font-size:13px;margin:0}.meal-reuse-note{font-size:14px;line-height:1.5;padding:12px;background:#f2dfd2;border-radius:6px}.meal-shopping{columns:2;column-gap:40px;padding-left:22px}.meal-shopping li{break-inside:avoid;margin-bottom:12px}.meal-shopping small{display:block;color:#546977}.meal-generated-photo{width:100%;max-width:600px;border-radius:10px}.meal-plan-meal small{color:#546977}
+@media(max-width:760px){.meal-plan-meals{grid-template-columns:1fr}.meal-plan-meal{display:grid;grid-template-columns:110px minmax(0,1fr);gap:14px}.meal-plan-meal:not(:has(img)){display:block}.meal-shopping{columns:1}}
 .studio-content-card:has(img[src*="book-file"])>img{object-fit:contain;background:#eaf0ef;padding:12px;}
 @media(max-width:480px){.studio-cards,.studio-content-grid,.studio .studio-simple-grid,.studio .studio-type-grid {grid-template-columns:1fr;}.studio-list>li {gap:8px;}.studio-card {min-height:130px;}.studio-book-cover{height:340px;}}
 

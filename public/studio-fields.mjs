@@ -30,6 +30,7 @@ export const fieldLabels = {
   warmup:'Warm-up', cooldown:'Cool-down', duration:'Duration (minutes)', durationSeconds:'Video length (seconds)',
   durationMinutes:'Duration (minutes)', prepMinutes:'Prep time (minutes)', cookMinutes:'Cooking time (minutes)',
   nutrition:'Nutrition per serving', script:'Voiceover script', media:'Video and thumbnail', blocks:'Exercises',
+  durationDays:'Plan length in days', cookServings:'Portions to cook', leftoverFromDay:'Leftovers from day', imagePreference:'Recipe picture preference',
   audience:'Who it is for', channel:'Where it will be used', altText:'Image description'
 };
 export const fieldLabel = key => fieldLabels[key] || key.replace(/([A-Z])/g,' $1').replace(/^./,s=>s.toUpperCase());

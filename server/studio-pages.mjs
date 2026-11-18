@@ -3,6 +3,7 @@ import { editorForm, referenceData, contentPreview, videoTools } from './studio-
 import { fieldLabel } from '../public/studio-fields.mjs';
 import { randomUUID } from 'node:crypto';
 import { recipeImage, recipePreview } from './studio-recipes.mjs';
+import { mealPlanForm, mealPlanPage } from './studio-mealplan-ui.mjs';
 import { bookAssetUrl, bookPage } from './studio-books.mjs';
 import { articleImage, articlePage } from './studio-articles.mjs';
 import { kinds, templates, blankFields, references, descendants, issues } from './studio-model.mjs';
@@ -102,6 +103,7 @@ export function library(params,data,meta={}){
     }).join('')+'</div>');
 }
 export function createPage(params,data,values={}){
+  if(params.get('template')==='mealplan')return mealPlanForm(data,values);
   const choice=params.get('template'),t=data.actor.role==='admin'?templates[choice]:null;
   if(!t)return heading('Create content','Choose what you want to make.')+
     '<div class="studio-cards studio-type-grid">'+contentSections.map(([kind,title])=>card(title,'',createLink(kind))).join('')+'</div>'+
@@ -209,6 +211,7 @@ function programmePage(params,data,r){
 }
 export function itemPage(params,data){
   const r=data.byId.get(params.get('id'));if(!r)return heading('Content unavailable');
+  if(r.kind==='mealplan'&&r.fields.plannerVersion===1&&params.get('tab')!=='edit')return mealPlanPage(params,data,r);
   if(r.kind==='article'&&r.fields.bodyFormat==='html'&&params.get('tab')!=='edit')return articlePage(r,data);
   if(r.kind==='ebook'&&r.bookAssets&&params.get('tab')!=='edit')return bookPage(r,data);
   if(r.kind==='programme'&&!['edit','preview'].includes(params.get('tab')))return programmePage(params,data,r);
@@ -245,7 +248,7 @@ export function itemPage(params,data){
       (admin?button('Assign work',url('project-from',{id:r.id})):'')+'</div>'+
       '<details><summary>Feedback ('+(r.comments||[]).length+')</summary>'+list(r.comments||[],c=>'<div><p>'+esc(c.body)+'</p><small>'+esc(c.author)+' · '+esc(c.at.slice(0,10))+'</small></div>','No feedback yet.')+
       form('content-comment',hidden('revision',r.revision)+textarea('comment','Add feedback'),state,'Add feedback')+'</details>'+
-      (data.aiReady?'<details><summary>Draft with AI</summary>'+form('ai-draft',hidden('revision',r.revision)+textarea('prompt','What would you like to improve?'),state,'Generate a draft for checking')+'</details>':'')+
+      (r.kind==='mealplan'?'<details><summary>Change the plan settings</summary>'+mealPlanForm(data,{},r)+'</details>':data.aiReady?'<details><summary>Draft with AI</summary>'+form('ai-draft',hidden('revision',r.revision)+textarea('prompt','What would you like to improve?'),state,'Generate a draft for checking')+'</details>':'')+
       (admin?'<details><summary>Request changes or archive</summary>'+form('content-review',hidden('revision',r.revision)+select('status','Action',{'Changes requested':'Request changes',Archived:'Archive this item'})+textarea('feedback','Note'),state,'Apply to saved version')+'</details>':'')+'</details>';
   }
   if(refs.length&&!preview)out+='<details class="panel"><summary>Linked content ('+refs.length+')</summary>'+list(refs,contentRow)+'</details>';
@@ -255,6 +258,7 @@ export function itemPage(params,data){
 }
 export function newItem(params,data,values={}){
   const kind=Object.hasOwn(kinds,values.kind||params.get('kind'))?(values.kind||params.get('kind')):'article';
+  if(kind==='mealplan')return mealPlanForm(data,{...values,project:values.project||params.get('project')||''});
   let fields=blankFields(kind);if(values.fields)try{fields=JSON.parse(values.fields);}catch{}
   const r={id:values.id||'studio:'+randomUUID(),kind,title:values.title??params.get('title')??'',fields};
   return '<a class="back" href="'+url('create')+'">← Create content</a>'+heading('Create '+kinds[kind].toLowerCase())+
