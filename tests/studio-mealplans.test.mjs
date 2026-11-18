@@ -12,7 +12,7 @@ const recipes=[recipe('breakfast','Greek yoghurt','Greek yoghurt',400),recipe('c
 const data=()=>({actor:{role:'admin',id:randomUUID()},items:structuredClone(recipes),byId:new Map(recipes.map(r=>[r.id,r])),assigned:new Set(),projects:[],people:[],tasks:[],index:{records:recipes,files:{}}});
 const options=(values={})=>mealPlanOptions({brief:'Mediterranean-inspired meals',...values});
 const proposal=(days=7)=>({introduction:'A Mediterranean-inspired menu.',days:Array.from({length:days},(_,i)=>({day:i+1,breakfast:'breakfast',lunch:'lunch',dinner:'chicken'})),generatedRecipes:[],notes:''});
-const aiResponse=fields=>({ok:true,json:async()=>({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({title:'Mediterranean menu',fieldsJson:JSON.stringify(fields),notes:'Review the menu.'})}]}]})});
+const aiResponse=fields=>({ok:true,json:async()=>({status:'completed',output:[{content:[{type:'output_text',text:JSON.stringify({title:'Mediterranean menu',fields,notes:'Review the menu.'})}]}]})});
 const newRecipe={id:'new-beans',title:'Lemon beans',servings:2,ingredients:[{name:'White beans',quantity:400,unit:'g',note:''}],instructions:['Warm the beans with lemon.']};
 const response=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},end(v){this.body=v;}});
 
@@ -67,6 +67,8 @@ test('AI receives real recipe IDs, quantities, requested duration and reuse cons
   assert.equal(input.context.recipes[1].ingredients[0].quantity,400);
   assert.match(input.request,/exactly 28/);assert.match(input.request,/NEXT day/);assert.match(input.request,/ONLY supplied/);
   assert.equal(plan.fields.days.length,28);assert.equal(request.store,false);
+  assert.deepEqual(request.text.format.schema.$defs.recipeId.enum,['r1','r2','r3','r4']);
+  assert.equal(request.text.format.schema.properties.fields.properties.days.items.properties.dinner.$ref,'#/$defs/recipeId');
 });
 test('creation form and saved menu offer all durations, source photos and accessible weekly navigation',()=>{
   const d=data(),form=createPage(new URLSearchParams({template:'mealplan'}),d);
