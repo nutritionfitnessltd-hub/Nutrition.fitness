@@ -398,6 +398,12 @@
 .worker-content-list{list-style:none;padding:0;margin:0 0 16px}.worker-content-list li{display:flex;align-items:start;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #d6dedb}.worker-content-list a{overflow-wrap:anywhere}.worker-content-list .studio-status{flex-shrink:0}.dashboard-worker>.btn{align-self:start;margin-bottom:16px}@media(max-width:600px){.worker-content-list li{flex-direction:column;gap:6px}}
 
 .studio-card-photo{display:block;position:relative}.studio-card-photo>img{display:block;width:100%;height:170px;object-fit:cover}.studio-photo-caption{position:absolute;right:12px;bottom:12px;max-width:85%;padding:6px 10px 4px;background:#fffdf5;color:#17394b;font-family:Kalam,cursive;font-size:21px;font-weight:400;line-height:1.2;transform:rotate(-3deg);box-shadow:0 2px 6px #0002}.knowledge-preview-frame{display:block;width:100%;height:1000px;border:1px solid #dce2e6;border-radius:8px;background:white}.knowledge-preview .studio-actions{margin-bottom:16px}
+
+.worker-chat-profile { display:flex; align-items:center; gap:20px; }
+.worker-message p,.worker-ideas .prose { white-space:pre-wrap; overflow-wrap:anywhere; }
+.worker-message { padding:16px 0; }
+.worker-message.from-you { border-left:3px solid #8168a7; padding-left:16px; }
+.worker-ideas>ul { display:block; }
 /* Saved-content review dialog: scroll the preview while keeping decisions visible. */
 .review-popup{width:min(1220px,96vw);max-width:96vw;height:92dvh;max-height:92dvh;padding:0;border:1px solid #d7d4cc;border-radius:16px;background:#faf8f3;color:#003349;box-shadow:0 20px 80px #002d3f44;overflow:hidden}
 .review-popup::backdrop{background:#001e2cc7}
@@ -412,3 +418,4 @@
 .review-popup-footer [data-review-status]{margin:0 0 10px}.review-popup-footer .studio-form{margin:0}.review-popup-footer .studio-actions{align-items:center}
 [data-review-feedback]{margin-top:18px}[data-review-feedback][hidden]{display:none}[data-review-feedback] textarea{width:100%;box-sizing:border-box}
 @media(max-width:600px){.review-popup{width:100vw;max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0;border:0}.review-popup-header,.review-popup-body,.review-popup-footer{padding:14px}.review-popup-footer .studio-actions{gap:8px;flex-wrap:wrap}.review-popup-body .studio-article-frame{min-height:300px}}
+

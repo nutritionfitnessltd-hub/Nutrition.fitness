@@ -1,4 +1,7 @@
+import {workerIdeaSummaries} from './studio-ideas.mjs';
+import {workerChatPage,changeHq} from './studio-hq.mjs';
 import { assetsPage, brandMediaPage, workspaceArchive, softwareReleases, saveSoftwareRelease } from './team-workspace.mjs';
+
 import {publicationPanel,publishStudio} from './studio-publishing.mjs';
 import {reviewPreview,reviewDecision} from './studio-review.mjs';
 import {sendWorkerImage} from './worker-images.mjs';
@@ -75,6 +78,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }
     [data,meta]=await Promise.all([studioData(api,actor,load),displayEntry(env,'shelves').catch(()=>({}))]);
     meta=meta||{};
+    if(section==='home'&&actor.role==='admin'&&env.NUFI_HQ_SITE_TOKEN)data.hqIdeas=await workerIdeaSummaries(env,fetcher);
     data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');
     data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';
     if(section==='article-preview'||(section==='item'&&params.get('tab')==='knowledge-document')){
@@ -102,10 +106,13 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='article-image'){const r=data.byId.get(params.get('id'));if(r?.workerImage&&!r.articleImage)return await sendWorkerImage(res,r,env,fetcher);return await sendArticleImage(req,res,params,data);}
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
+      if(['hq-message','hq-idea','hq-approve-plan'].includes(f.action)){const result=await changeHq(params,f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url(result.section,result).replaceAll('&amp;','&'));return res.end();}
+
       if(f.action==='software-release-save'){
         await saveSoftwareRelease(f,data,api);
         res.statusCode=303;res.setHeader('Location',url('software-releases').replaceAll('&amp;','&'));return res.end();
       }
+
       if(f.action?.startsWith('notifications-')){
         const result=await changeNotifications(f,data,api,env,fetcher);
         res.statusCode=303;res.setHeader('Location',url('connections',result).replaceAll('&amp;','&'));return res.end();
@@ -200,6 +207,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       case 'library':case 'exercises':body=library(params,data,meta||{});break;
       case 'create':body=createPage(params,data);break;
       case 'builder':body=builderPage(params,data,meta);break;
+      case 'worker-chat':body=await workerChatPage(params,data,env,fetcher);break;
       case 'worker-requests':body=workerRequestsPage(params,data);break;
       case 'projects':body=projectList(params,data);break;
       case 'project':body=projectPage(params,data);break;
@@ -254,6 +262,8 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       if(schedule?.kind==='structure'&&week&&(data.actor.role==='admin'||data.assigned.has(schedule.id))){
         body+='<p>Your unsaved day changes are shown below. If the schedule changed, open the latest weekly plan before combining your changes.</p>'+button('Open latest weekly plan',url('item',{id:params.get('id'),tab:'plan',schedule:schedule.id,week:week.number}))+workoutDaysEditor(params,data,schedule,week,f);
       }
+    }else if(req.method==='POST'&&['hq-message','hq-idea'].includes(f.action)&&data?.actor.role==='admin'){
+      body+=await workerChatPage(new URLSearchParams({worker:f.worker}),data,env,fetcher,f);
     }else if(req.method==='POST'&&['worker-step','worker-preview','worker-save'].includes(f.action)&&data?.actor.role==='admin'){
       try{body+=f.action==='worker-save'?workerPreview(f,data,meta):builderPage(params,data,meta,f);}catch{body+=button('Choose original material',url('builder'));}
     }else if(req.method==='POST'&&f.action==='content-create'&&data){
