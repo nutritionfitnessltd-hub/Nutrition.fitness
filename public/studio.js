@@ -1,7 +1,7 @@
 import { primaryFields, fieldLabel } from './studio-fields.mjs';
 const fieldsInput = document.querySelector('#studio-fields');
 const editor = document.querySelector('#studio-editor');
-const labelFor = fieldLabel;
+const labelFor = key => editor?.dataset.kind==='communication' ? ({subject:'Subject (optional)',body:'Message',callToAction:'Link text',channel:'Channel',trigger:'Trigger',timing:'Timing'})[key]||fieldLabel(key) : fieldLabel(key);
 const element = (tag, text, className) => {
   const el=document.createElement(tag);
   if(text!==undefined)el.textContent=text;
@@ -95,12 +95,13 @@ if(fieldsInput&&editor){
     control.addEventListener('input',()=>set(bool?control.checked:number?(control.value===''?0:Number(control.value)):control.value));
     label.append(control);return label;
   }
-  const main=primaryFields[editor.dataset.kind]||Object.keys(values),details=element('details',undefined,'editor-details');
-  details.append(element('summary','More details'));
+  const messageOptions=document.querySelector('#studio-message-options');
+  const main=primaryFields[editor.dataset.kind]||Object.keys(values),details=messageOptions||element('details',undefined,'editor-details');
+  if(!messageOptions)details.append(element('summary','More details'));
   const upload=document.querySelector('[data-article-upload]'),imageFields=upload?['imageUrl','imageAlt','imageCredit','imageCreditUrl']:[];
   for(const key of main)if(Object.hasOwn(values,key)&&!imageFields.includes(key))editor.append(draw(key,values[key],next=>values[key]=next));
   for(const [key,value] of Object.entries(values))if(!main.includes(key)&&!imageFields.includes(key))details.append(draw(key,value,next=>values[key]=next));
-  if(details.children.length>1)editor.append(details);
+  if(!messageOptions&&details.children.length>1)editor.append(details);
   form.addEventListener('submit',event=>{
     if(event.defaultPrevented)return;
     if(upload){

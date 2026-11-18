@@ -239,9 +239,10 @@ export function itemPage(params,data){
     const unique=[...new Map([...included,...children].map(x=>[x.id,x])).values()];
     if(unique.length)out+='<section class="panel"><h2>'+ (r.kind==='course'?'Lessons & supporting content':'Included content')+'</h2>'+list(unique,contentRow)+'</section>';
   }else{
-    if(checks.length)out+='<details class="editor-checks"><summary>'+checks.length+' '+(checks.length===1?'thing':'things')+' to complete before checking</summary><ul>'+checks.map(c=>'<li>'+esc(c)+'</li>').join('')+'</ul></details>';
+    if(checks.length&&r.kind!=='communication')out+='<details class="editor-checks"><summary>'+checks.length+' '+(checks.length===1?'thing':'things')+' to complete before checking</summary><ul>'+checks.map(c=>'<li>'+esc(c)+'</li>').join('')+'</ul></details>';
     out+=videoTools(r)+editorForm(r,data,{feedback:data.unsavedFeedback||'',unsaved:data.unsaved===true})+referenceData(data);
   }
+  if(r.kind==='communication')return out;
   if(canEdit){
     out+='<details class="panel"><summary>History, feedback & other actions</summary><div class="studio-actions">'+button('Version history',url('history',{id:r.id}))+
       (r.sourceId?button('Original files','/content-library/?work=1&assets='+encodeURIComponent(r.sourceId)):'')+

@@ -1,7 +1,7 @@
 // The everyday editor shows content first. All other saved fields remain editable.
 export const primaryFields = {
   campaign:['headline','body','callToAction','assetIds'],
-  communication:['subject','body','callToAction'],
+  communication:['subject','body'],
   article:['introduction','body','takeaway'], learning:['body','takeaway'],
   lesson:['introduction','body','videoUrl','script','durationSeconds','takeaway','activity'],
   course:['introduction','outcome','lessonIds'],

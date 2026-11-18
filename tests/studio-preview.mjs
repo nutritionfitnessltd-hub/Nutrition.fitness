@@ -8,6 +8,7 @@ const root=path.resolve(import.meta.dirname,'../dist');
 const actor={role:'admin',id:'00000000-0000-4000-8000-000000000001'};
 const make=(id,kind,title,fields)=>({id,kind,title,status:'Draft',fields:{...blankFields(kind),...fields},files:[]});
 const records=[
+ make('training:message','communication','Stronger — your first step',{subject:'Ready to get started?',body:'Choose one small step for this week. What would make the biggest difference for you?',channel:'WhatsApp',trigger:'Programme begins',timing:'Day 1',callToAction:'Reply with your first step',replyPaths:[{reply:'Ready',response:'Let’s get started.',nextStep:'First session'}],editorialNote:'Keep this saved detail'}),
  make('training:copy','campaign','Stronger — programme landing copy',{headline:'Strength you can put to use.',body:'A clear whole-body training plan, with useful coaching and room for real life.',channel:'website',audience:'prospective',assetIds:['training:cover']}),
  make('training:cover','asset','Stronger programme cover',{url:'/assets/cookbook/recipe-061.webp',thumbnailUrl:'/assets/cookbook/recipe-061.webp'}),
  make('training:course','course','Learning the basics',{introduction:'An introduction to your training.',lessonIds:['training:lesson-two','training:lesson-one']}),
