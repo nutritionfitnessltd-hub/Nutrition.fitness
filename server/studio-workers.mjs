@@ -2,15 +2,16 @@ import { randomUUID } from 'node:crypto';
 import { HttpError, uuid } from './platform.mjs';
 import { cleanText } from './studio-model.mjs';
 import { saveRecord } from './studio-store.mjs';
+import { contentPhoto, workerPortrait } from './studio-visuals.mjs';
 import { esc, url, heading, button, hidden, input, textarea, select, form, list, pages } from './studio-ui.mjs';
 
 // These roles were checked against James HQ and the saved Rory role on 18 November 2026.
 // A named employee or scheduled chat is not a published API-triggerable Workspace Agent.
 export const workers={
-  nina:{defaultBuild:'newsletter',name:'Nina',role:'Content & marketing',employeeId:'employee:Nutrition.Fitness:content',reason:'Newsletters, articles, emails and campaign copy.'},
-  imogen:{defaultBuild:'course',name:'Imogen',role:'Courses & production',employeeId:'employee:Nutrition.Fitness:course-production',reason:'Course structure, lesson scripts and production preparation.'},
-  marcus:{defaultBuild:'programme',setupNote:'HQ employee setup is awaiting sign-in.',name:'Marcus',role:'Training & Programme Designer',employeeId:null,reason:'Workouts, exercise choices, weekly schedules and progression. HQ directory connection still needs confirming.'},
-  rory:{defaultBuild:'socials',name:'Rory',role:'Social & video',employeeId:null,reason:'Social posts and short video scripts. HQ directory connection still needs confirming.'}
+  nina:{portrait:'/assets/studio-team/nina.jpg',defaultBuild:'newsletter',name:'Nina',role:'Content & marketing',employeeId:'employee:Nutrition.Fitness:content',reason:'Newsletters, articles, emails and campaign copy.'},
+  imogen:{portrait:'/assets/studio-team/imogen.jpg',defaultBuild:'course',name:'Imogen',role:'Courses & production',employeeId:'employee:Nutrition.Fitness:course-production',reason:'Course structure, lesson scripts and production preparation.'},
+  marcus:{portrait:'/assets/studio-team/marcus.jpg',defaultBuild:'programme',name:'Marcus',role:'Training & Programme Designer',employeeId:'11e08be4-caa8-45de-b972-b333bb4e274c',reason:'Workouts, exercise choices, weekly schedules and progression.'},
+  rory:{portrait:'/assets/studio-team/rory.jpg',defaultBuild:'socials',name:'Rory',role:'Social & video',employeeId:null,reason:'Social posts and short video scripts. HQ directory connection still needs confirming.'}
 };
 export const outputs={
   programme:{label:'Training programme',worker:'marcus',brief:'Read the original programme and preserve its evidenced structure. Prepare the goal, audience, weekly schedule, workout sequence, exercise choices and progression. Specify sets, reps, rest, intensity, recovery and suitable alternatives where the sources support them. Identify missing goals, experience, equipment, training days, session length and limitations before prescribing details. Flag uncertain exercise or safety claims and keep the programme as a draft for James to review; never claim clinical suitability or professional approval.'},
@@ -96,7 +97,7 @@ function buildStart(state={},bundle){
     '<div class="studio-build-grid">'+Object.entries(outputs).map(([key,o])=>{
       const next={...flowState(state),build:key};
       if(state.build!==key){delete next.configured;for(const k of Object.keys(outputs)){delete next['output_'+k];delete next['worker_'+k];}}
-      return '<form method="post" action="'+url('builder')+'">'+hidden('action','worker-step')+stateFields(next)+'<button class="studio-build-choice"><span class="build-worker">'+workers[o.worker].name+' suggested</span><strong>'+esc(buildTitles[key])+'</strong><span>'+esc(buildDescriptions[key])+'</span><span class="build-arrow" aria-hidden="true">→</span></button></form>';
+      return '<form method="post" action="'+url('builder')+'">'+hidden('action','worker-step')+stateFields(next)+'<button class="studio-build-choice worker-'+o.worker+'">'+contentPhoto(key,'build-photo')+'<span class="build-worker">'+workerPortrait(workers[o.worker],'worker-mini')+workers[o.worker].name+' suggested</span><strong>'+esc(buildTitles[key])+'</strong><span>'+esc(buildDescriptions[key])+'</span><span class="build-arrow" aria-hidden="true">→</span></button></form>';
     }).join('')+'</div>';
 }
 export function workerStart(){return buildStart();}
@@ -124,7 +125,7 @@ export function builderPage(params,data,meta={},values){
   return heading('Make it your own',primary.label+' from '+bundle.title)+steps(3)+
     form('worker-preview',stateFields({...state,...bundle.selection,build,requestId:state.requestId||randomUUID()},['audience','instructions','sourceText','configured',...Object.keys(outputs).map(k=>'output_'+k)])+hidden('configured','yes')+
       '<div class="studio-flow-back"><button name="step" value="source" formaction="'+url('builder',{flowBack:'1'})+'" formnovalidate>← Change original</button><button name="step" value="build" formaction="'+url('builder',{flowBack:'1'})+'" formnovalidate>Change what to build</button></div>'+
-      '<section class="panel studio-chosen-build"><h2>'+esc(primary.label)+'</h2><p>'+esc(buildDescriptions[build])+'</p><p class="meta">Original: '+esc(bundle.title)+' · Suggested worker: '+workers[primary.worker].name+'</p>'+hidden('output_'+build,'yes')+'</section>'+
+      '<section class="panel studio-chosen-build">'+workerPortrait(workers[primary.worker])+'<div><h2>'+esc(primary.label)+'</h2><p>'+esc(buildDescriptions[build])+'</p><p class="meta">Original: '+esc(bundle.title)+' · Suggested worker: '+workers[primary.worker].name+'</p></div>'+hidden('output_'+build,'yes')+'</section>'+
       input('audience','Who is this for?',state.audience??'Nutrition.fitness members','text','maxlength="500"')+
       (['programme','workout'].includes(build)?'<p class="meta">Tell Marcus the goal, experience level, equipment, days per week and session length. Include any known limitations. Missing details will be flagged for your review.</p>':'')+
       textarea('instructions','What would you like them to do?',state.instructions||'',4)+

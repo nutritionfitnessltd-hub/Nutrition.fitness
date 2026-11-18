@@ -9,7 +9,7 @@ Workers are suggested by output type and each suggestion can be changed. Saving 
 Verified role mapping on 18 November 2026:
 - Nina: newsletters, emails, articles and landing copy. Confirmed Nutrition.Fitness Content & Marketing Specialist in James HQ.
 - Imogen: course structure, challenge preparation and lesson scripts. Confirmed Canva & Course Production Specialist in James HQ.
-- Marcus: Training & Programme Designer. Workouts, exercise choices, weekly structure, sets/reps, recovery and progression. Added to Studio at James’s request. HQ identity verification is pending; the Studio profile must not imply automatic dispatch.
+- Marcus: Training & Programme Designer. Workouts, exercise choices, weekly structure, sets/reps, recovery and progression. Confirmed and saved in James HQ as `11e08be4-caa8-45de-b972-b333bb4e274c`, with no regular duties enabled. Studio suggests him for programmes and workouts. This identity does not enable automatic dispatch.
 - Rory: social posts and short video scripts. Role verified in the Content Manager record `nf-worker-rory-social-video-producer`; no matching active HQ directory entry was present.
 
 ## What is connected

@@ -1,4 +1,5 @@
 import { workers } from './studio-workers.mjs';
+import { contentPhoto, workerPortrait } from './studio-visuals.mjs';
 import { esc, url, heading, button, list, badge } from './studio-ui.mjs';
 
 const complete=status=>['Done','Complete','Archived'].includes(status);
@@ -22,7 +23,7 @@ function workerCards(data){
   return '<section class="dashboard-team" aria-labelledby="workers-title"><div class="dashboard-section-heading"><div><h2 id="workers-title">AI workers</h2><p>The work you have planned with your team.</p></div>'+button('All worker plans',url('worker-requests'))+'</div>'+
     '<p class="dashboard-connection">Plans are saved here. Automatic worker start and progress updates are not connected yet.</p><div class="dashboard-workers">'+Object.entries(workers).map(([id,w])=>{
       const plans=requests.flatMap(request=>(request.fields.outputs||[]).filter(o=>o.worker===id).map(output=>({request,output})));
-      return '<article class="dashboard-worker"><header><span class="worker-initial" aria-hidden="true">'+w.name[0]+'</span><div><h3>'+w.name+'</h3><p>'+esc(w.role)+'</p></div></header><p class="worker-state">'+(plans.length?plans.length+' planned · not started':'No work planned')+'</p>'+
+      return '<article class="dashboard-worker worker-'+id+'"><header>'+workerPortrait(w)+'<div><h3>'+w.name+'</h3><p>'+esc(w.role)+'</p></div></header><p class="worker-state">'+(plans.length?plans.length+' planned · not started':'No work planned')+'</p>'+
         (w.setupNote?'<p class="worker-empty">'+esc(w.setupNote)+'</p>':'')+
         (plans.length?'<ul class="worker-plan-list">'+plans.slice(0,3).map(({request,output})=>'<li><a href="'+url('worker-requests',{id:request.id})+'">'+esc(output.title)+'</a><small>From '+esc(request.title)+'</small><details><summary>What '+w.name+' will do</summary><p>'+esc(output.brief)+'</p></details></li>').join('')+'</ul>':'<p class="worker-empty">'+esc(w.reason.split(' HQ directory')[0])+'</p>')+
         (plans.length>3?button('View all '+w.name+'’s plans',url('worker-requests',{worker:id})):'')+
@@ -33,7 +34,7 @@ function workerCards(data){
 export function workspaceDashboard(data){
   const {mine,reviews,ownProjects}=dashboardWork(data),admin=data.actor.role==='admin';
   const plans=admin?requestsFor(data).reduce((n,r)=>n+(r.fields.outputs||[]).length,0):0;
-  return heading('Dashboard','Your work, your team and what comes next.',button('Create content',url('create'),true))+
+  return '<section class="dashboard-welcome"><div class="welcome-copy"><span class="studio-eyebrow">Made for real life. Created by your team.</span><h1>Dashboard</h1><p class="welcome-lead">Good ideas start here.</p><p>Your work, your team and what comes next. Turn your originals into something people will enjoy, use and come back to.</p><div class="studio-actions">'+button('Create content',url('create'),true)+button('Explore your library',url('library'))+'</div></div><div class="welcome-pictures"><a href="'+url('library',{kind:'recipe'})+'">'+contentPhoto('recipe','welcome-photo',true)+'<span>Food to enjoy ↗</span></a><a href="'+url('library',{kind:'programme'})+'">'+contentPhoto('programme','welcome-photo',true)+'<span>Movement for real life ↗</span></a></div></section>'+
     '<nav class="dashboard-overview" aria-label="Work overview"><a href="#my-work"><strong>'+mine.length+'</strong><span>My open tasks</span></a><a href="#my-review"><strong>'+reviews.length+'</strong><span>'+(admin?'For my review':'Awaiting review')+'</span></a>'+(admin?'<a href="#workers-title"><strong>'+plans+'</strong><span>Planned with AI workers</span></a>':'')+'</nav>'+
     '<div class="dashboard-work"><section class="panel" id="my-work"><div class="dashboard-section-heading"><h2>My work</h2>'+button('All work',url('projects'))+'</div>'+
     list(mine.slice(0,5),row,'No open tasks assigned to you.')+
