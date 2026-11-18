@@ -7,10 +7,11 @@ export function referenceData(data){
   return '<textarea hidden id="studio-reference-data">'+esc(JSON.stringify(data.items.filter(r=>r.kind!=='settings'&&r.status!=='Archived').map(r=>({id:r.id,title:r.title,kind:r.kind,image:r.fields.imageUrl||r.fields.thumbnailUrl||r.fields.media?.thumbnailUrl||''}))))+'</textarea>';
 }
 export function editorFields(r){
-  return input('title','Title',r.title,'text','required maxlength="200"')+
+  return input('title',r.kind==='communication'?'Name':'Title',r.title,'text','required maxlength="200"')+
     '<textarea hidden id="studio-fields" name="fields">'+esc(JSON.stringify({...blankFields(r.kind),...r.fields}))+'</textarea><div id="studio-editor" data-kind="'+esc(r.kind)+'"></div><noscript><p>Enable JavaScript to edit this content.</p></noscript>';
 }
 export function editorForm(r,data,{create=false,project='',entry='',feedback='',unsaved=false}={}){
+  if(r.kind==='communication')return messageEditorForm(r,data,{create,project,entry,unsaved});
   return '<form method="post" action="'+url(create?'new':'item',create?{kind:r.kind}:{id:r.id,tab:'edit'})+'" class="studio-form content-editor" id="studio-editor-form">'+
     hidden('action',create?'content-create':'content-save')+hidden(create?'id':'revision',create?r.id:r.revision)+
     (create?hidden('kind',r.kind)+hidden('entry',entry):'')+editorFields(r)+
@@ -22,7 +23,22 @@ export function editorForm(r,data,{create=false,project='',entry='',feedback='',
       '<button type="submit" name="intent" value="draft">Save draft</button><button type="submit" name="intent" value="preview">Save &amp; preview</button>'+
       (!create?'<button class="primary" type="submit" name="intent" value="'+(data.actor.role==='admin'?'approve':'review')+'">'+(data.actor.role==='admin'?'Save &amp; mark checked':'Save &amp; send for checking')+'</button>':'')+'</div></div></form>';
 }
+function messageEditorForm(r,data,{create,project,entry,unsaved}){
+  return '<form method="post" action="'+url(create?'new':'item',create?{kind:r.kind}:{id:r.id,tab:'edit'})+'" class="studio-form content-editor message-editor" id="studio-editor-form">'+
+    hidden('action',create?'content-create':'content-save')+hidden(create?'id':'revision',create?r.id:r.revision)+
+    (create?hidden('kind',r.kind)+hidden('entry',entry):'')+editorFields(r)+
+    (r.source?.needsChecking?'<label class="check"><input type="checkbox" name="sourceChecked" value="yes"> Checked against the original</label>':'')+
+    '<div class="studio-save-bar"><span data-editor-status'+(unsaved?' data-unsaved="true"':'')+' role="status">'+(unsaved?'Unsaved changes':create?'New message':'Saved')+'</span><div class="studio-actions">'+
+      '<button type="submit" name="intent" value="preview">Preview</button><button class="primary" type="submit" name="intent" value="draft">Save</button></div></div>'+
+    '<details class="message-options"><summary>Options</summary><div id="studio-message-options"></div>'+
+    (create?'<label>Project<select name="project">'+(data.actor.role==='admin'?'<option value="">None</option>':'')+data.projects.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===project?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></label>':
+      '<div class="studio-actions"><button type="submit" name="intent" value="'+(data.actor.role==='admin'?'approve':'review')+'">'+(data.actor.role==='admin'?'Mark checked':'Send for checking')+'</button>'+button('History',url('history',{id:r.id}))+'</div>')+
+    '</details></form>';
+}
 export function contentPreview(r,data,readable){
+  if(r.kind==='communication')return '<article class="studio-content-preview message-preview">'+
+    (r.fields.subject?'<h2>'+esc(r.fields.subject)+'</h2>':'')+'<div class="prose">'+readable(r.fields.body,data)+'</div>'+
+    (r.fields.callToAction?'<p class="message-link-text">'+esc(r.fields.callToAction)+'</p>':'')+'</article>';
   const main=primaryFields[r.kind]||Object.keys(r.fields),has=v=>v!==null&&v!==undefined&&v!==''&&(!Array.isArray(v)||v.length);
   const draw=key=>has(r.fields[key])?'<section><h2>'+esc(fieldLabel(key))+'</h2><div class="prose">'+readable(r.fields[key],data)+'</div></section>':'';
   return '<article class="studio-content-preview">'+main.filter(k=>!['videoUrl','script','durationSeconds'].includes(k)&&!(r.kind==='course'&&k==='lessonIds')).map(draw).join('')+'</article>'+
