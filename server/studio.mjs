@@ -1,3 +1,5 @@
+import {publicationPanel,publishStudio} from './studio-publishing.mjs';
+import {sendWorkerImage} from './worker-images.mjs';
 import { saveInlineWorkout } from './studio-workout-inline.mjs';
 import { workoutSession } from './studio-workouts.mjs';
 import { workoutDaysEditor } from './studio-workout-days.mjs';
@@ -71,8 +73,9 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     [data,meta]=await Promise.all([studioData(api,actor,load),displayEntry(env,'shelves').catch(()=>({}))]);
     meta=meta||{};
     data.aiReady=Boolean(env.OPENAI_API_KEY);
+    data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';
     if(section==='book-file')return await sendBookFile(req,res,params,data);
-    if(section==='article-image')return await sendArticleImage(req,res,params,data);
+    if(section==='article-image'){const r=data.byId.get(params.get('id'));if(r?.workerImage&&!r.articleImage)return await sendWorkerImage(res,r,env,fetcher);return await sendArticleImage(req,res,params,data);}
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
       if(f.action==='workout-inline-save'){
@@ -147,7 +150,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         await saveRecord(api,actor,draft,r.revision);
         res.statusCode=303;res.setHeader('Location',url('item',{id:r.id}).replaceAll('&amp;','&'));return res.end();
       }
-      const next=await (f.action==='content-save'&&f.imageUpload?saveArticleImage(params,f,data,api,env):changeStudio(params,f,data,api));
+      const next=await (['publish-test','publish-live'].includes(f.action)?publishStudio(params,f,data,api):f.action==='content-save'&&f.imageUpload?saveArticleImage(params,f,data,api,env):changeStudio(params,f,data,api));
       res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();
     }
     let body;
@@ -159,7 +162,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       case 'worker-requests':body=workerRequestsPage(params,data);break;
       case 'projects':body=projectList(params,data);break;
       case 'project':body=projectPage(params,data);break;
-      case 'item':body=itemPage(params,data);break;
+      case 'item':body=itemPage(params,data);if(data.byId.has(params.get('id')))body+=publicationPanel(data.byId.get(params.get('id')),data);break;
       case 'new':body=newItem(params,data);break;
       case 'review':body=reviewPage(params,data);break;
       case 'calendar':body=calendar(data);break;

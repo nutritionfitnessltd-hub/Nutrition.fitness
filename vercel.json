@@ -5,10 +5,19 @@
   "outputDirectory": "dist",
   "trailingSlash": true,
   "functions": {
-    "api/content.js": { "includeFiles": "server/guest-catalogue.enc" }
+    "api/content.js": {
+      "includeFiles": "server/guest-catalogue.enc"
+    }
   },
   "rewrites": [
-    { "source": "/content-library/", "destination": "/api/content?view=library" }
+    {
+      "source": "/content-library/",
+      "destination": "/api/content?view=library"
+    },
+    {
+      "source": "/content/:id/",
+      "destination": "/api/content?view=studio-release&id=:id"
+    }
   ],
   "headers": [
     {

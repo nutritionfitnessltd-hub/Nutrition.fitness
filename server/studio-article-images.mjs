@@ -31,7 +31,7 @@ export async function saveArticleImage(params,f,data,api,env,{store=put,remove=d
  const pathname='nutrition-library/article-images/v1/'+randomUUID()+'.webp';
  const asset={pathname,type:'image/webp',bytes:bytes.length,width,height,sha256:createHash('sha256').update(bytes).digest('hex')};
  fields.imageAlt=cleanText(f.uploadAlt||f.title,500);fields.imageCredit=cleanText(f.uploadCredit||'',500);fields.imageCreditUrl='';
- const nextData={...data,byId:new Map(data.byId)};nextData.byId.set(r.id,{...r,articleImage:asset});
+ const nextData={...data,byId:new Map(data.byId)};nextData.byId.set(r.id,{...r,workerImage:null,articleImage:asset});
  await store(pathname,bytes,{access:'private',contentType:'image/webp',addRandomSuffix:false,token:env.BLOB_READ_WRITE_TOKEN});
  try{return await changeStudio(params,{...f,fields:JSON.stringify(fields)},nextData,api);}
  catch(error){try{await remove(pathname,{token:env.BLOB_READ_WRITE_TOKEN});}catch{}throw error;}

@@ -54,7 +54,7 @@ test('failed checking retains text and review note in the same editor',async()=>
 test('one editor has save actions together and no separate check form',()=>{
  const data=fixture(),html=itemPage(params,data);
  const editor=html.match(/<form[^>]*id="studio-editor-form"[\s\S]*?<\/form>/)[0];
- for(const value of ['draft','preview','approve'])assert.ok(editor.includes('value="'+value+'"'));
+ for(const value of ['draft','preview','review'])assert.ok(editor.includes('value="'+value+'"'));
  assert.doesNotMatch(html,/<h2>Review<\/h2>|name="status"[^]*value="Approved"/);
 });
 test('video controls copy only a real script and report unknown duration honestly',()=>{

@@ -20,11 +20,12 @@ export async function allRows(api,url){
   }
 }
 export async function studioData(api,actor,load){
-  const [index,overlays,projects,tasks,people]=await Promise.all([
+  const [index,overlays,projects,tasks,people,releases]=await Promise.all([
     load(),allRows(api,itemTable+'?select=id,payload,revision,updated_at&order=id'),
     allRows(api,projectTable+'?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&creator_id=eq.'+actor.id)),
     allRows(api,'/rest/v1/nufi_library_tasks?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&staff_id=eq.'+actor.id)),
-    actor.role==='admin'?api('/rest/v1/nufi_library_staff?select=id,name,email&order=name',service):Promise.resolve([{id:actor.id,name:actor.name}])
+    actor.role==='admin'?api('/rest/v1/nufi_library_staff?select=id,name,email&order=name',service):Promise.resolve([{id:actor.id,name:actor.name}]),
+    allRows(api,'/rest/v1/nufi_studio_releases?select=item_id,environment,source_revision,published_at&order=item_id')
   ]);
   const records=new Map(index.records.filter(r=>r.id.startsWith('training:')||r.fields?.recipeText).map(r=>[r.id,canonical(r)]));
   for(const row of overlays.filter(row=>actor.role==='admin'||row.payload.kind!=='worker-request'))records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
@@ -40,7 +41,7 @@ export async function studioData(api,actor,load){
       }
     }
   }
-  return {index,items,byId:records,projects,tasks,people,assigned,actor};
+  return {index,items,byId:records,projects,tasks,people,releases,assigned,actor};
 }
 export function editable(data,id){
   if(data.actor.role!=='admin'&&!data.assigned.has(id))throw new HttpError(403,'This item is outside your assigned work.');
