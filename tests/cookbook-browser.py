@@ -24,7 +24,7 @@ with sync_playwright() as p:
     def visit(path):
         resp=page.goto(BASE+path,wait_until='domcontentloaded')
         check('HTTP page '+path, resp is not None and resp.status==200)
-        check('One banner on '+path,page.locator('.launch-banner').count()==1)
+        check('No expired banner on '+path,page.locator('.launch-banner:visible').count()==0)
         page.wait_for_timeout(180)
     visit('/recipes/')
     page.wait_for_function("expected => document.querySelectorAll('[data-recipe-grid] .food-card').length===expected", arg=MANIFEST['recipes'])
@@ -147,7 +147,7 @@ with sync_playwright() as p:
     check('Price pending, not invented','Price to be announced' in page.locator('body').inner_text())
     check('Book cannot be added at an unapproved price',page.locator('[data-add-product],[data-add-to-cart]').count()==0)
     check('Paid PDF is not a public download',page.locator('a[href$=".pdf"]').count()==0)
-    check('Book retains launch date','1 November 2026' in page.locator('body').inner_text())
+    check('Book availability is honest','Coming soon' in page.locator('.cookbook-buybox').inner_text() and '1 November' not in page.locator('.cookbook-buybox').inner_text())
     for width in [390,760,1024,1440]:
         page.set_viewport_size({'width':width,'height':900})
         check('Book layout no overflow '+str(width),page.evaluate('document.documentElement.scrollWidth<=innerWidth'))

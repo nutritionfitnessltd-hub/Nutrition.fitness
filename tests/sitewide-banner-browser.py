@@ -19,17 +19,15 @@ with sync_playwright() as pw:
     browser=pw.chromium.launch(**options)
     page=browser.new_page()
     page.on('pageerror',lambda e:errors.append(str(e)))
-    page.clock.install(time=datetime(2026,9,16,9,0,tzinfo=timezone.utc))
+    page.clock.install(time=datetime(2026,11,18,9,0,tzinfo=timezone.utc))
     for route in ROUTES:
         for width in (390,1440):
             page.set_viewport_size({'width':width,'height':1100})
             page.goto(BASE+route,wait_until='load')
-            page.wait_for_function('document.querySelector("[data-days]").textContent !== "—"')
             name=f'{route} at {width}px'
-            check('One working banner: '+name,page.locator('.launch-banner').count()==1)
-            check('November launch date: '+name,page.locator('.launch-date time').get_attribute('datetime')=='2026-11-01T09:00:00.000Z')
-            check('Below navigation and above main content: '+name,page.evaluate("""(()=>{const b=document.querySelector('.launch-banner').getBoundingClientRect(),h=document.querySelector('.site-header').getBoundingClientRect(),m=document.querySelector('main').getBoundingClientRect();return b.top>=h.bottom-1&&b.bottom<=m.top+1})()"""))
-            check('Banner fits screen: '+name,page.locator('.launch-banner').evaluate('(e)=>{const b=e.getBoundingClientRect();return b.left>=-1&&b.right<=innerWidth+1&&e.scrollWidth<=e.clientWidth}'))
+            check('No expired banner: '+name,page.locator('.launch-banner:visible').count()==0)
+            check('Main content is available: '+name,page.locator('main').is_visible())
+            check('Page fits screen: '+name,page.evaluate('document.documentElement.scrollWidth<=innerWidth+1'))
             if route in ['/recipes/','/shop/','/knowledge-centre/']:
                 page.screenshot(path=str(OUT/(route.strip('/')+f'-banner-{width}.png')))
     check('No JavaScript runtime errors',not errors)

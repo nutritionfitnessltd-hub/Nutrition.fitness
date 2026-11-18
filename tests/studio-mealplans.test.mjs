@@ -111,6 +111,23 @@ test('a four-week shopping list over 500 entries remains editable and is recalcu
  await changeStudio(new URLSearchParams({id:r.id}),{action:'content-save',revision:1,title:r.title,fields:JSON.stringify(fields)},d,async(_,o)=>{saved=o.payload.document;return [1];});
  assert.ok(saved.fields.shoppingList.length);assert.ok(saved.fields.shoppingList.every(i=>i.name!=='Derived shopping row'));
 });
+
+test('save and mark checked recalculates the posted meal plan in the same revision',async()=>{
+ const d=data(),fields=buildMealPlan(proposal(),recipes,options({reuse:'off'}));
+ const r={id:'studio:checked-plan',kind:'mealplan',title:'Plan',revision:1,status:'Draft',fields};
+ d.byId.set(r.id,r);d.items.push(r);
+ const edited=structuredClone(fields);edited.servings=2;edited.shoppingList=[];
+ const writes=[];
+ await changeStudio(new URLSearchParams({id:r.id}),{action:'content-save',revision:1,title:'Checked menu',fields:JSON.stringify(edited),intent:'approve'},d,async(_,o)=>{writes.push(o.payload);return [{revision:2}];});
+ assert.equal(writes.length,1);
+ assert.equal(writes[0].document.status,'Approved');
+ assert.equal(writes[0].document.approval.revision,2);
+ assert.equal(writes[0].document.fields.servings,2);
+ assert.ok(writes[0].document.fields.shoppingList.length);
+ const html=itemPage(new URLSearchParams({id:r.id,tab:'edit'}),d);
+ assert.match(html,/value="approve"/);assert.match(html,/Change the plan settings/);
+ assert.doesNotMatch(html,/<h2>Review<\/h2>/);
+});
 test('photo generation uses a natural recipe-specific brief and private checked image bytes',async()=>{
   const r={title:newRecipe.title,fields:newRecipe};let payload,stored;
   assert.match(mealPhotoPrompt(r),/Soft window light/);assert.match(mealPhotoPrompt(r),/White beans/);

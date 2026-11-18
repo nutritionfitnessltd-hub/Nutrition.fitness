@@ -27,11 +27,14 @@ test('library retains separate content types while creation and programme naviga
   const frame=studioFrame(html,'library',admin);
   const nav=frame.match(/aria-label="Studio navigation">(.*?)<\/nav>/s)[1];
   assert.equal((nav.match(/class="studio-nav-section"/g)||[]).length,5);
-  assert.ok(nav.indexOf('Content Library')<nav.indexOf('Reference Library'));
-  for(const label of ['Published','Drafts','Knowledge Centre','Books','Lead magnets','Settings'])assert.ok(nav.includes(label));
-  assert.match(createPage(new URLSearchParams(),data),/Use something from the Reference Library/);
-  assert.match(projectList(new URLSearchParams(),data),/aria-label="Project content types"/);
-  assert.equal((createPage(new URLSearchParams(),data).match(/class="studio-card"/g)||[]).length,6);
+  assert.ok(nav.indexOf('Content library')<nav.indexOf('Originals'));
+  for(const label of ['Create','Work','Settings'])assert.ok(nav.includes(label));
+  assert.doesNotMatch(nav,/Published|Drafts/); // Status controls have one home, in the library.
+  assert.match(html,/<summary>More content types<\/summary>/);
+  const create=createPage(new URLSearchParams(),data);
+  assert.match(create,/Use an original/);
+  assert.match(create,/studio=new&amp;kind=campaign/);
+  assert.doesNotMatch(projectList(new URLSearchParams(),data),/aria-label="Project content types"/);
 });
 
 test('approved drafts remain separate from content explicitly recorded as published',()=>{
@@ -39,7 +42,9 @@ test('approved drafts remain separate from content explicitly recorded as publis
   data.items[0].status='Approved';data.items[1].publication={status:'published',destination:'app'};
   const drafts=library(new URLSearchParams({view:'all',bucket:'drafts'}),data);
   const published=library(new URLSearchParams({view:'all',bucket:'published'}),data);
-  assert.match(drafts,/Chair stand/);assert.doesNotMatch(drafts,/First workout/);
+  const checked=library(new URLSearchParams({view:'all',bucket:'checked'}),data);
+  assert.doesNotMatch(drafts,/Chair stand|First workout/);
+  assert.match(checked,/Chair stand/);assert.doesNotMatch(checked,/First workout/);
   assert.match(published,/First workout/);assert.doesNotMatch(published,/Chair stand/);
 });
 

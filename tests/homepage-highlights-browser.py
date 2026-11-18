@@ -29,7 +29,7 @@ with sync_playwright() as w:
    ok(f'Coach section replaced by exactly two rows at {width}px')
    expect(p.locator('#hero-heading')).to_contain_text('Getting fit is')
    expect(p.locator('.hero-phone')).to_have_attribute('src','/assets/phone-in-hand.webp')
-   expect(p.locator('.launch-banner')).to_have_count(1)
+   expect(p.locator('.launch-banner:visible')).to_have_count(0)
    expect(p.locator('#recipes,#shop,#about')).to_have_count(3)
    expect(p.locator('.feature-strip a')).to_have_count(5)
    expect(p.locator('.feature-strip a[href="/coaches/"]')).to_have_count(1)

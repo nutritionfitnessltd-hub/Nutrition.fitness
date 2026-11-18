@@ -39,6 +39,22 @@ export function projectDraft(f,data){
 function verifyRevision(current,expected){
   if(current.revision!==number(expected,0,1000000))throw new HttpError(409,'A newer version has been saved. Reopen this page before making changes.');
 }
+function readFields(raw,kind){
+  let fields;
+  try{fields=JSON.parse(raw);}catch{throw new HttpError(400,'The content fields could not be read.');}
+  if(!fields||Array.isArray(fields)||typeof fields!=='object'||JSON.stringify(fields).length>500000)throw new HttpError(400,'Check the content fields and size.');
+  validateFields(fields,0,kind==='mealplan'?2000:500);validateShape(kind,fields);return fields;
+}
+function reviewRecord(next,status,f,data,revision){
+  if(!['In review','Changes requested','Approved','Archived'].includes(status))throw new HttpError(400,'Choose a review status.');
+  if(status!=='In review')adminOnly(data);
+  const missing=issues(next,data.items.map(r=>r.id===next.id?next:r));
+  if(status==='Approved'&&missing.length)throw new HttpError(400,missing.join(' '));
+  next.status=status;delete next.approval;
+  if(status==='Approved')next.approval={by:data.actor.id,at:new Date().toISOString(),revision:revision+1};
+  const note=cleanText(f.feedback||'',4000);
+  if(note)next.comments=[...(next.comments||[]),{id:randomUUID(),body:note,author:data.actor.name||'Administrator',at:new Date().toISOString()}];
+}
 export async function createItem(record,projectId,entryId,data,api){
   if(!projectId){adminOnly(data);await saveRecord(api,data.actor,record,0);return;}
   const p=projectFor(data,projectId);
@@ -61,8 +77,9 @@ export async function changeStudio(params,f,data,api){
     const title=cleanText(f.title,200);if(!title)throw new HttpError(400,'Add a title.');
     const id='studio:'+uuid(String(f.id||'').replace(/^studio:/,''));
     if(data.byId.has(id))return {section:'item',id};
-    const record={id,title,kind:f.kind,status:'Draft',fields:blankFields(f.kind),parent:null,comments:[]};
-    await createItem(record,f.project,f.entry,data,api);return {section:'item',id};
+    if(f.intent&&!['draft','preview'].includes(f.intent))throw new HttpError(400,'Save this new draft before checking it.');
+    const record={id,title,kind:f.kind,status:'Draft',fields:f.fields?readFields(f.fields,f.kind):blankFields(f.kind),parent:null,comments:[]};
+    await createItem(record,f.project,f.entry,data,api);return {section:'item',id,tab:f.intent==='preview'?'preview':'edit'};
   }
   if(action==='import-save'){
     if(!['recipe','programme','exercise','lesson','article','communication'].includes(f.kind))throw new HttpError(400,'Choose an import type.');
@@ -80,30 +97,23 @@ export async function changeStudio(params,f,data,api){
     let next=structuredClone(r);delete next.revision;delete next.updatedAt;
     if(action==='content-save'){
       next.title=cleanText(f.title,200);if(!next.title)throw new HttpError(400,'Add a title.');
-      try{next.fields=JSON.parse(f.fields);}catch{throw new HttpError(400,'The content fields could not be read.');}
-      if(!next.fields||Array.isArray(next.fields)||typeof next.fields!=='object'||JSON.stringify(next.fields).length>500000)throw new HttpError(400,'Check the content fields and size.');
-      validateFields(next.fields,0,next.kind==='mealplan'?2000:500);
-      validateShape(next.kind,next.fields);
-      if(next.kind==='mealplan'&&r.fields.plannerVersion===1){
-        next.fields=refreshMealPlan(next.fields,data,r.fields);
-      }
+      if(f.intent&&!['draft','preview','approve','review'].includes(f.intent))throw new HttpError(400,'Choose a save action.');
+      next.fields=readFields(f.fields,next.kind);
+      if(next.kind==='mealplan'&&r.fields.plannerVersion===1)next.fields=refreshMealPlan(next.fields,data,r.fields);
       if(next.source&&f.sourceChecked==='yes')next.source.needsChecking=false;
       next.status='Draft';delete next.approval;
+      if(f.intent==='approve'||f.intent==='review')reviewRecord(next,f.intent==='approve'?'Approved':'In review',f,data,r.revision);
+      else if(f.feedback?.trim()){
+        next.comments=[...(next.comments||[]),{id:randomUUID(),body:cleanText(f.feedback,4000),author:data.actor.name||'Administrator',at:new Date().toISOString()}];
+      }
     }else if(action==='content-review'){
-      if(!['In review','Changes requested','Approved','Archived'].includes(f.status))throw new HttpError(400,'Choose a review status.');
-      if(f.status!=='In review')adminOnly(data);
-      const missing=issues(next,data.items);
       if(next.kind==='mealplan'&&next.fields.plannerVersion===1)next.fields=refreshMealPlan(next.fields,data,r.fields);
-      if(f.status==='Approved'&&missing.length)throw new HttpError(400,missing.join(' '));
-      next.status=f.status;
-      if(f.status==='Approved')next.approval={by:data.actor.id,at:new Date().toISOString(),revision:r.revision+1};
-      const note=cleanText(f.feedback||'',4000);
-      if(note)next.comments=[...(next.comments||[]),{id:randomUUID(),body:note,author:data.actor.name||'Administrator',at:new Date().toISOString()}];
+      reviewRecord(next,f.status,f,data,r.revision);
     }else if(action==='content-comment'){
       const body=cleanText(f.comment||'',4000);if(!body)throw new HttpError(400,'Write your feedback first.');
       next.comments=[...(next.comments||[]),{id:randomUUID(),body,author:data.actor.name||'Administrator',at:new Date().toISOString()}];
     }else throw new HttpError(400,'Choose a valid content action.');
-    await saveRecord(api,data.actor,next,r.revision);return {section:'item',id:r.id};
+    await saveRecord(api,data.actor,next,r.revision);return {section:'item',id:r.id,...(action==='content-save'?{tab:f.intent==='preview'||f.intent==='approve'?'preview':'edit'}:{})};
   }
   if(['task-save','task-add','task-attach','project-save'].includes(action)){
     const p=projectFor(data,params.get('project'));verifyRevision(p,f.projectRevision);

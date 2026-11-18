@@ -1,13 +1,7 @@
+import { primaryFields, fieldLabel } from './studio-fields.mjs';
 const fieldsInput = document.querySelector('#studio-fields');
 const editor = document.querySelector('#studio-editor');
-const fieldLabels = {
-  repMin:'Minimum reps',repMax:'Maximum reps',referenceId:'Exercise or activity',restSeconds:'Rest in seconds',
-  effortValue:'Effort target',effortType:'Effort scale',perSide:'Per side',sessionIds:'Workouts',stageIds:'Stages',
-  easierId:'Easier exercise',harderId:'Harder exercise',videoUrl:'Demonstration video URL',thumbnailUrl:'Image URL',
-  sourceText:'Original source text',busyWeek:'Busy week option',warmup:'Warm-up',cooldown:'Cool-down',
-  durationDays:'Plan length in days',cookServings:'Portions to cook',leftoverFromDay:'Leftovers from day',recipeId:'Recipe',imagePreference:'Recipe picture preference'
-};
-const labelFor = key => fieldLabels[key] || key.replace(/([A-Z])/g,' $1').replace(/^./,s=>s.toUpperCase());
+const labelFor = fieldLabel;
 const element = (tag, text, className) => {
   const el=document.createElement(tag);
   if(text!==undefined)el.textContent=text;
@@ -17,7 +11,12 @@ const element = (tag, text, className) => {
 if(fieldsInput&&editor){
   const values=JSON.parse(fieldsInput.value);
   const refs=JSON.parse(document.querySelector('#studio-reference-data')?.value||'[]');
-  const names=new Map(refs.map(r=>[r.id,r.title]));
+  const form=document.querySelector('#studio-editor-form');
+  let dirty=form.querySelector('[data-unsaved]')!==null,submitting=false;
+  const markChanged=()=>{dirty=true;form.querySelector('[data-editor-status]').textContent='Unsaved changes';};
+  form.addEventListener('input',markChanged);form.addEventListener('change',markChanged);
+  window.addEventListener('beforeunload',event=>{if(dirty&&!submitting){event.preventDefault();event.returnValue='';}});
+  document.addEventListener('submit',event=>{if(event.target!==form&&dirty&&!confirm('You have unsaved edits. Leave this draft without saving?')){event.preventDefault();event.stopImmediatePropagation();}},true);
   const templates={
     blocks:{type:'exercise',referenceId:'',sets:3,repMin:8,repMax:12,restSeconds:90,effortType:'RIR',effortValue:3,notes:''},
     weeks:{number:1,title:'',message:'',progression:'',sessionIds:[]},
@@ -25,15 +24,32 @@ if(fieldsInput&&editor){
     replyPaths:{reply:'',response:'',nextStep:''},chapters:{title:'',body:''}
   };
   function referenceControl(key,value,set){
-    const wrap=element('div'),list=document.createElement('datalist'),input=document.createElement('input');
-    list.id='refs-'+crypto.randomUUID();input.setAttribute('list',list.id);input.value=value;
-    const kind=key==='referenceId'?'exercise':key.includes('session')?'session':key.includes('recipe')?'recipe':key.includes('stage')?'stage':key.includes('rule')?'rule':key.includes('asset')?'asset':'';
-    for(const r of refs.filter(r=>!kind||r.kind===kind||(key==='referenceId'&&r.kind==='activity'))){
-      const option=element('option',r.title);option.value=r.id;list.append(option);
-    }
-    const selected=element('small',names.get(value)||names.get('training:'+value)||'Choose a library item.');
-    input.addEventListener('input',()=>{set(input.value);selected.textContent=names.get(input.value)||names.get('training:'+input.value)||'Choose a matching library item.';});
-    wrap.append(input,selected,list);return wrap;
+    const wrap=element('div',undefined,'reference-picker'),choose=element('button'),clear=element('button','Clear');
+    choose.type=clear.type='button';
+    const kind=key==='referenceId'?'exercise':({sessionId:'session',recipeId:'recipe',stageId:'stage',ruleId:'rule',assetId:'asset',lessonId:'lesson',scheduleId:'structure',programmeId:'programme',messageId:'communication',easierId:'exercise',harderId:'exercise'})[key]||'';
+    const selected=()=>refs.find(r=>r.id===value||r.id==='training:'+value);
+    const update=()=>{choose.textContent=selected()?.title||(value?'Linked item unavailable':'Choose '+labelFor(key).toLowerCase());clear.hidden=!value;};
+    const pick=id=>{value=id;set(id);markChanged();update();};
+    clear.addEventListener('click',()=>pick(''));
+    choose.addEventListener('click',()=>{
+      const dialog=element('dialog',undefined,'studio-picker'),head=element('div',undefined,'studio-heading'),title=element('h2','Choose '+labelFor(key).toLowerCase()),close=element('button','Close');
+      close.type='button';title.id='picker-title';dialog.setAttribute('aria-labelledby',title.id);head.append(title,close);
+      const searchLabel=element('label','Search by name'),search=element('input'),results=element('div',undefined,'studio-picker-results'),count=element('p',undefined,'meta');
+      search.type='search';searchLabel.append(search);count.setAttribute('role','status');dialog.append(head,searchLabel,count,results);document.body.append(dialog);
+      const available=refs.filter(r=>!kind||r.kind===kind||(key==='referenceId'&&r.kind==='activity'));
+      function render(){
+        results.replaceChildren();const matches=available.filter(r=>r.title.toLowerCase().includes(search.value.toLowerCase()));
+        count.textContent=matches.length?matches.length+' items'+(matches.length>60?' · Type a name to narrow the list':''):'No matching items.';
+        for(const r of matches.slice(0,60)){
+          const b=element('button',undefined,'studio-picker-card');b.type='button';
+          if(r.image&&/^(https?:\/\/|\/(?!\/))/.test(r.image)){const img=element('img');img.src=r.image;img.alt='';img.loading='lazy';b.append(img);}
+          b.append(element('strong',r.title));b.addEventListener('click',()=>{pick(r.id);dialog.close();});results.append(b);
+        }
+      }
+      search.addEventListener('input',render);close.addEventListener('click',()=>dialog.close());dialog.addEventListener('close',()=>{dialog.remove();choose.focus();});
+      dialog.showModal();render();search.focus();
+    });
+    update();wrap.append(choose,clear);return wrap;
   }
   function draw(key,value,set,depth=0){
     if(Array.isArray(value)){
@@ -46,15 +62,15 @@ if(fieldsInput&&editor){
           const controls=element('div',undefined,'array-controls');
           for(const [name,delta] of [['Move earlier',-1],['Move later',1]]){
             const b=element('button',delta<0?'↑':'↓');b.type='button';b.title=name;b.setAttribute('aria-label',name+' '+labelFor(key)+' '+(i+1));
-            b.disabled=i+delta<0||i+delta>=value.length;b.addEventListener('click',()=>{[value[i],value[i+delta]]=[value[i+delta],value[i]];redraw();});controls.append(b);
+            b.disabled=i+delta<0||i+delta>=value.length;b.addEventListener('click',()=>{[value[i],value[i+delta]]=[value[i+delta],value[i]];markChanged();redraw();});controls.append(b);
           }
-          const remove=element('button','Remove');remove.type='button';remove.addEventListener('click',()=>{value.splice(i,1);redraw();});controls.append(remove);row.append(controls);box.append(row);
+          const remove=element('button','Remove');remove.type='button';remove.addEventListener('click',()=>{value.splice(i,1);markChanged();redraw();});controls.append(remove);row.append(controls);box.append(row);
         });
         const add=element('button','Add '+labelFor(key).toLowerCase());add.type='button';
         add.addEventListener('click',()=>{
           const next=templates[key]?structuredClone(templates[key]):typeof value[0]==='number'?0:'';
           if(next&&typeof next==='object'&&'number' in next)next.number=value.length+1;
-          value.push(next);redraw();
+          value.push(next);markChanged();redraw();
         });box.append(add);
       }
       redraw();return box;
@@ -66,26 +82,40 @@ if(fieldsInput&&editor){
       for(const [child,v] of Object.entries(value))inner.append(draw(child,v,next=>value[child]=next,depth+1));
       details.append(inner);return details;
     }
+    if(/Id$/.test(key)&&key!=='sourceRecordId'){
+      const group=element('div',undefined,'reference-field');group.setAttribute('role','group');group.setAttribute('aria-label',labelFor(key));
+      group.append(element('span',labelFor(key)),referenceControl(key,value||'',set));return group;
+    }
     const label=element('label',labelFor(key));
-    if(/Id$/.test(key)&&!['programmeId','sourceRecordId'].includes(key)){label.append(referenceControl(key,value||'',set));return label;}
     const bool=typeof value==='boolean',number=typeof value==='number';
-    const control=document.createElement(bool||number?'input':/Url$|^type$|^channel$|^movement$|^unit$|^effortType$|^subject$/.test(key)?'input':'textarea');
+    const control=document.createElement(bool||number?'input':/Url$|^url$|^type$|^channel$|^audience$|^headline$|^callToAction$|^movement$|^unit$|^effortType$|^subject$/.test(key)?'input':'textarea');
     if(bool){control.type='checkbox';control.checked=value;label.className='check';}
     else if(number){control.type='number';control.step='any';control.value=value;}
-    else {control.value=value??'';if(control.tagName==='TEXTAREA')control.rows=value&&String(value).length>200?5:2;}
+    else {control.value=value??'';if(control.tagName==='TEXTAREA')control.rows=['body','script','voiceoverScript'].includes(key)?12:value&&String(value).length>200?5:3;}
     control.addEventListener('input',()=>set(bool?control.checked:number?(control.value===''?0:Number(control.value)):control.value));
     label.append(control);return label;
   }
-  for(const [key,value] of Object.entries(values)){
-    if(document.querySelector('[data-article-upload]')&&['imageUrl','imageAlt','imageCredit','imageCreditUrl'].includes(key))continue;
-    editor.append(draw(key,value,next=>values[key]=next));
-  }
-  if(document.querySelector('[data-article-upload]'))document.querySelector('#studio-editor-form').addEventListener('submit',()=>{
-    values.imageAlt=document.querySelector('[name=uploadAlt]').value;values.imageCredit=document.querySelector('[name=uploadCredit]').value;
-    if(values.imageCredit!==JSON.parse(fieldsInput.value).imageCredit)values.imageCreditUrl='';
+  const main=primaryFields[editor.dataset.kind]||Object.keys(values),details=element('details',undefined,'editor-details');
+  details.append(element('summary','More details'));
+  const upload=document.querySelector('[data-article-upload]'),imageFields=upload?['imageUrl','imageAlt','imageCredit','imageCreditUrl']:[];
+  for(const key of main)if(Object.hasOwn(values,key)&&!imageFields.includes(key))editor.append(draw(key,values[key],next=>values[key]=next));
+  for(const [key,value] of Object.entries(values))if(!main.includes(key)&&!imageFields.includes(key))details.append(draw(key,value,next=>values[key]=next));
+  if(details.children.length>1)editor.append(details);
+  form.addEventListener('submit',event=>{
+    if(event.defaultPrevented)return;
+    if(upload){
+      values.imageAlt=upload.querySelector('[name=uploadAlt]').value;values.imageCredit=upload.querySelector('[name=uploadCredit]').value;
+      if(values.imageCredit!==JSON.parse(fieldsInput.value).imageCredit)values.imageCreditUrl='';
+    }
+    fieldsInput.value=JSON.stringify(values);submitting=true;
   });
-  document.querySelector('#studio-editor-form').addEventListener('submit',()=>fieldsInput.value=JSON.stringify(values));
 }
+
+document.querySelectorAll('[data-copy-script]').forEach(button=>button.addEventListener('click',async()=>{
+  const area=button.closest('.studio-video-tools'),status=area.querySelector('[data-copy-status]');
+  try{await navigator.clipboard.writeText(area.querySelector('[data-script-text]').value);status.textContent='Script copied';}
+  catch{status.textContent='Copy is unavailable in this browser. Open Edit content to select the script.';}
+}));
 
 const fileInput=document.querySelector('#studio-file');
 if(fileInput){
@@ -133,8 +163,10 @@ if(fileInput){
 }
 
 document.querySelectorAll('form[method=post]').forEach(form=>{
-  form.addEventListener('submit',()=>{
-    const submit=form.querySelector('button.primary');
-    if(submit){submit.disabled=true;submit.textContent='Working…';}
+  form.addEventListener('submit',event=>{
+    if(event.defaultPrevented)return;
+    // Keep the clicked button's name/value in the request (disabled buttons are omitted).
+    const submit=event.submitter;
+    if(submit){submit.setAttribute('aria-disabled','true');submit.textContent='Saving…';}
   });
 });

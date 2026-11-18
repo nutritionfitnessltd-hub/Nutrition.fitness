@@ -12,7 +12,7 @@ test('only the two requested homepage feature panels change from production 20bb
 });
 test('panels retain one genuine action each and no hand-made pouch or text-image overlays',()=>{
  assert.equal((panels.match(/class="nf-home-feature__action"/g)||[]).length,2);
- assert.match(panels,/href="\/recipes\/"/);assert.match(panels,/href="\/shop\/"/);
+ assert.match(panels,/href="\/meal-planner\/"/);assert.match(panels,/href="\/shop\/"/);
  assert.doesNotMatch(panels,/home-powder-pack|class="product-copy"|<br|note-small-habits.webp|note-proper-food.webp/);
  assert.match(panels,/Packaging preview/);
  for(const [,src] of panels.matchAll(/<img[^>]+src="([^"]+)"/g))assert.ok(existsSync(new URL('../public'+src,import.meta.url)));

@@ -153,7 +153,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       case 'settings':
         if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
         body=heading('Settings','Manage your team, brand guidance and connections.')+'<div class="studio-cards">'+
-          button('Team & permissions',url('team'))+button('Brand & writing guidance',url('standards'))+button('Connections',url('standards'))+'</div>';break;
+          button('Team & permissions',url('team'))+button('Brand & connections',url('standards'))+'</div>';break;
       case 'standards':
         if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
         body=standardsPage(data,env);break;
@@ -175,10 +175,13 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(req.method==='POST'&&f.action==='content-save'&&data?.byId.has(params.get('id'))){
       try{
         const original=data.byId.get(params.get('id'));
-        data.byId.set(original.id,{...original,title:f.title,fields:JSON.parse(f.fields),revision:Number(f.revision)});
+        data.byId.set(original.id,{...original,title:f.title,fields:JSON.parse(f.fields),revision:Number(f.revision),...(original.source&&f.sourceChecked==='yes'?{source:{...original.source,needsChecking:false}}:{})});
+        data.unsaved=true;data.unsavedFeedback=f.feedback||'';
         const editParams=new URLSearchParams(params);editParams.set('tab','edit');
         body+='<p>Your unsaved edits are shown below. For a version conflict, open the latest saved copy in another tab before combining changes.</p>'+itemPage(editParams,data);
       }catch{body+='<details><summary>Unsaved content</summary><pre class="source-text">'+esc(f.fields||'')+'</pre></details>';}
+    }else if(req.method==='POST'&&f.action==='content-create'&&data){
+      data.unsaved=true;body+=newItem(params,data,f);
     }else if(req.method==='POST'&&f.action==='mealplan-generate'&&data){
       body+=mealPlanForm(data,f,params.get('id')?data.byId.get(params.get('id')):null);
     }else if(req.method==='POST'&&f.action==='mealplan-image-generate'&&data){

@@ -40,3 +40,10 @@ body[data-page=food-planner] .macro-hero{margin:0 0 27px}body[data-page=food-pla
 @media print{.recipe-access-notice[data-shopping-incomplete]{display:block!important;background:#fff;border:2px solid #000;break-inside:avoid}.food-access-badge{color:#000}}
 
 .food-access-nav{display:flex;flex-wrap:wrap;gap:.7rem;margin:1.5rem 0}.food-access-nav a[aria-current="page"]{background:var(--ink,#152e36);border-color:var(--ink,#152e36);color:#fff}
+
+/* Browsing begins with the search controls, close to the title. */
+.food-intro.food-intro-compact { margin:24px 0; padding:0; align-items:center; gap:24px; }
+.food-intro-compact h1 { font-size:clamp(28px,3vw,40px); line-height:1.2; margin:0 0 12px; }
+.food-intro-compact .lead { font-size:17px; max-width:680px; margin:0; }
+.food-intro-compact .food-note-card { padding:0; background:none; border:0; }
+@media(max-width:650px){.food-intro.food-intro-compact{display:block;}.food-intro-compact .food-note-card{margin-top:16px;}}
