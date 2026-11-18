@@ -187,7 +187,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
   const projects=params.get('projects')==='1';
   const asset=params.get('assets');
   const studio=params.get('studio');
-  const destination=params.get('reader')==='1'?Object.fromEntries([...params].filter(([k])=>['reader','file','image','preview'].includes(k))):studio?Object.fromEntries([...params].filter(([k])=>['studio','id','project','week','source','template','kind','tab','category','schedule','view','contentKind','shelf','folder','item','from','progress','q','page','reader','file','image','preview','collection','bucket','bookType'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
+  const destination=params.get('reader')==='1'?Object.fromEntries([...params].filter(([k])=>['reader','file','image','preview'].includes(k))):studio?Object.fromEntries([...params].filter(([k])=>['studio','id','project','week','source','template','kind','tab','category','schedule','view','contentKind','shelf','folder','item','from','progress','q','page','reader','file','image','preview','collection','bucket','bookType','build','worker'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
   let actor;
   try {
     if(!['GET','POST'].includes(req.method))throw new HttpError(405,'Use the work screen to continue.');
@@ -203,7 +203,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
         const next=Object.fromEntries([...params].filter(([k])=>['file','image','preview'].includes(k)));
         res.statusCode=303;res.setHeader('Location','/content-library/?'+new URLSearchParams(next));return res.end();
       }
-      if(f.action==='sign-in'&&!projects&&!asset&&!studio){res.statusCode=303;res.setHeader('Location',route+'&studio=library');return res.end();}
+      if(f.action==='sign-in'&&!projects&&!asset&&!studio){res.statusCode=303;res.setHeader('Location',route+'&studio=home');return res.end();}
       if(projects||asset||studio){res.statusCode=303;res.setHeader('Location',route+'&'+new URLSearchParams(destination));return res.end();}
       return redirect(res,item);
     }
@@ -239,6 +239,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
       const message=await change(actor,f,api,load);
       return message?writePage(res,200,message,actor):redirect(res);
     }
+    if(!params.has('assignments')&&!['item','find','staff','status','page'].some(k=>params.has(k)))return handleStudio(req,res,{params:new URLSearchParams({studio:'home'}),actor,api,load,env});
     return writePage(res,200,await dashboard(params,api,actor,load),actor);
   }catch(e){
     const status=e instanceof HttpError?e.status:503;

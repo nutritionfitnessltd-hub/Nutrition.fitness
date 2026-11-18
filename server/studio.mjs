@@ -73,6 +73,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='article-image')return await sendArticleImage(req,res,params,data);
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
+      if(f.action==='worker-step'||params.get('flowBack')==='1'&&['worker-preview','worker-save'].includes(f.action))return write(res,200,builderPage(params,data,meta,f),'builder',actor,meta);
       if(f.action==='worker-preview')return write(res,200,workerPreview(f,data,meta),'builder',actor,meta);
       if(f.action==='worker-save'){
         const id=await saveWorkerRequest(f,data,meta,api);
@@ -195,7 +196,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       if(schedule?.kind==='structure'&&week&&(data.actor.role==='admin'||data.assigned.has(schedule.id))){
         body+='<p>Your unsaved day changes are shown below. If the schedule changed, open the latest weekly plan before combining your changes.</p>'+button('Open latest weekly plan',url('item',{id:params.get('id'),tab:'plan',schedule:schedule.id,week:week.number}))+workoutDaysEditor(params,data,schedule,week,f);
       }
-    }else if(req.method==='POST'&&['worker-preview','worker-save'].includes(f.action)&&data?.actor.role==='admin'){
+    }else if(req.method==='POST'&&['worker-step','worker-preview','worker-save'].includes(f.action)&&data?.actor.role==='admin'){
       try{body+=f.action==='worker-save'?workerPreview(f,data,meta):builderPage(params,data,meta,f);}catch{body+=button('Choose original material',url('builder'));}
     }else if(req.method==='POST'&&f.action==='content-create'&&data){
       data.unsaved=true;body+=newItem(params,data,f);

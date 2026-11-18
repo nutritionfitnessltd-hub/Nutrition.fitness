@@ -1,6 +1,10 @@
 # Archive-to-worker requests
 
-Studio now prepares a request from an archive item or collection. It suggests outputs by source category, then workers by output type. Administrators can override each suggestion. Saved requests are separate from content drafts and retain source IDs, links, available text, extra supplied text, audience and brand guidance.
+The workspace opens on Dashboard, including after sign-in. My work contains open assignments and project tasks for the signed-in person; review work follows existing role permissions. Administrators also see Nina, Imogen and Rory with their actual saved output assignments. Counts and plans come from saved records, not example activity or inferred worker runs. Legacy assignments remain accessible explicitly with `assignments=1`.
+
+Studio starts with “What do you want to build today?” and guides administrators through four steps: output type, archive material, brief, then worker review. Links from Originals retain their selected source while offering the build choice first. Only the requested output is selected initially; supporting content is optional. Back controls and source search/pagination retain the brief, source text and worker overrides in POST bodies rather than URLs. Changing the primary build resets output choices while retaining the brief and original.
+
+Workers are suggested by output type and each suggestion can be changed. Saving a plan places its outputs under the assigned workers on Dashboard. Saved requests are separate from content drafts and retain source IDs, links, available text, extra supplied text, audience and brand guidance. Manual creation and existing project planning remain available below the Studio flow.
 
 Verified role mapping on 18 November 2026:
 - Nina: newsletters, emails, articles and landing copy. Confirmed Nutrition.Fitness Content & Marketing Specialist in James HQ.
