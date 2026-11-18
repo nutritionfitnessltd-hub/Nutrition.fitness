@@ -7,7 +7,9 @@ import { get } from '@vercel/blob';
 import { renderLibrary } from './library-view.mjs';
 import { unpackCatalogue, verifyReleaseProof } from './library-release.mjs';
 import { displayEntry } from './library-display.mjs';
-import { handleLibraryWork } from './library-work.mjs';
+import { handleLibraryWork, libraryActor, clearLibraryCookies } from './library-work.mjs';
+import { libraryLogin } from './library-login.mjs';
+import { platform } from './platform.mjs';
 
 const path = '/content-library/';
 const cookieName = '__Host-nufi-library';
@@ -15,6 +17,7 @@ const sessionSeconds = 8 * 60 * 60;
 const indexPath = 'nutrition-library/v1/index.json.gz';
 const digest = input => createHash('sha256').update(input).digest();
 const equal = (a, b) => a.length === b.length && timingSafeEqual(a, b);
+const escTarget=value=>('/content-library/'+new URL(value,'https://local.invalid').search).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
 let cached;
 
 async function bundledCatalogue() {
@@ -67,7 +70,7 @@ function html(res, status, page) {
 }
 
 export function createLibraryReader({ env = process.env, load = readIndex,
-  fetchFile = name => get(name, { access: 'private' }) } = {}) {
+  fetchFile = name => get(name, { access: 'private' }), apiFactory=platform } = {}) {
   return async (req, res) => {
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
@@ -78,16 +81,24 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; worker-src 'self' blob:; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' blob:; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
     const params = new URL(req.url, 'https://localhost').searchParams;
-    if (params.get('work')==='1') return handleLibraryWork(req,res,{env,load,params});
+    if (params.get('work')==='1') return handleLibraryWork(req,res,{env,load,params,apiFactory});
+    const fields=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
+    const loginScreen=error=>libraryLogin({target:escTarget(req.url),shared:true,error});
+    if(req.method==='POST'&&fields.email&&['sign-in','admin-login','staff-login'].includes(fields.action)){
+      const target=new URLSearchParams(params);
+      if(params.has('file')||params.has('preview'))target.set('reader','1');
+      else target.set('studio',[...params].length?'archive':'library');
+      return handleLibraryWork(req,res,{env,load,params:target,apiFactory});
+    }
     const config = env.NUFI_LIBRARY_PASSWORD_SHA256;
-    if (!/^[a-f0-9]{64}$/.test(config || '')) return html(res, 503, renderLibrary({ error: 'The shared library is being set up. Please try again later.' }));
+    if (!/^[a-f0-9]{64}$/.test(config || '')) return html(res, 503, loginScreen('The library is being connected. Please try again later.'));
     const catalogueKey = env.NUFI_LIBRARY_CATALOGUE_KEY;
-    if (!/^[a-f0-9]{64}$/.test(catalogueKey || '')) return html(res, 503, renderLibrary({ error: 'The shared library is being set up. Please try again later.' }));
+    if (!/^[a-f0-9]{64}$/.test(catalogueKey || '')) return html(res, 503, loginScreen('The library is being connected. Please try again later.'));
     const passwordHash = Buffer.from(config, 'hex');
     const key = createHmac('sha256', Buffer.from(catalogueKey, 'hex')).update('guest-session:v1:').update(passwordHash).digest();
     if (params.get('release') === 'snapshot') {
       if (req.method !== 'GET' || !verifyReleaseProof(catalogueKey,req.headers['x-nufi-release-proof'])) {
-        return html(res,401,renderLibrary({login:true}));
+        return html(res,401,loginScreen());
       }
       try {
         const bytes = await readFile(new URL('./guest-catalogue.enc', import.meta.url));
@@ -98,15 +109,14 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     }
     if (req.method === 'POST') {
       const origin = req.headers.origin;
-      if (!origin || origin !== 'https://' + req.headers.host) return html(res, 403, renderLibrary({ error: 'Open the library link and try again.' }));
-      const fields = typeof req.body === 'string' ? Object.fromEntries(new URLSearchParams(req.body)) : req.body;
+      if (!origin || origin !== 'https://' + req.headers.host) return html(res, 403, loginScreen('Open the library link and try again.'));
       if (fields?.action === 'logout') {
-        res.setHeader('Set-Cookie', cookie('', 0));
+        clearLibraryCookies(res);
         return redirect(res);
       }
       const password = fields?.password;
       if (typeof password !== 'string' || password.length > 256 || !equal(digest(password), passwordHash)) {
-        return html(res, 401, renderLibrary({ login: true, error: 'That password didn’t match. Please try again.' }));
+        return html(res, 401, loginScreen('That password didn’t match. Please try again.'));
       }
       const payload = (Math.floor(Date.now() / 1000) + sessionSeconds) + '.' + randomBytes(16).toString('base64url');
       res.setHeader('Set-Cookie', cookie(payload + '.' + signature(key, payload), sessionSeconds));
@@ -116,7 +126,13 @@ export function createLibraryReader({ env = process.env, load = readIndex,
       res.setHeader('Allow', 'GET, POST');
       return html(res, 405, renderLibrary({ error: 'This request is unavailable.' }));
     }
-    if (!validSession(req, key)) return html(res, 401, renderLibrary({ login: true }));
+    let actor;
+    try{actor=await libraryActor(req,res,env,apiFactory);}catch{return html(res,503,loginScreen('Sign-in could not be checked. Please try again.'));}
+    if (!actor&&!validSession(req, key)) return html(res, 401, loginScreen());
+    if(actor&&!params.has('file')&&!params.has('preview')){
+      const destination=new URLSearchParams(params);destination.set('work','1');destination.set('studio',[...params].length?'archive':'library');
+      res.statusCode=303;res.setHeader('Location',path+'?'+destination);return res.end();
+    }
     try {
       if (params.has('preview')) {
         const id=params.get('preview');
