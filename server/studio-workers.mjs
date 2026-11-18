@@ -10,9 +10,9 @@ import { esc, url, heading, button, hidden, input, textarea, select, form, list,
 // A named employee or scheduled chat is not a published API-triggerable Workspace Agent.
 export const workers={
   nina:{portrait:'/assets/studio-team/nina.jpg',defaultBuild:'newsletter',name:'Nina',role:'Content & marketing',employeeId:'employee:Nutrition.Fitness:content',reason:'Newsletters, articles, emails and campaign copy.'},
-  imogen:{portrait:'/assets/studio-team/imogen.jpg',defaultBuild:'course',name:'Imogen',role:'Courses & production',employeeId:'employee:Nutrition.Fitness:course-production',reason:'Course structure, lesson scripts and production preparation.'},
-  marcus:{portrait:'/assets/studio-team/marcus.jpg',defaultBuild:'programme',name:'Marcus',role:'Training & Programme Designer',employeeId:'11e08be4-caa8-45de-b972-b333bb4e274c',reason:'Workouts, exercise choices, weekly schedules and progression.'},
-  rory:{portrait:'/assets/studio-team/rory.jpg',defaultBuild:'socials',name:'Rory',role:'Social & video',employeeId:null,reason:'Social posts and short video scripts. HQ directory connection still needs confirming.'}
+  imogen:{portrait:'/assets/studio-team/imogen-animated.png',defaultBuild:'course',name:'Imogen',role:'Courses & production',employeeId:'employee:Nutrition.Fitness:course-production',reason:'Course structure, lesson scripts and production preparation.'},
+  marcus:{portrait:'/assets/studio-team/marcus-animated.png',defaultBuild:'programme',name:'Marcus',role:'Training & Programme Designer',employeeId:'11e08be4-caa8-45de-b972-b333bb4e274c',reason:'Workouts, exercise choices, weekly schedules and progression.'},
+  rory:{portrait:'/assets/studio-team/rory-animated.png',defaultBuild:'socials',name:'Rory',role:'Social & video',employeeId:null,reason:'Social posts and short video scripts. HQ directory connection still needs confirming.'}
 };
 export const outputs={
   programme:{label:'Training programme',worker:'marcus',brief:'Read the original programme and preserve its evidenced structure. Prepare the goal, audience, weekly schedule, workout sequence, exercise choices and progression. Specify sets, reps, rest, intensity, recovery and suitable alternatives where the sources support them. Identify missing goals, experience, equipment, training days, session length and limitations before prescribing details. Flag uncertain exercise or safety claims and keep the programme as a draft for James to review; never claim clinical suitability or professional approval.'},
