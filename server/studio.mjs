@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { sendBookFile } from './studio-books.mjs';
+import { saveArticleImage, sendArticleImage } from './studio-article-images.mjs';
 import { HttpError } from './platform.mjs';
 import { displayEntry } from './library-display.mjs';
 import { studioData, editable, projectFor, saveRecord, mergeStudioRecord } from './studio-store.mjs';
@@ -66,6 +67,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     [data,meta]=await Promise.all([studioData(api,actor,load),displayEntry(env,'shelves').catch(()=>({}))]);
     data.aiReady=Boolean(env.OPENAI_API_KEY);
     if(section==='book-file')return await sendBookFile(req,res,params,data);
+    if(section==='article-image')return await sendArticleImage(req,res,params,data);
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
       if(f.action==='mealplan-generate'){
@@ -128,7 +130,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         await saveRecord(api,actor,draft,r.revision);
         res.statusCode=303;res.setHeader('Location',url('item',{id:r.id}).replaceAll('&amp;','&'));return res.end();
       }
-      const next=await changeStudio(params,f,data,api);
+      const next=await (f.action==='content-save'&&f.imageUpload?saveArticleImage(params,f,data,api,env):changeStudio(params,f,data,api));
       res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();
     }
     let body;

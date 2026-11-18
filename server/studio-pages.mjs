@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { recipeImage, recipePreview } from './studio-recipes.mjs';
 import { mealPlanForm, mealPlanPage } from './studio-mealplan-ui.mjs';
 import { bookAssetUrl, bookPage } from './studio-books.mjs';
-import { articleImage, articlePage } from './studio-articles.mjs';
+import { articleImage, articlePage, articleImageEditor } from './studio-articles.mjs';
 import { kinds, templates, blankFields, references, descendants, issues } from './studio-model.mjs';
 import { projectFor } from './studio-store.mjs';
 import { icons } from './library-icons.mjs';
@@ -202,8 +202,8 @@ function programmePage(params,data,r){
 }
 export function itemPage(params,data){
   const r=data.byId.get(params.get('id'));if(!r)return heading('Content unavailable');
-  if(r.kind==='mealplan'&&r.fields.plannerVersion===1&&params.get('tab')!=='edit')return mealPlanPage(params,data,r);
   if(r.kind==='article'&&r.fields.bodyFormat==='html'&&params.get('tab')!=='edit')return articlePage(r,data);
+  if(r.kind==='mealplan'&&r.fields.plannerVersion===1&&params.get('tab')!=='edit')return mealPlanPage(params,data,r);
   if(r.kind==='ebook'&&r.bookAssets&&params.get('tab')!=='edit')return bookPage(r,data);
   if(r.kind==='programme'&&!['edit','preview'].includes(params.get('tab')))return programmePage(params,data,r);
   if(r.kind==='programme-family'){
@@ -230,7 +230,7 @@ export function itemPage(params,data){
   }
   if(preview)return out+(r.kind==='recipe'?recipePreview(r):'<article class="studio-preview"><h2>'+esc(r.title)+'</h2>'+readable(r.fields,data)+'</article>');
   if(canEdit){
-    out+='<div class="studio-columns editor-columns"><section>'+form('content-save',hidden('revision',r.revision)+input('title','Title',r.title,'text','required maxlength="200"')+
+    out+='<div class="studio-columns editor-columns"><section>'+form('content-save',hidden('revision',r.revision)+input('title','Title',r.title,'text','required maxlength="200"')+(r.kind==='article'?articleImageEditor(r):'')+
       '<textarea hidden id="studio-fields" name="fields">'+esc(JSON.stringify({...blankFields(r.kind),...r.fields}))+'</textarea><div id="studio-editor"></div><noscript><p>Enable JavaScript to edit structured content.</p></noscript>'+
       (r.source?.needsChecking?'<label class="check"><input type="checkbox" name="sourceChecked" value="yes"> I compared the extracted content with the original source</label>':''),
       state,'Save draft','id="studio-editor-form"')+'</section><aside class="panel"><h2>Review</h2>'+

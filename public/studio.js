@@ -76,7 +76,14 @@ if(fieldsInput&&editor){
     control.addEventListener('input',()=>set(bool?control.checked:number?(control.value===''?0:Number(control.value)):control.value));
     label.append(control);return label;
   }
-  for(const [key,value] of Object.entries(values))editor.append(draw(key,value,next=>values[key]=next));
+  for(const [key,value] of Object.entries(values)){
+    if(document.querySelector('[data-article-upload]')&&['imageUrl','imageAlt','imageCredit','imageCreditUrl'].includes(key))continue;
+    editor.append(draw(key,value,next=>values[key]=next));
+  }
+  if(document.querySelector('[data-article-upload]'))document.querySelector('#studio-editor-form').addEventListener('submit',()=>{
+    values.imageAlt=document.querySelector('[name=uploadAlt]').value;values.imageCredit=document.querySelector('[name=uploadCredit]').value;
+    if(values.imageCredit!==JSON.parse(fieldsInput.value).imageCredit)values.imageCreditUrl='';
+  });
   document.querySelector('#studio-editor-form').addEventListener('submit',()=>fieldsInput.value=JSON.stringify(values));
 }
 
