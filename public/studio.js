@@ -1,4 +1,5 @@
 import {startWorkerUpdates} from './studio-worker-updates.mjs';
+import './studio-review.js';
 startWorkerUpdates();
 import { primaryFields, fieldLabel } from './studio-fields.mjs';
 const fieldsInput = document.querySelector('#studio-fields');

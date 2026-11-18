@@ -29,6 +29,15 @@ test('worker cards derive plans from saved assignments and never invent activity
  const nina=workerRequestsPage(new URLSearchParams({worker:'nina'}),d);assert.doesNotMatch(nina,/Source &lt;script&gt;/);
  d.actor.role='staff';assert.doesNotMatch(workspaceDashboard(d),/AI workers|Source &lt;script&gt;|Member newsletter/);
 });
+test('dashboard reviews and worker approvals open the reading window, with draft editing kept separate',()=>{
+ const d=fixture(),review={id:'worker:review',title:'Review this article',kind:'article',status:'In review',workerId:'nina',fields:{}},draft={...review,id:'worker:draft',title:'Edit this draft',status:'Draft'};
+ d.items=[review,draft];d.byId=new Map(d.items.map(r=>[r.id,r]));
+ const html=workspaceDashboard(d),work=dashboardWork(d);
+ assert.match(work.reviews[0].href,/studio=review-preview/);
+ assert.equal((html.match(/data-review-preview target="_blank" rel="noopener"/g)||[]).length,2);
+ assert.match(html,/studio=item&amp;id=worker%3Adraft&amp;tab=edit/);
+ assert.doesNotMatch(html,/studio=item&amp;id=worker%3Areview/);
+});
 
 test('flow starts with the build choice even when entered from an original and selects only the requested output',()=>{
  const d=fixture();let html=builderPage(new URLSearchParams({source:'source:challenge'}),d);
