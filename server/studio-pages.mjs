@@ -51,30 +51,32 @@ export function home(data,meta={}){
   return library(new URLSearchParams({studio:'library'}),data,meta);
 }
 export function library(params,data,meta={}){
-  const exercise=params.get('studio')==='exercises',kind=params.get('kind')||'',q=(params.get('q')||'').toLowerCase(),state=params.get('state')||'';
-  const category=exercise?'exercises':params.get('category')||'',shelf=shelves[category];
-  const all=data.items.filter(r=>r.kind!=='settings'&&(!state?r.status!=='Archived':r.status===state));
-  if(!exercise&&!shelf&&!kind&&!q&&!state&&params.get('view')!=='all'){
-    return heading('Our content','Everything you and Joyce are creating, in one place.',button('Create',url('create'),true))+workSummary(data)+
-      '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','library')+hidden('view','all')+input('q','Find content','','search','placeholder="Search by name"')+'<button>Search</button></form>'+
-      '<nav class="studio-cards studio-simple-grid" aria-label="Content types">'+Object.entries(shelves).map(([id,c])=>{
-        const count=all.filter(r=>(id==='programmes'?['programme','challenge']:c.types).includes(r.kind)).length;
-        return '<a class="studio-card studio-type-card" href="'+url('library',{category:id})+'"><div class="studio-type-icon" aria-hidden="true">'+icons[c.icon]+'</div><h2>'+c.title+'</h2><p>'+c.description+'</p><div class="studio-type-count">'+count.toLocaleString('en-GB')+' items</div><span aria-hidden="true">→</span></a>';
+  const exercise=params.get('studio')==='exercises',kind=params.get('kind')||shelves[params.get('category')]?.create||'',q=(params.get('q')||'').toLowerCase(),state=params.get('state')||'';
+  if(!exercise&&!kind&&!q&&!state&&params.get('view')!=='all'){
+    const counts=new Map();
+    for(const r of data.items)if(r.status!=='Archived')counts.set(r.kind,(counts.get(r.kind)||0)+1);
+    return heading('Our content','Choose a content type to browse, create or continue your work.',button('Create',url('create'),true))+workSummary(data)+
+      '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','library')+hidden('view','all')+input('q','Search all content','','search')+'<button>Search</button>'+button('Browse all content',url('library',{view:'all'}))+'</form>'+
+      '<nav class="studio-cards studio-type-grid" aria-label="Content types">'+Object.entries(collections).map(([id,[title,description,icon]])=>{
+        const count=counts.get(id)||0;
+        return '<a class="studio-card studio-type-card" href="'+url('library',{kind:id})+'"><div class="studio-type-icon" aria-hidden="true">'+icons[icon]+'</div><h2>'+title+'</h2><p>'+description+'</p><div class="studio-type-count">'+count.toLocaleString('en-GB')+' '+(count===1?'item':'items')+'</div><span aria-hidden="true">→</span></a>';
       }).join('')+'</nav>';
   }
-  let rows=all.filter(r=>(!shelf||shelf.types.includes(r.kind))&&(!kind||r.kind===kind));
-  if(category==='programmes'&&!kind&&!q&&!state){
-    rows=rows.filter(r=>r.kind==='programme-family'||(['programme','challenge'].includes(r.kind)&&data.byId.get(r.parent)?.kind!=='programme-family'));
-  }else rows=rows.filter(r=>r.kind!=='programme-family');
+  let rows=data.items.filter(r=>!['settings','programme-family'].includes(r.kind)&&(exercise?['exercise','activity'].includes(r.kind)&&(!kind||r.kind===kind):!kind||r.kind===kind)&&(!state?r.status!=='Archived':r.status===state));
+  if(kind==='programme'){
+    if(!q&&!state)rows=data.items.filter(r=>r.status!=='Archived'&&(r.kind==='programme-family'||r.kind==='programme'&&data.byId.get(r.parent)?.kind!=='programme-family'));
+    const families=['stronger','build','fitter','run','swim','ride','back-to-it','nufi365'];
+    const rank=r=>{const id=(r.parent||r.id).replace(/^training:/,'');const n=families.indexOf(id);return n<0?99:n;};
+    rows.sort((a,b)=>rank(a)-rank(b)||['start','progress','develop','own-it'].indexOf(a.fields.level)-['start','progress','develop','own-it'].indexOf(b.fields.level));
+  }
   const words=value=>Array.isArray(value)?value.join(' '):String(value||'');
   rows=rows.filter(r=>(r.title+' '+words(r.fields.aliases)+' '+words(r.fields.equipment)+' '+words(r.fields.muscles)).toLowerCase().includes(q));
-  const choices=Object.fromEntries(Object.entries(kinds).filter(([k])=>!shelf||shelf.types.includes(k)));
-  const filter='<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','library')+hidden('view','all')+hidden('category',category)+input('q','Search',params.get('q')||'','search')+select('kind','Show',{'':'All',...choices},kind)+select('state','Progress',{'':'Active content',Draft:'Draft','In review':'In review','Changes requested':'Changes requested',Approved:'Approved',Archived:'Archived'},state)+'<button>Search</button></form>';
-  return '<a class="back" href="'+url('library')+'">← Our content</a>'+heading(shelf?.title||collections[kind]?.[0]||'Search content',shelf?.description||'',button('Create',createLink(kind||shelf?.create||'article',data.actor.role==='admin'),true))+filter+
-    (!rows.length?'<p class="studio-empty">'+(q||state?'No content matches these filters.':'Nothing here yet. Create something or use a starting point from the archive.')+'</p>':'')+
+  const filter='<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio',exercise?'exercises':'library')+hidden('view','all')+input('q','Search',params.get('q')||'','search')+select('kind','Content type',{'':'All types',...Object.fromEntries(Object.entries(kinds).filter(([k])=>!exercise||['exercise','activity'].includes(k)))},kind)+select('state','Progress',{'':'Active content',Draft:'Draft','In review':'In review','Changes requested':'Changes requested',Approved:'Approved',Archived:'Archived'},state)+'<button>Search</button></form>';
+  return (!exercise?'<a class="back" href="'+url('library')+'">← Content types</a>':'')+heading(exercise?'Exercises & drills':collections[kind]?.[0]||'All content',exercise?'Find instructions, coaching cues and demonstrations.':collections[kind]?.[1]||'Your working Nutrition.fitness content.',button(kind?'Create '+(kinds[kind]||'content').toLowerCase():'Create content',url('new',{kind:kind||(exercise?'exercise':'article')}),true))+filter+
+    (!rows.length?'<p class="studio-empty">'+(q||state?'No content matches these filters.':'Nothing here yet. Create the first item or import a starting point from the archive.')+'</p>':'')+
     pages(params,rows,rs=>'<div class="studio-content-grid">'+rs.map(r=>{
       const preview=meta.training?.[r.id]||meta.assets?.[r.id]?.preview||meta.training?.[r.parent];
-      return '<a class="studio-content-card" href="'+url('item',{id:r.id})+'">'+(preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(r.kind==='programme-family'?'Training programmes':kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks</p>':r.kind==='programme-family'?'<p>Start · Progress · Develop · Own It</p>':'')+badge(r.status)+'</div></a>';
+      return '<a class="studio-content-card" href="'+url('item',{id:r.id})+'">'+(preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(r.kind==='programme-family'?'Training programmes':kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks · '+(r.id==='training:nufi365'?'Year-round programme':'Standalone programme')+'</p>':r.kind==='programme-family'?'<p>Start · Progress · Develop · Own It</p>':'')+badge(r.status)+'</div></a>';
     }).join('')+'</div>');
 }
 export function createPage(params,data,values={}){
@@ -94,11 +96,16 @@ export function createPage(params,data,values={}){
       {section:'create',template:choice},'Show the plan');
 }
 export function projectList(params,data){
-  const category=params.get('category')||'',shelf=shelves[category];
-  const selected=data.projects.filter(p=>!shelf||shelf.types.includes(data.byId.get(p.studio?.rootId)?.kind||templates[p.studio?.type]?.kind));
-  return '<a class="back" href="'+url('library')+'">← Our content</a>'+heading('Work in progress','Open a piece of work to see the content, creator and next steps.',button('Create',url('create'),true))+
-    '<nav class="tabs" aria-label="Work types">'+[['','All work'],...Object.entries(shelves).map(([id,c])=>[id,c.title])].map(([id,title])=>'<a href="'+url('projects',{category:id})+'"'+(id===category?' aria-current="page"':'')+'>'+title+'</a>').join('')+'</nav>'+
-    pages(params,selected,rows=>list(rows,p=>'<div><a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a><small>'+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+' · '+p.weeks+' weeks</small></div>'+badge(p.status),'No work here yet. Choose Create to start.'));
+  const kind=params.get('kind')||'',categories={...collections,other:['Other projects','Projects without a content type.','Briefcase']};
+  const projectKind=p=>data.byId.get(p.studio?.rootId)?.kind||templates[p.studio?.type]?.kind||'other';
+  if(!kind&&params.get('view')!=='all')return heading(data.actor.role==='admin'?'Projects':'My projects','Choose the type of content you want to work on.',data.actor.role==='admin'?button('Create a project',url('create'),true):'')+
+    button('Browse all projects',url('projects',{view:'all'}))+'<nav class="studio-cards studio-type-grid" aria-label="Project content types">'+Object.entries(categories).filter(([id])=>id!=='other'||data.projects.some(p=>projectKind(p)==='other')).map(([id,[title,description,icon]])=>{
+      const count=data.projects.filter(p=>projectKind(p)===id).length;
+      return '<a class="studio-card studio-type-card" href="'+url('projects',{kind:id})+'"><div class="studio-type-icon" aria-hidden="true">'+icons[icon]+'</div><h2>'+title+'</h2><p>'+description+'</p><div class="studio-type-count">'+count+' '+(count===1?'project':'projects')+'</div><span aria-hidden="true">→</span></a>';
+    }).join('')+'</nav>';
+  const selected=data.projects.filter(p=>!kind||projectKind(p)===kind);
+  return '<a class="back" href="'+url('projects')+'">← Project types</a>'+heading((categories[kind]?.[0]||'All')+' projects','Bring the content, people and customer journey together.',data.actor.role==='admin'?button('Create a project',url('create'),true):'')+
+    pages(params,selected,rows=>list(rows,p=>'<div><a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a><small>'+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+' · '+p.weeks+' weeks'+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</small></div>'+badge(p.status),'No projects of this type yet.'));
 }
 export function projectPage(params,data){
   const p=projectFor(data,params.get('project')),week=Math.max(0,Math.min(p.weeks,Number(params.get('week'))||0)),admin=data.actor.role==='admin';
