@@ -40,7 +40,7 @@ function field(value, byId) {
   }
   return escape(typeof value === 'boolean' ? (value ? 'Yes' : 'No') : value);
 }
-function contents(index, params, meta) {
+export function contents(index, params, meta) {
   const byId = new Map(index.records.map(r => [r.id, r]));
   const current = byId.get(params.get('item')) || (activeShelf(params,index)==='Courses' && byId.get('course:'+params.get('folder')));
   if (current) {

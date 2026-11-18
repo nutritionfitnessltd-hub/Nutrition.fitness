@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { canonical, descendants, issues } from '../server/studio-model.mjs';
 import { studioData, mergeStudioRecord } from '../server/studio-store.mjs';
 import { projectDraft, changeStudio } from '../server/studio-actions.mjs';
-import { extractDrafts } from '../server/studio-import.mjs';
+import { extractDrafts, archivePage } from '../server/studio-import.mjs';
 import { handleStudio } from '../server/studio.mjs';
 import { generateDraft } from '../server/studio-ai.mjs';
 import { library, itemPage, createPage, projectList } from '../server/studio-pages.mjs';
@@ -20,18 +20,33 @@ function fixture(actor=admin){
   return {actor,items,byId:new Map(items.map(r=>[r.id,r])),people:[{id:staff.id,name:'Creator'}],projects:[],tasks:[],assigned:new Set([session.id,exercise.id]),index:{records:items,files:{}}};
 }
 
-test('simple studio keeps six shelves and three main choices with tools still accessible',()=>{
+test('library retains separate content types while creation and programme navigation stay simple',()=>{
   const data=fixture(),html=library(new URLSearchParams(),data);
-  assert.equal((html.match(/class="studio-card studio-type-card"/g)||[]).length,6);
-  assert.match(html,/category=programmes/);
-  assert.doesNotMatch(html,/>Training stages</);
+  assert.equal((html.match(/class="studio-card studio-type-card"/g)||[]).length,20);
+  for(const type of ['recipe','mealplan','course','article','ebook','communication','workflow','asset'])assert.ok(html.includes('kind='+type));
   const frame=studioFrame(html,'library',admin);
   const nav=frame.match(/aria-label="Studio navigation">(.*?)<\/nav>/s)[1];
   assert.equal((nav.match(/<a /g)||[]).length,3);
   assert.match(frame,/<summary>Team & tools<\/summary>/);
   assert.match(frame,/studio=review/);
   assert.match(createPage(new URLSearchParams(),data),/Use something from the archive/);
-  assert.match(projectList(new URLSearchParams(),data),/aria-label="Work types"/);
+  assert.match(projectList(new URLSearchParams(),data),/aria-label="Project content types"/);
+  assert.equal((createPage(new URLSearchParams(),data).match(/class="studio-card"/g)||[]).length,6);
+});
+
+test('archive preserves original collection folders, recipe tabs and course lessons in the studio',()=>{
+  const data=fixture();
+  data.index.records=[{id:'catalogue:book',group:'Recipes',kind:'Recipe book',title:'Example book',fields:{},files:[]},{id:'course:Example course',group:'Courses',kind:'Course outline',title:'Example course',fields:{},files:[]},{id:'catalogue:lesson',group:'Courses',kind:'Lesson',title:'First lesson',fields:{body:'Lesson text'},files:[]}];
+  const meta={assets:{'catalogue:book':{shelf:'Recipe collection'}},courses:{'Example course':{order:'confirmed',members:['catalogue:lesson'],sections:[{title:'Basics',entries:[{id:'catalogue:lesson'}]}],support:[]}}};
+  const recipes=archivePage(new URLSearchParams({shelf:'Recipes'}),data,meta);
+  for(const label of ['Recipe books &amp; meal plans','Individual recipes','Supporting files','Source collections'])assert.ok(recipes.includes(label)||recipes.includes(label.replace('&amp;','&')));
+  assert.match(recipes,/studio=archive&amp;shelf=Recipes.*folder=Recipe\+collection/);
+  assert.match(recipes,/name="studio" value="archive"/);
+  const course=archivePage(new URLSearchParams({item:'course:Example course'}),data,meta);
+  assert.match(course,/Basics/);assert.match(course,/First lesson/);
+  assert.match(course,/studio=archive&amp;item=catalogue%3Alesson/);
+  assert.match(course,/work=1&amp;assets=course%3AExample\+course/);
+  assert.match(course,/studio=import&amp;source=course%3AExample\+course/);
 });
 
 test('programme dashboard switches week and frequency without losing workout sections',()=>{
