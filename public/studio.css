@@ -231,3 +231,19 @@
 
 /* Archive-led worker requests */
 .studio-worker-intro{border-left:4px solid var(--accent,#074b60);max-width:950px}.studio-worker-intro h2{margin-top:.5rem}.studio-worker-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}.studio-worker-choices .check{align-items:flex-start}.studio-worker-choices small{display:block;color:#566d7b;margin-top:5px}.studio-notice{padding:22px;background:#edf4f5;border-left:3px solid #074b60;margin:22px 0;max-width:1000px}.studio-notice h2{font-size:1.1rem;margin-top:0}
+
+.workout-day-tools { display:flex; align-items:center; justify-content:space-between; gap:16px; margin-top:24px; }
+.workout-day-tools h3 { margin:0; font-size:18px; }
+.workout-day-tools+.workout-days { margin-top:12px; }
+.workout-days-editor { scroll-margin-top:16px; }
+.workout-days-editor h3 { margin-top:0; }
+.workout-days-editor>p { max-width:800px; }
+.workout-day-edit { min-width:0; border:1px solid var(--line); border-radius:10px; margin:22px 0; padding:16px; }
+.workout-day-edit legend { font-weight:600; padding:0 6px; }
+.workout-day-fields { display:grid; grid-template-columns:minmax(150px,1fr) minmax(0,2fr); gap:16px; margin-bottom:14px; }
+.workout-day-fields select,.workout-day-fields input { width:100%; max-width:100%; }
+.workout-day-edit .studio-actions { align-items:center; }
+.workout-day-edit .studio-actions a { margin-left:auto; }
+.workout-day-edit button:disabled { opacity:.45; cursor:default; }
+.workout-save-notice { background:#eaf1ef; padding:12px 16px; border-radius:8px; }
+@media(max-width:760px){.workout-day-fields { grid-template-columns:1fr; }.workout-day-edit .studio-actions a { margin-left:0; }.workout-day-edit { padding:12px; }}

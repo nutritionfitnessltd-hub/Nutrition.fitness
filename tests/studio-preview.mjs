@@ -8,6 +8,11 @@ const root=path.resolve(import.meta.dirname,'../dist');
 const actor={role:'admin',id:'00000000-0000-4000-8000-000000000001'};
 const make=(id,kind,title,fields)=>({id,kind,title,status:'Draft',fields:{...blankFields(kind),...fields},files:[]});
 const records=[
+ make('training:workout-plan','programme','Workout day editing',{weeks:2}),
+ {...make('training:workout-days','structure','3 days',{frequency:3,weeks:[1,2].map(number=>({number,sessionIds:['workout-a','workout-b','workout-c']}))}),parent:'training:workout-plan'},
+ ...['a','b','c'].map(id=>make('training:workout-'+id,'session','Workout '+id,{warmup:['Walk'],blocks:[{referenceId:'squat',sets:2,repMin:8}],cooldown:['Walk'],adjustmentRuleIds:['rule-adjust']})),
+ make('training:squat','exercise','Squat',{instructions:['Controlled movement']}),
+ make('training:rule-adjust','rule','Adjustment rule',{instructions:'Resume the schedule.'}),
  make('training:message','communication','Stronger — your first step',{subject:'Ready to get started?',body:'Choose one small step for this week. What would make the biggest difference for you?',channel:'WhatsApp',trigger:'Programme begins',timing:'Day 1',callToAction:'Reply with your first step',replyPaths:[{reply:'Ready',response:'Let’s get started.',nextStep:'First session'}],editorialNote:'Keep this saved detail'}),
  make('training:copy','campaign','Stronger — programme landing copy',{headline:'Strength you can put to use.',body:'A clear whole-body training plan, with useful coaching and room for real life.',channel:'website',audience:'prospective',assetIds:['training:cover']}),
  make('training:cover','asset','Stronger programme cover',{url:'/assets/cookbook/recipe-061.webp',thumbnailUrl:'/assets/cookbook/recipe-061.webp'}),

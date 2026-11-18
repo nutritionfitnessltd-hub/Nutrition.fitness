@@ -1,3 +1,4 @@
+import { workoutDaysEditor } from './studio-workout-days.mjs';
 import { builderPage, workerPreview, saveWorkerRequest, workerRequestsPage } from './studio-workers.mjs';
 import { randomUUID } from 'node:crypto';
 import { sendBookFile } from './studio-books.mjs';
@@ -189,6 +190,11 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         const editParams=new URLSearchParams(params);editParams.set('tab','edit');
         body+='<p>Your unsaved edits are shown below. For a version conflict, open the latest saved copy in another tab before combining changes.</p>'+itemPage(editParams,data);
       }catch{body+='<details><summary>Unsaved content</summary><pre class="source-text">'+esc(f.fields||'')+'</pre></details>';}
+    }else if(req.method==='POST'&&f.action==='workout-days-save'&&data){
+      const schedule=data.byId.get(f.schedule),week=schedule?.fields.weeks?.find(w=>String(w.number)===String(f.week));
+      if(schedule?.kind==='structure'&&week&&(data.actor.role==='admin'||data.assigned.has(schedule.id))){
+        body+='<p>Your unsaved day changes are shown below. If the schedule changed, open the latest weekly plan before combining your changes.</p>'+button('Open latest weekly plan',url('item',{id:params.get('id'),tab:'plan',schedule:schedule.id,week:week.number}))+workoutDaysEditor(params,data,schedule,week,f);
+      }
     }else if(req.method==='POST'&&['worker-preview','worker-save'].includes(f.action)&&data?.actor.role==='admin'){
       try{body+=f.action==='worker-save'?workerPreview(f,data,meta):builderPage(params,data,meta,f);}catch{body+=button('Choose original material',url('builder'));}
     }else if(req.method==='POST'&&f.action==='content-create'&&data){
