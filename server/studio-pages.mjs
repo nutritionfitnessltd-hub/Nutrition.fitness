@@ -19,8 +19,9 @@ const collections={
   challenge:['Challenges','Guided journeys with a clear finish line.','CheckCheck'],
   course:['Courses','Structured learning and practical activities.','BookOpen'],
   lesson:['Lessons','Individual lessons to use in your courses.','BookOpen'],
-  article:['Articles','Helpful advice and educational content.','FileText'],
-  ebook:['E-books','Longer guides and downloadable books.','Book'],
+  article:['Knowledge Centre','Helpful advice and educational content.','FileText'],
+  ebook:['Books','Recipe books, workout books and other guides.','Book'],
+  leadmagnet:['Lead magnets','Free guides, checklists and resources that introduce Nutrition.fitness.','FileText'],
   communication:['Coaching messages','WhatsApp messages, emails and member encouragement.','MessageCircle'],
   campaign:['Marketing content','Campaigns, launch copy and promotional content.','Briefcase'],
   workflow:['GHL workflows','Triggers, timing, messages and follow-up steps.','Layers'],
@@ -51,29 +52,34 @@ export function home(data,meta={}){
   return library(new URLSearchParams({studio:'library'}),data,meta);
 }
 export function library(params,data,meta={}){
+  const bucket=params.get('bucket')==='published'?'published':'drafts';
+  const published=r=>r.publication?.status==='published';
+  data={...data,items:data.items.filter(r=>bucket==='published'?published(r):!published(r))};
+  const lifecycle='<nav class="tabs" aria-label="Content status">'+[['published','Published'],['drafts','Drafts']].map(([id,title])=>'<a href="'+url('library',{bucket:id,kind:params.get('kind')||''})+'"'+(id===bucket?' aria-current="page"':'')+'>'+title+'</a>').join('')+'</nav>';
   const exercise=params.get('studio')==='exercises',kind=params.get('kind')||shelves[params.get('category')]?.create||'',q=(params.get('q')||'').toLowerCase(),state=params.get('state')||'';
   if(!exercise&&!kind&&!q&&!state&&params.get('view')!=='all'){
     const counts=new Map();
     for(const r of data.items)if(r.status!=='Archived')counts.set(r.kind,(counts.get(r.kind)||0)+1);
-    return heading('Our content','Choose a content type to browse, create or continue your work.',button('Create',url('create'),true))+workSummary(data)+
-      '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','library')+hidden('view','all')+input('q','Search all content','','search')+'<button>Search</button>'+button('Browse all content',url('library',{view:'all'}))+'</form>'+
+    return heading('Content Library','Choose a content type to browse, create or continue your work.',button('Create',url('create'),true))+workSummary(data)+lifecycle+
+      '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','library')+hidden('view','all')+hidden('bucket',bucket)+input('q','Search all content','','search')+'<button>Search</button>'+button('Browse all content',url('library',{view:'all',bucket}))+'</form>'+
       '<nav class="studio-cards studio-type-grid" aria-label="Content types">'+Object.entries(collections).map(([id,[title,description,icon]])=>{
         const count=counts.get(id)||0;
-        return '<a class="studio-card studio-type-card" href="'+url('library',{kind:id})+'"><div class="studio-type-icon" aria-hidden="true">'+icons[icon]+'</div><h2>'+title+'</h2><p>'+description+'</p><div class="studio-type-count">'+count.toLocaleString('en-GB')+' '+(count===1?'item':'items')+'</div><span aria-hidden="true">→</span></a>';
+        return '<a class="studio-card studio-type-card" href="'+url('library',{kind:id,bucket})+'"><div class="studio-type-icon" aria-hidden="true">'+icons[icon]+'</div><h2>'+title+'</h2><p>'+description+'</p><div class="studio-type-count">'+count.toLocaleString('en-GB')+' '+(count===1?'item':'items')+'</div><span aria-hidden="true">→</span></a>';
       }).join('')+'</nav>';
   }
   let rows=data.items.filter(r=>!['settings','programme-family'].includes(r.kind)&&(exercise?['exercise','activity'].includes(r.kind)&&(!kind||r.kind===kind):!kind||r.kind===kind)&&(!state?r.status!=='Archived':r.status===state));
   if(kind==='programme'){
-    if(!q&&!state)rows=data.items.filter(r=>r.status!=='Archived'&&(r.kind==='programme-family'||r.kind==='programme'&&data.byId.get(r.parent)?.kind!=='programme-family'));
+    if(!q&&!state&&bucket!=='published')rows=data.items.filter(r=>r.status!=='Archived'&&(r.kind==='programme-family'||r.kind==='programme'&&data.byId.get(r.parent)?.kind!=='programme-family'));
     const families=['stronger','build','fitter','run','swim','ride','back-to-it','nufi365'];
     const rank=r=>{const id=(r.parent||r.id).replace(/^training:/,'');const n=families.indexOf(id);return n<0?99:n;};
     rows.sort((a,b)=>rank(a)-rank(b)||['start','progress','develop','own-it'].indexOf(a.fields.level)-['start','progress','develop','own-it'].indexOf(b.fields.level));
   }
   const words=value=>Array.isArray(value)?value.join(' '):String(value||'');
+  if(kind==='ebook'&&params.get('bookType'))rows=rows.filter(r=>(r.fields.bookType||'Guide')===params.get('bookType'));
   rows=rows.filter(r=>(r.title+' '+words(r.fields.aliases)+' '+words(r.fields.equipment)+' '+words(r.fields.muscles)).toLowerCase().includes(q));
-  const filter='<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio',exercise?'exercises':'library')+hidden('view','all')+input('q','Search',params.get('q')||'','search')+select('kind','Content type',{'':'All types',...Object.fromEntries(Object.entries(kinds).filter(([k])=>!exercise||['exercise','activity'].includes(k)))},kind)+select('state','Progress',{'':'Active content',Draft:'Draft','In review':'In review','Changes requested':'Changes requested',Approved:'Approved',Archived:'Archived'},state)+'<button>Search</button></form>';
-  return (!exercise?'<a class="back" href="'+url('library')+'">← Content types</a>':'')+heading(exercise?'Exercises & drills':collections[kind]?.[0]||'All content',exercise?'Find instructions, coaching cues and demonstrations.':collections[kind]?.[1]||'Your working Nutrition.fitness content.',button(kind?'Create '+(kinds[kind]||'content').toLowerCase():'Create content',url('new',{kind:kind||(exercise?'exercise':'article')}),true))+filter+
-    (!rows.length?'<p class="studio-empty">'+(q||state?'No content matches these filters.':'Nothing here yet. Create the first item or import a starting point from the archive.')+'</p>':'')+
+  const filter='<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio',exercise?'exercises':'library')+hidden('view','all')+hidden('bucket',bucket)+input('q','Search',params.get('q')||'','search')+select('kind','Content type',{'':'All types',...Object.fromEntries(Object.entries(kinds).filter(([k])=>!exercise||['exercise','activity'].includes(k)))},kind)+select('state','Progress',{'':'Active content',Draft:'Draft','In review':'In review','Changes requested':'Changes requested',Approved:'Approved',Archived:'Archived'},state)+'<button>Search</button></form>';
+  return (!exercise?'<a class="back" href="'+url('library',{bucket})+'">← Content types</a>':'')+heading(exercise?'Exercises & drills':kind==='ebook'&&params.get('bookType')?params.get('bookType')+'s':collections[kind]?.[0]||'All content',exercise?'Find instructions, coaching cues and demonstrations.':collections[kind]?.[1]||'Your working Nutrition.fitness content.',button(kind?'Create '+(kinds[kind]||'content').toLowerCase():'Create content',url('new',{kind:kind||(exercise?'exercise':'article')}),true))+lifecycle+filter+
+    (!rows.length?'<p class="studio-empty">'+(q||state?'No content matches these filters.':(bucket==='published'?'No content has been published here yet. Approved drafts stay under Drafts until they are released.':'Nothing here yet. Create the first item or import a starting point from the Reference Library.'))+'</p>':'')+
     pages(params,rows,rs=>'<div class="studio-content-grid">'+rs.map(r=>{
       const preview=meta.training?.[r.id]||meta.assets?.[r.id]?.preview||meta.training?.[r.parent];
       return '<a class="studio-content-card" href="'+url('item',{id:r.id})+'">'+(preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(r.kind==='programme-family'?'Training programmes':kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks · '+(r.id==='training:nufi365'?'Year-round programme':'Standalone programme')+'</p>':r.kind==='programme-family'?'<p>Start · Progress · Develop · Own It</p>':'')+badge(r.status)+'</div></a>';
@@ -81,9 +87,9 @@ export function library(params,data,meta={}){
 }
 export function createPage(params,data,values={}){
   const choice=params.get('template'),t=data.actor.role==='admin'?templates[choice]:null;
-  if(!t)return heading('What would you like to create?','Choose a type. Start fresh or use something from the archive.')+
+  if(!t)return heading('What would you like to create?','Choose a type. Start fresh or use something from the Reference Library.')+
     '<div class="studio-cards studio-simple-grid">'+Object.values(shelves).map(c=>card(c.title,c.description,createLink(c.create,data.actor.role==='admin'))).join('')+'</div>'+
-    '<div class="panel studio-start-options">'+button('Use something from the archive',url('archive'))+'<details><summary>More options</summary><div class="studio-actions">'+[['challenge','Challenge'],['mealplan','Meal plan'],['article','Article'],['ebook','E-book'],['workflow','GHL workflow'],['asset','Creative asset']].map(([k,t])=>button(t,createLink(k,data.actor.role==='admin'))).join('')+'</div></details></div>';
+    '<div class="panel studio-start-options">'+button('Use something from the Reference Library',url('archive'))+'<details><summary>More options</summary><div class="studio-actions">'+[['challenge','Challenge'],['mealplan','Meal plan'],['article','Article'],['ebook','Book'],['leadmagnet','Lead magnet'],['workflow','GHL workflow'],['asset','Creative asset']].map(([k,t])=>button(t,createLink(k,data.actor.role==='admin'))).join('')+'</div></details></div>';
   return heading(t.name,'Tell us the idea and who will work on it. We’ll organise the steps.')+
     form('plan-preview',hidden('template',choice)+hidden('id',values.id||randomUUID())+hidden('rootId',values.rootId||'')+
       input('name','What shall we call it?',values.name||'','text','required maxlength="160"')+

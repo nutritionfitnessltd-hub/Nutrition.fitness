@@ -22,16 +22,25 @@ function fixture(actor=admin){
 
 test('library retains separate content types while creation and programme navigation stay simple',()=>{
   const data=fixture(),html=library(new URLSearchParams(),data);
-  assert.equal((html.match(/class="studio-card studio-type-card"/g)||[]).length,20);
+  assert.equal((html.match(/class="studio-card studio-type-card"/g)||[]).length,21);
   for(const type of ['recipe','mealplan','course','article','ebook','communication','workflow','asset'])assert.ok(html.includes('kind='+type));
   const frame=studioFrame(html,'library',admin);
   const nav=frame.match(/aria-label="Studio navigation">(.*?)<\/nav>/s)[1];
-  assert.equal((nav.match(/<a /g)||[]).length,3);
-  assert.match(frame,/<summary>Team & tools<\/summary>/);
-  assert.match(frame,/studio=review/);
-  assert.match(createPage(new URLSearchParams(),data),/Use something from the archive/);
+  assert.equal((nav.match(/class="studio-nav-section"/g)||[]).length,5);
+  assert.ok(nav.indexOf('Content Library')<nav.indexOf('Reference Library'));
+  for(const label of ['Published','Drafts','Knowledge Centre','Books','Lead magnets','Settings'])assert.ok(nav.includes(label));
+  assert.match(createPage(new URLSearchParams(),data),/Use something from the Reference Library/);
   assert.match(projectList(new URLSearchParams(),data),/aria-label="Project content types"/);
   assert.equal((createPage(new URLSearchParams(),data).match(/class="studio-card"/g)||[]).length,6);
+});
+
+test('approved drafts remain separate from content explicitly recorded as published',()=>{
+  const data=fixture();
+  data.items[0].status='Approved';data.items[1].publication={status:'published',destination:'app'};
+  const drafts=library(new URLSearchParams({view:'all',bucket:'drafts'}),data);
+  const published=library(new URLSearchParams({view:'all',bucket:'published'}),data);
+  assert.match(drafts,/Chair stand/);assert.doesNotMatch(drafts,/First workout/);
+  assert.match(published,/First workout/);assert.doesNotMatch(published,/Chair stand/);
 });
 
 test('archive preserves original collection folders, recipe tabs and course lessons in the studio',()=>{
@@ -160,7 +169,7 @@ test('studio pages render repository data and export excludes internal comments'
     const res={headers:{},setHeader(k,v){this.headers[k]=v;},end(v){this.body=v;}};
     await handleStudio({method:'GET'},res,{params:new URLSearchParams({studio:section,project:project.id,id:session.id}),actor:admin,api,load,env:{}});
     assert.equal(res.statusCode,200,section);
-    assert.match(res.body,/Content studio/);
+    assert.match(res.body,/Content workspace/);
   }
   const res={setHeader(){},end(v){this.body=v;}};
   await handleStudio({method:'GET'},res,{params:new URLSearchParams({studio:'export',project:project.id,mode:'review'}),actor:admin,api,load,env:{}});

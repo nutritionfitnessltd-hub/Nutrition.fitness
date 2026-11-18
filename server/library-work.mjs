@@ -1,9 +1,11 @@
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
-import { platform, membership, verifiedUser, cookies, email, uuid, HttpError, session } from './platform.mjs';
-import { signInProvisioned } from './provisioned-login.mjs';
-import { esc, frame, link } from './library-shelves.mjs';
+import { platform, membership, verifiedUser, cookies, email, uuid, HttpError } from './platform.mjs';
+import { signInProvisioned, consumePasswordAttempt } from './provisioned-login.mjs';
+import { esc, link } from './library-shelves.mjs';
 import { projectScreen, changeProject } from './library-projects.mjs';
 
+import { libraryLogin } from './library-login.mjs';
+import { studioFrame } from './studio-ui.mjs';
 import { handleStudio } from './studio.mjs';
 import { assetButton, assetScreen } from './library-assets.mjs';
 import { displayEntry } from './library-display.mjs';
@@ -22,9 +24,9 @@ const options=(items,current)=>items.map(v=>'<option'+(v===current?' selected':'
 const personOptions=(staff,id)=>staff.map(s=>'<option value="'+esc(s.id)+'"'+(s.id===id?' selected':'')+'>'+esc(s.name)+'</option>').join('');
 const form=(action,inner,url=route)=>'<form method="post" action="'+url+'" class="edit-form">'+field('action',action)+inner+'</form>';
 const post=(payload,prefer='return=representation')=>({service:true,method:'POST',headers:{Prefer:prefer},payload});
-function writePage(res,status,body) {
+function writePage(res,status,body,actor,section='work') {
   res.statusCode=status;res.setHeader('Content-Type','text/html; charset=utf-8');
-  res.end(frame({body,section:'Work assignments',work:true}));
+  res.end(actor?studioFrame(body,section,actor):libraryLogin({error:'Please sign in to continue.'}));
 }
 function redirect(res,item) {
   res.statusCode=303;res.setHeader('Location',route+(item?'&item='+encodeURIComponent(item):''));res.end();
@@ -37,10 +39,17 @@ function issue(res,key,claims) {
   const payload=Buffer.from(JSON.stringify({...claims,expires})).toString('base64url');
   setWorkCookie(res,payload+'.'+sign(key,payload),3600);
 }
-function signInPage(item,projectParams={}) {
-  const target=link({work:'1',item,...projectParams});
-  const credentials='<label>Email<input type="email" name="email" maxlength="254" autocomplete="username" required></label>';
-  return '<h1>Work assignments</h1><div class="work-login"><section class="panel"><h2>Administrator</h2>'+form('admin-login',credentials+'<label>Website account password<input type="password" name="password" autocomplete="current-password" required></label><button class="primary">Open admin screen</button>',target)+'</section><section class="panel"><h2>My assignments</h2>'+form('staff-login',credentials+'<label>Personal work code<input type="password" name="code" maxlength="128" autocomplete="current-password" required></label><button>Open my queue</button>',target)+'</section></div>';
+function signInPage(res,status,item,destination={},error='') {
+  res.statusCode=status;res.setHeader('Content-Type','text/html; charset=utf-8');
+  res.end(libraryLogin({target:link({work:'1',item,...destination}),error}));
+}
+export function clearLibraryCookies(res){
+  res.setHeader('Set-Cookie',[cookieName+'=; Secure; HttpOnly; Path=/; SameSite=Strict; Max-Age=0','__Host-nufi-library=; Secure; HttpOnly; Path=/; SameSite=Lax; Max-Age=0']);
+}
+export async function libraryActor(req,res,env,apiFactory=platform){
+  if(!cookies(req)[cookieName])return null;
+  if(!env.NUFI_LIBRARY_CATALOGUE_KEY)return null;
+  return readActor(req,res,apiFactory(env),env,env.NUFI_LIBRARY_CATALOGUE_KEY);
 }
 function readText(value,name,max,required=true) {
   if(typeof value!=='string'||(required&&!value.trim())||value.length>max||/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(value))throw new HttpError(400,'Check '+name+' and try again.');
@@ -52,7 +61,6 @@ function dueDate(s) {
   return s;
 }
 async function readActor(req,res,api,env,key) {
-  const scoped={...env,NUFI_ACCOUNT_MANAGEMENT_READY:'true',NUFI_AUTH_MODE:'provisioned'};
   const jar=cookies(req),token=jar[cookieName]||'';
   if(token.length<1400){
     const [payload,mac]=token.split('.');
@@ -69,28 +77,39 @@ async function readActor(req,res,api,env,key) {
       }
     }
   }
-  if(jar['__Host-nufi-access']||jar['__Host-nufi-refresh']){
-    try{const current=await session(req,res,scoped);if(current.member?.role==='admin')return {role:'admin',id:current.user.id};}
-    catch(e){if(![401,403].includes(e.status))throw e;}
-  }
   return null;
 }
 async function login(fields,res,api,env,key) {
   const address=email(fields.email);
-  if(fields.action==='admin-login'){
-    const scoped={...env,NUFI_ACCOUNT_MANAGEMENT_READY:'true',NUFI_AUTH_MODE:'provisioned'};
-    const result=await signInProvisioned(address,fields,api,scoped,res);
-    const user=verifiedUser(result.user);
-    const member=await membership(user,api,scoped);
-    if(member?.role!=='admin')throw new HttpError(403,'An active website administrator account is required.');
-    issue(res,key,{role:'admin',id:user.id});
-  }else{
-    const code=String(fields.code||'').trim();
-    if(code.length<20||code.length>128)throw new HttpError(401,'Check your email and personal work code.');
-    const rows=await api(staffTable+'?email=eq.'+encodeURIComponent(address)+'&select=id,code_hash',service);
-    if(!rows[0]?.code_hash||!same(hash(code),rows[0].code_hash))throw new HttpError(401,'Check your email and personal work code.');
-    issue(res,key,{role:'staff',id:rows[0].id,generation:sign(key,rows[0].code_hash)});
+  await consumePasswordAttempt(address,api,env,res);
+  const staff=fields.action==='admin-login'?[]:await api(staffTable+'?email=eq.'+encodeURIComponent(address)+'&select=id,code_hash',service);
+  if(staff.length||fields.action==='staff-login'){
+    const supplied=fields.password??fields.code;
+    const code=typeof supplied==='string'?supplied.trim():'';
+    if(code.length>=20&&code.length<=128&&staff[0]?.code_hash&&same(hash(code),staff[0].code_hash)){
+      issue(res,key,{role:'staff',id:staff[0].id,generation:sign(key,staff[0].code_hash)});return;
+    }
+    if(fields.action==='staff-login')throw new HttpError(401,'The email or password was not recognised, or this account is not enabled.');
   }
+  const scoped={...env,NUFI_ACCOUNT_MANAGEMENT_READY:'true',NUFI_AUTH_MODE:'provisioned'};
+  let result;
+  try{result=await signInProvisioned(address,fields,api,scoped,res,{attemptConsumed:true});}
+  catch(e){if([400,401].includes(e.status))throw new HttpError(401,'The email or password was not recognised, or this account is not enabled.');throw e;}
+  const user=verifiedUser(result.user),member=await membership(user,api,scoped);
+  if(member?.role!=='admin'){
+    if(result.access_token)try{await api('/auth/v1/logout?scope=local',{method:'POST',access:result.access_token});}catch{}
+    throw new HttpError(401,'The email or password was not recognised, or this account is not enabled.');
+  }
+  issue(res,key,{role:'admin',id:user.id});
+}
+async function teamScreen(api,actor){
+  if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
+  const staff=await api(staffTable+'?select=id,name,email,code_hash&order=name.asc',service),target=link({work:'1',studio:'team'});
+  return '<h1>Team & permissions</h1><p>Create team accounts and manage their access to this workspace.</p><section class="panel"><h2>Create user</h2>'+form('create-user','<label>Full name<input name="name" maxlength="100" required autocomplete="off"></label><label>Email<input name="email" type="email" maxlength="254" required autocomplete="off"></label><p class="meta">Team members can browse the library and edit their assigned work. Approvals and user management remain with administrators.</p><button class="primary">Create user</button>',target)+'</section><section class="panel"><h2>Team members</h2>'+
+    (staff.length?staff.map(s=>'<div class="team-row"><div><strong>'+esc(s.name)+'</strong><br>'+esc(s.email)+'<br><small>'+ (s.code_hash?'Access enabled':'Access disabled or password not set')+'</small></div><div class="studio-actions">'+form('issue-code',field('staff',s.id)+'<button>'+(s.code_hash?'Reset password':'Set password & enable')+'</button>',target)+(s.code_hash?form('disable-user',field('staff',s.id)+'<button>Disable access</button>',target):'')+'</div></div>').join(''):'<p>No team members yet.</p>')+'</section>';
+}
+function passwordResult(person,password){
+  return '<h1>Team password</h1><p>Share these details privately with '+esc(person.name)+'. This password is shown only now.</p><section class="panel"><p>Email: <strong>'+esc(person.email)+'</strong></p><p>Password: <code class="staff-code">'+esc(password)+'</code></p><p>Sign in at <a href="/content-library/">the content workspace</a>.</p></section><a class="btn" href="'+link({work:'1',studio:'team'})+'">Back to Team & permissions</a>';
 }
 function tasksMarkup(tasks,staff,actor) {
   if(!tasks.length)return '<p>No assignments match this view.</p>';
@@ -124,7 +143,7 @@ async function dashboard(params,api,actor,load) {
     out+='</section>';
   }
   out+='<section class="panel"><h2>'+esc(admin?'Assigned work':'My work')+'</h2><form class="workbar" action="/content-library/">'+field('work','1')+(admin?'<label>Assignee<select name="staff"><option value="">Everyone</option>'+personOptions(staff,person)+'</select></label>':'')+'<label>Status<select name="status"><option value="">All statuses</option>'+options(statuses,status)+'</select></label><button>Filter</button></form>'+tasksMarkup(rows.slice(0,30),staff,actor)+'<nav class="pages">'+(page>1?'<a href="'+link({work:'1',page:page-1,staff:person,status})+'">Previous</a>':'')+(rows.length>30?'<a href="'+link({work:'1',page:page+1,staff:person,status})+'">Next</a>':'')+'</nav></section>';
-  if(admin)out+='<section class="panel"><h2>Team</h2>'+staff.map(s=>'<div class="team-row"><span><strong>'+esc(s.name)+'</strong><br>'+esc(s.email)+'</span>'+form('issue-code',field('staff',s.id)+'<button>Issue new work code</button>')+'</div>').join('')+'<details><summary>Add a colleague</summary>'+form('add-staff','<label>Name<input name="name" maxlength="100" required></label><label>Email<input name="email" type="email" required></label><button>Add colleague</button>')+'</details></section>';
+  if(admin)out+='<section class="panel"><a href="'+link({work:'1',studio:'team'})+'">Team & permissions</a></section>';
   return out+'</div>';
 }
 async function change(actor,f,api,load) {
@@ -136,6 +155,16 @@ async function change(actor,f,api,load) {
     return;
   }
   if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
+  if(f.action==='create-user'){
+    const password=randomBytes(24).toString('base64url');
+    const person={name:readText(f.name,'the name',100),email:email(f.email),code_hash:hash(password)};
+    try{await api(staffTable,post(person));}catch(e){if(e.status===409)throw new HttpError(409,'A team member with this email already exists. Use Reset password for that person.');throw e;}
+    return passwordResult(person,password);
+  }
+  if(f.action==='disable-user'){
+    const rows=await api(staffTable+'?id=eq.'+uuid(f.staff),{service:true,method:'PATCH',headers:{Prefer:'return=representation'},payload:{code_hash:null}});
+    if(!rows.length)throw new HttpError(404,'Team member not found.');return;
+  }
   if(f.action==='add-staff'){
     await api(staffTable,post({name:readText(f.name,'the name',100),email:email(f.email)}));return;
   }
@@ -143,7 +172,7 @@ async function change(actor,f,api,load) {
     const code=randomBytes(24).toString('base64url');
     const rows=await api(staffTable+'?id=eq.'+uuid(f.staff),{service:true,method:'PATCH',headers:{Prefer:'return=representation'},payload:{code_hash:hash(code)}});
     if(!rows.length)throw new HttpError(404,'Colleague not found.');
-    return '<h1>Personal work code</h1><p>Share this code privately with '+esc(rows[0].name)+' at '+esc(rows[0].email)+'. They can enter it under My assignments. Issuing another code replaces this one.</p><p><code class="staff-code">'+esc(code)+'</code></p><a href="'+route+'">Return to work assignments</a>';
+    return passwordResult(rows[0],code);
   }
   if(f.action!=='create')throw new HttpError(400,'Unknown work action.');
   const item=(await load()).records.find(r=>r.id===f.item);
@@ -156,39 +185,57 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
   const projects=params.get('projects')==='1';
   const asset=params.get('assets');
   const studio=params.get('studio');
-  const destination=studio?Object.fromEntries([...params].filter(([k])=>['studio','id','project','week','source','template','kind','tab','category','schedule','view','contentKind','shelf','folder','item','from','progress','q','page'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
+  const destination=params.get('reader')==='1'?Object.fromEntries([...params].filter(([k])=>['reader','file','image','preview'].includes(k))):studio?Object.fromEntries([...params].filter(([k])=>['studio','id','project','week','source','template','kind','tab','category','schedule','view','contentKind','shelf','folder','item','from','progress','q','page','reader','file','image','preview','collection','bucket','bookType'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
+  let actor;
   try {
     if(!['GET','POST'].includes(req.method))throw new HttpError(405,'Use the work screen to continue.');
     const key=env.NUFI_LIBRARY_CATALOGUE_KEY;
     if(!key)throw new HttpError(503,'The work screen is being connected.');
     if(req.method==='POST' && req.headers.origin!=='https://'+req.headers.host)throw new HttpError(403,'Open the work screen to continue.');
     const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
-    if(req.method==='POST'&&f.action==='work-logout'){setWorkCookie(res,'',0);return redirect(res);}
+    if(req.method==='POST'&&f.action==='work-logout'){clearLibraryCookies(res);res.statusCode=303;res.setHeader('Location','/content-library/');return res.end();}
     const api=apiFactory(env);
-    if(req.method==='POST'&&['admin-login','staff-login'].includes(f.action)){
+    if(req.method==='POST'&&['sign-in','admin-login','staff-login'].includes(f.action)){
       await login(f,res,api,env,key);
+      if(params.get('reader')==='1'){
+        const next=Object.fromEntries([...params].filter(([k])=>['file','image','preview'].includes(k)));
+        res.statusCode=303;res.setHeader('Location','/content-library/?'+new URLSearchParams(next));return res.end();
+      }
+      if(f.action==='sign-in'&&!projects&&!asset&&!studio){res.statusCode=303;res.setHeader('Location',route+'&studio=library');return res.end();}
       if(projects||asset||studio){res.statusCode=303;res.setHeader('Location',route+'&'+new URLSearchParams(destination));return res.end();}
       return redirect(res,item);
     }
-    const actor=await readActor(req,res,api,env,key);
-    if(!actor)return writePage(res,401,signInPage(item,destination));
+    actor=await readActor(req,res,api,env,key);
+    if(!actor)return signInPage(res,401,item,destination);
+    if(studio==='team'){
+      if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
+      if(req.method==='POST'){
+        if(!['create-user','issue-code','disable-user'].includes(f.action))throw new HttpError(400,'Choose a team action.');
+        const message=await change(actor,f,api,load);
+        if(message)return writePage(res,200,message,actor,'team');
+        res.statusCode=303;res.setHeader('Location',route+'&studio=team');return res.end();
+      }
+      return writePage(res,200,await teamScreen(api,actor),actor,'team');
+    }
     if(studio)return handleStudio(req,res,{params,actor,api,load,env});
     if(asset){
       if(req.method!=='GET')throw new HttpError(405,'Open the asset page to continue.');
-      return writePage(res,200,await assetScreen(params,actor,api,load,id=>displayEntry(env,id)));
+      return writePage(res,200,await assetScreen(params,actor,api,load,id=>displayEntry(env,id)),actor);
     }
     if(projects){
-      if(req.method==='GET')return writePage(res,200,await projectScreen(params,actor,api,load));
+      if(req.method==='GET')return writePage(res,200,await projectScreen(params,actor,api,load),actor);
       const next=await changeProject(params,f,actor,api,load);
       res.statusCode=303;res.setHeader('Location',route+'&projects=1&'+new URLSearchParams(next));return res.end();
     }
     if(req.method==='POST'){
       const message=await change(actor,f,api,load);
-      return message?writePage(res,200,message):redirect(res);
+      return message?writePage(res,200,message,actor):redirect(res);
     }
-    return writePage(res,200,await dashboard(params,api,actor,load));
+    return writePage(res,200,await dashboard(params,api,actor,load),actor);
   }catch(e){
     const status=e instanceof HttpError?e.status:503;
-    return writePage(res,status,'<p role="alert">'+esc(e instanceof HttpError?e.message:'The work screen could not be loaded. Please try again shortly.')+'</p>'+(status===401?signInPage(item,destination):'<a href="'+link({work:'1',...(asset?{}:destination)})+'">Return to '+(projects?'projects':'work assignments')+'</a>'));
+    const message=e instanceof HttpError?e.message:'The workspace could not complete this request. Please try again.';
+    if(!actor)return signInPage(res,status,item,destination,message);
+    return writePage(res,status,'<p role="alert">'+esc(message)+'</p><a href="'+link({work:'1',...(asset?{}:destination)})+'">Return to the workspace</a>',actor,studio==='team'?'team':'work');
   }
 }
