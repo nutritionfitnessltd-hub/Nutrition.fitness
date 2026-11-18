@@ -1,3 +1,4 @@
+import { requireAccess } from './library-permissions.mjs';
 import { HttpError } from './platform.mjs';
 import { canonical, descendants } from './studio-model.mjs';
 
@@ -52,6 +53,7 @@ export function projectFor(data,id){
   return p;
 }
 export async function saveRecord(api,actor,record,expected){
+  requireAccess(actor,'library','edit');
   const rows=await api('/rest/v1/rpc/nufi_studio_save',{service:true,method:'POST',payload:{
     item:record.id,expected,document:record,editor_name:actor.role+':'+actor.id
   }});
@@ -59,6 +61,7 @@ export async function saveRecord(api,actor,record,expected){
   return rows[0];
 }
 export async function saveProject(api,actor,p,update){
+  requireAccess(actor,'work','edit');
   const rows=await api(projectTable+'?id=eq.'+p.id+'&revision=eq.'+p.revision+(actor.role==='admin'?'':'&creator_id=eq.'+actor.id),{
     service:true,method:'PATCH',headers:{Prefer:'return=representation'},payload:{...update,revision:p.revision+1}
   });

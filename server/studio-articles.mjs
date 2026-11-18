@@ -1,3 +1,4 @@
+import { canAccess, canEditContent } from './library-permissions.mjs';
 import {esc,url,heading,button,badge} from './studio-ui.mjs';
 
 const origin='https://nutrition-fitness-website-2.vercel.app';
@@ -31,7 +32,7 @@ export function articleHtml(value){
  }).join('');
 }
 export function articlePage(r,data){
- const f=r.fields||{},canEdit=data.actor.role==='admin'||data.assigned.has(r.id),image=articleImage(r),live=articleUrl(r.publication?.sourceUrl);
+ const f=r.fields||{},canEdit=canEditContent(data,r.id),image=articleImage(r),live=articleUrl(r.publication?.sourceUrl);
  const link=(title,value)=>{const href=articleUrl(value);return href?'<a href="'+esc(href)+'" target="_blank" rel="noopener noreferrer">'+esc(title)+'</a>':esc(title);};
  const salesLabels={buyerConcern:'The question behind it',whenToSend:'When to share',discoveryQuestion:'A useful question',emailSubject:'Email subject',emailBody:'Email message',chatReply:'Chat reply',nextStep:'Next step'};
  return '<a class="back" href="'+url('library',{bucket:r.publication?.status==='published'?'published':'drafts',kind:'article'})+'">← Knowledge Centre</a>'+

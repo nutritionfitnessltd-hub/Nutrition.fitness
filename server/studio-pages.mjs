@@ -1,3 +1,4 @@
+import { canAccess, canEditContent } from './library-permissions.mjs';
 import { canEditDays, workoutDaysEditor } from './studio-workout-days.mjs';
 import { workoutDays, workoutSession } from './studio-workouts.mjs';
 import { contentPhoto } from './studio-visuals.mjs';
@@ -78,7 +79,7 @@ export function library(params,data,meta={}){
   if(!exercise&&!kind&&!q&&!state&&params.get('view')!=='all'){
     const counts=new Map();
     for(const r of data.items)if(r.status!=='Archived')counts.set(r.kind,(counts.get(r.kind)||0)+1);
-    return heading('Content library','',button('Create content',url('create'),true))+lifecycle+
+    return heading('Content library','',(canAccess(data.actor,'studio')?button('Create content',url('create'),true):''))+lifecycle+
       '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','library')+hidden('view','all')+hidden('bucket',bucket)+input('q','Search all content','','search')+'<button>Search</button>'+button('Browse all content',url('library',{view:'all',bucket}))+'</form>'+
       typeCards(contentSections,counts,bucket)+
       '<details class="panel"><summary>More content types</summary>'+typeCards(Object.entries(collections).filter(([id])=>!contentSections.some(([key])=>key===id)).map(([id,[title]])=>[id,title]),counts,bucket)+'</details>';
@@ -99,7 +100,7 @@ export function library(params,data,meta={}){
     (kind==='ebook'?select('bookType','Book type',{'':'All books','Recipe book':'Recipe books','Workout book':'Workout books',Guide:'Guides'},params.get('bookType')||''):'')+
     '<details class="filter-details"'+(state?' open':'')+'><summary>More filters</summary>'+select('state','Progress',{'':'Active content',Draft:'Draft','In review':'Needs checking','Changes requested':'Needs changes',Approved:'Checked',Archived:'Archived'},state)+'</details><button>Search</button></form>';
 
-  return (!exercise?'<a class="back" href="'+url('library',{bucket})+'">← Content types</a>':'')+heading(exercise?'Exercises & drills':kind==='ebook'&&params.get('bookType')?params.get('bookType')+'s':collections[kind]?.[0]||'All content',exercise?'Find instructions, coaching cues and demonstrations.':collections[kind]?.[1]||'Your working Nutrition.fitness content.',button(kind?'Create '+(kinds[kind]||'content').toLowerCase():'Create content',url('new',{kind:kind||(exercise?'exercise':'article')}),true))+lifecycle+filter+
+  return (!exercise?'<a class="back" href="'+url('library',{bucket})+'">← Content types</a>':'')+heading(exercise?'Exercises & drills':kind==='ebook'&&params.get('bookType')?params.get('bookType')+'s':collections[kind]?.[0]||'All content',exercise?'Find instructions, coaching cues and demonstrations.':collections[kind]?.[1]||'Your working Nutrition.fitness content.',(canAccess(data.actor,'studio')?button(kind?'Create '+(kinds[kind]||'content').toLowerCase():'Create content',url('new',{kind:kind||(exercise?'exercise':'article')}),true):''))+lifecycle+filter+
     (!rows.length?'<p class="studio-empty">'+(q||state?'No content matches these filters.':(bucket==='published'?'Nothing has been published here yet. Checked content is kept separately.':'Nothing here yet. Create an item or import an original.'))+'</p>':'')+
     pages(params,rows,rs=>'<div class="studio-content-grid">'+rs.map(r=>{
       const preview=meta.training?.[r.id]||meta.assets?.[r.id]?.preview||meta.training?.[r.parent];
@@ -113,7 +114,7 @@ export function createPage(params,data,values={}){
   if(!t)return (data.actor.role==='admin'?workerStart():heading('What do you want to build today?','Choose a content type to begin.'))+'<details class="panel studio-manual"><summary>Create it myself</summary>'+
     '<div class="studio-cards studio-type-grid">'+contentSections.map(([kind,title])=>card(title,'',createLink(kind))).join('')+'</div>'+
     '<details class="panel"><summary>More content types</summary><div class="studio-actions">'+Object.entries(kinds).filter(([kind])=>!contentSections.some(([key])=>key===kind)).map(([kind,title])=>button(title,createLink(kind))).join('')+'</div></details>'+
-    '<div class="studio-actions">'+button('Use an original',url('archive'))+button('Import a file',url('import'))+'</div></details>'+
+    '<div class="studio-actions">'+(canAccess(data.actor,'originals')?button('Use an original',url('archive'))+button('Import a file',url('import')):'')+'</div></details>'+
     (data.actor.role==='admin'?'<details class="panel"'+(params.get('project')?' open':'')+'><summary>Plan a project with several items</summary><div class="studio-cards">'+Object.entries(templates).map(([kind,t])=>card(t.name,t.description,url('create',{template:kind}))).join('')+'</div></details>':'');
   return heading(t.name,'Tell us the idea and who will work on it. We’ll organise the steps.')+
     form('plan-preview',hidden('template',choice)+hidden('id',values.id||randomUUID())+hidden('rootId',values.rootId||'')+
@@ -135,6 +136,7 @@ export function projectList(params,data){
 }
 export function projectPage(params,data){
   const p=projectFor(data,params.get('project')),week=Math.max(0,Math.min(p.weeks,Number(params.get('week'))||0)),admin=data.actor.role==='admin';
+  if(!canAccess(data.actor,'edit'))return heading(p.name,p.brief)+badge(p.status)+'<section class="panel">'+list(p.entries,e=>'<div><small>'+(e.week?'Week '+e.week:'Preparation')+'</small><h3>'+esc(e.title)+'</h3><p>'+esc(e.notes||'')+'</p>'+(e.record&&canAccess(data.actor,'library')?button('Open content',url('item',{id:e.record})):'' )+'</div>'+badge(e.status))+'</section>';
   const state={section:'project',project:p.id,week},base=hidden('projectRevision',p.revision);
   const root=data.byId.get(p.studio.rootId);
   const nav='<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','project')+hidden('project',p.id)+select('week','Week',Object.fromEntries(Array.from({length:p.weeks+1},(_,w)=>[w,w?'Week '+w:'Preparation'])),week)+'<button>Open week</button></form>';
@@ -147,20 +149,20 @@ export function projectPage(params,data){
   const rows=[...taskRows].map(([type,entries])=>'<section class="studio-task-group"><h3>'+esc(collections[type]?.[0]||'Content')+'</h3>'+entries.map(e=>{
     const r=data.byId.get(e.record);
     return '<section class="studio-task"><div class="studio-heading"><div><small>'+esc(e.kind)+'</small><h3>'+esc(e.title)+'</h3></div>'+badge(e.status)+'</div><p class="prose">'+esc(e.notes||'')+'</p>'+
-      (r?button('Open content',url('item',{id:r.id})):button('Create this content',url('new',{project:p.id,entry:e.id,kind:e.kind==='PT WhatsApp message'?'communication':e.kind==='Creative asset'?'asset':e.kind==='GHL workflow'?'workflow':'article',title:e.title})))+
+      (r?(canAccess(data.actor,'library')?button('Open content',url('item',{id:r.id})):'' ):canAccess(data.actor,'studio')?button('Create this content',url('new',{project:p.id,entry:e.id,kind:e.kind==='PT WhatsApp message'?'communication':e.kind==='Creative asset'?'asset':e.kind==='GHL workflow'?'workflow':'article',title:e.title})):'' )+
       '<details><summary>Update task</summary>'+form('task-save',base+hidden('entry',e.id)+
       input('title','Task',e.title,'text','required maxlength="160"')+textarea('notes','Brief and feedback',e.notes||'')+
       select('status','Progress',Object.fromEntries((admin?['To do','In progress','Ready for review','Changes requested','Done']:['To do','In progress','Ready for review','Changes requested']).map(x=>[x,x])),e.status)+
       input('week','Week (0 is preparation)',e.week,'number','min="0" max="'+p.weeks+'"')+input('due','Due date',e.due||'','date'),state)+'</details></section>';
   }).join('')+'</section>').join('');
   const candidates=data.items.filter(r=>(r.title+' '+r.kind).toLowerCase().includes((params.get('find')||'').toLowerCase())).slice(0,35);
-  return heading(p.name,p.studio.audience||p.brief,button('Preview journey',url('journey',{project:p.id}))+button('Export',url('release',{project:p.id})))+
+  return heading(p.name,p.studio.audience||p.brief,canAccess(data.actor,'library')?button('Preview journey',url('journey',{project:p.id}))+button('Export',url('release',{project:p.id})):'' )+
     '<p class="studio-project-meta">'+esc(p.status)+' · '+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</p>'+
-    (root?'<p>Programme content · '+itemLink(root)+'</p>':'')+nav+'<div class="studio-columns project-columns"><section><h2>'+(week?'Week '+week:'Preparation')+'</h2>'+(rows||'<p>No tasks in this week yet.</p>')+'</section>'+
+    (root&&canAccess(data.actor,'library')?'<p>Programme content · '+itemLink(root)+'</p>':'')+nav+'<div class="studio-columns project-columns"><section><h2>'+(week?'Week '+week:'Preparation')+'</h2>'+(rows||'<p>No tasks in this week yet.</p>')+'</section>'+
     '<aside class="panel"><details><summary>Add work</summary>'+form('task-add',base+input('title','What needs doing?','','text','required maxlength="160"')+
     select('kind','Content type',{'Content to create':'Content to create','PT WhatsApp message':'PT WhatsApp message','GHL workflow':'GHL workflow','Creative asset':'Creative asset','Marketing content':'Marketing content'})+textarea('notes','What does a finished result need?'),state,'Add task')+'</details>'+
-    '<details><summary>Attach existing content</summary><form action="/content-library/">'+hidden('work','1')+hidden('studio','project')+hidden('project',p.id)+hidden('week',week)+input('find','Find content',params.get('find')||'')+'<button>Find</button></form>'+
-    (params.has('find')?form('task-attach',base+select('record','Library item',Object.fromEntries(candidates.map(r=>[r.id,r.title]))),state,'Attach to this week'):'')+'</details>'+
+    (canAccess(data.actor,'library')?'<details><summary>Attach existing content</summary><form action="/content-library/">'+hidden('work','1')+hidden('studio','project')+hidden('project',p.id)+hidden('week',week)+input('find','Find content',params.get('find')||'')+'<button>Find</button></form>'+
+    (params.has('find')?form('task-attach',base+select('record','Library item',Object.fromEntries(candidates.map(r=>[r.id,r.title]))),state,'Attach to this week'):'')+'</details>':'')+
     '<details><summary>Creator & details</summary>'+form('project-save',base+(admin?input('name','Name',p.name)+select('creator','Creator',personOptions(data),p.creator_id):'')+
       textarea('brief','Project brief',p.brief)+input('launch','Target launch',p.studio.launchDate||'','date')+
       select('status','Status',Object.fromEntries((admin?['Planning','In progress','Ready for review','Complete']:['Planning','In progress','Ready for review']).map(x=>[x,x])),p.status),state)+'</details></aside></div>';
@@ -189,7 +191,7 @@ function weeklyPlan(params,data,schedules,owner){
   return out+'<details class="panel"><summary>Spacing, recovery & busy weeks</summary>'+readable({spacing:chosen.fields.spacing||'',rest:chosen.fields.restRules||'',busyWeek:chosen.fields.busyWeek||{}},data)+button('Edit this schedule',url('item',{id:chosen.id,tab:'edit'}))+'</details>';
 }
 function programmePage(params,data,r){
-  const admin=data.actor.role==='admin',canEdit=admin||data.assigned.has(r.id);
+  const admin=data.actor.role==='admin',canEdit=canEditContent(data,r.id);
   const projects=data.projects.filter(p=>p.studio?.rootId===r.id),project=projects.find(p=>p.status!=='Complete')||projects[0];
   const ids=descendants([r.id,...projects.flatMap(p=>p.entries.map(e=>e.record).filter(Boolean))],data.items),related=data.items.filter(x=>x.id!==r.id&&ids.has(x.id)&&x.status!=='Archived');
   const schedules=related.filter(x=>x.kind==='structure').sort((a,b)=>a.fields.frequency-b.fields.frequency);
@@ -207,7 +209,7 @@ function programmePage(params,data,r){
     const rows=related.filter(x=>types.includes(x.kind)),kind=tab==='messages'?'communication':'asset';
     return out+'<section class="panel">'+heading(tab==='messages'?'Messages':'Assets',tab==='messages'?'Coaching messages and follow-up plans for this programme.':'Images, marketing and supporting files for this programme.',canEdit&&project?button('Add '+(tab==='messages'?'message':'asset'),url('new',{kind,project:project.id})):admin&&!project?button('Assign work to add content',url('project-from',{id:r.id})): '')+
       pages(params,rows,items=>list(items,contentRow,'Nothing here yet.'))+
-      (tab==='assets'&&canEdit&&r.sourceId?button('Open original source assets','/content-library/?work=1&assets='+encodeURIComponent(r.sourceId)):'')+'</section>';
+      (tab==='assets'&&canEdit&&r.sourceId&&canAccess(data.actor,'sources')?button('Open original source assets','/content-library/?work=1&assets='+encodeURIComponent(r.sourceId)):'')+'</section>';
   }
   const fields=[['The aim',r.fields.purpose||r.fields.description],['Who it’s for',r.fields.audience||r.fields.suitableFor],['What you’ll achieve',r.fields.outcome||r.fields.memberPromise],['Before starting',r.fields.entryCriteria],['Equipment',r.fields.equipment],['Completing the programme',r.fields.exitCriteria]];
   out+='<section class="panel studio-programme-overview">'+fields.filter(([,v])=>v&&(!Array.isArray(v)||v.length)).map(([label,value])=>'<section><h2>'+esc(label)+'</h2><div class="prose">'+readable(value,data)+'</div></section>').join('')+'</section>';
@@ -228,7 +230,7 @@ export function itemPage(params,data){
       '<div class="studio-cards">'+programmes.map(p=>card(p.title,p.fields.weeks+' weeks · '+(p.fields.audience||''),url('item',{id:p.id}))).join('')+'</div>'+
       '<details class="panel"><summary>Shared content & files</summary>'+list(data.items.filter(x=>x.parent===r.id&&x.kind!=='programme'&&x.status!=='Archived'),contentRow)+'</details>';
   }
-  const admin=data.actor.role==='admin',canEdit=admin||data.assigned.has(r.id),state={section:'item',id:r.id,tab:'edit'};
+  const admin=data.actor.role==='admin',canEdit=canEditContent(data,r.id),state={section:'item',id:r.id,tab:'edit'};
   const children=data.items.filter(x=>(x.parent===r.id||(r.fields.sharedContentIds||[]).includes(x.id))&&x.status!=='Archived'),refs=references(r,data.byId).map(id=>data.byId.get(id)).filter(Boolean);
   const parents=data.items.filter(x=>x.id!==r.id&&(x.id===r.parent||references(x,data.byId).includes(r.id)));
   const checks=issues(r,data.items),preview=params.get('tab')==='preview'||!canEdit||(!params.has('tab')&&['course','recipe','session'].includes(r.kind)),schedule=r.kind==='structure'&&params.get('tab')!=='edit'&&!preview;
@@ -252,11 +254,11 @@ export function itemPage(params,data){
   if(r.kind==='communication')return out;
   if(canEdit){
     out+='<details class="panel"><summary>History, feedback & other actions</summary><div class="studio-actions">'+button('Version history',url('history',{id:r.id}))+
-      (r.sourceId?button('Original files','/content-library/?work=1&assets='+encodeURIComponent(r.sourceId)):'')+
+      (r.sourceId&&canAccess(data.actor,'sources')?button('Original files','/content-library/?work=1&assets='+encodeURIComponent(r.sourceId)):'')+
       (admin?button('Assign work',url('project-from',{id:r.id})):'')+'</div>'+
       '<details><summary>Feedback ('+(r.comments||[]).length+')</summary>'+list(r.comments||[],c=>'<div><p>'+esc(c.body)+'</p><small>'+esc(c.author)+' · '+esc(c.at.slice(0,10))+'</small></div>','No feedback yet.')+
       form('content-comment',hidden('revision',r.revision)+textarea('comment','Add feedback'),state,'Add feedback')+'</details>'+
-      (r.kind==='mealplan'?'<details><summary>Change the plan settings</summary>'+mealPlanForm(data,{},r)+'</details>':data.aiReady?'<details><summary>Draft with AI</summary>'+form('ai-draft',hidden('revision',r.revision)+textarea('prompt','What would you like to improve?'),state,'Generate a draft for checking')+'</details>':'')+
+      (r.kind==='mealplan'&&canAccess(data.actor,'ai')?'<details><summary>Change the plan settings</summary>'+mealPlanForm(data,{},r)+'</details>':data.aiReady?'<details><summary>Draft with AI</summary>'+form('ai-draft',hidden('revision',r.revision)+textarea('prompt','What would you like to improve?'),state,'Generate a draft for checking')+'</details>':'')+
       (admin?'<details><summary>Request changes or archive</summary>'+form('content-review',hidden('revision',r.revision)+select('status','Action',{'Changes requested':'Request changes',Archived:'Archive this item'})+textarea('feedback','Note'),state,'Apply to saved version')+'</details>':'')+'</details>';
   }
   if(refs.length&&!preview)out+='<details class="panel"><summary>Linked content ('+refs.length+')</summary>'+list(refs,contentRow)+'</details>';
