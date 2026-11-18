@@ -1,5 +1,6 @@
 import { assetsPage, brandMediaPage, workspaceArchive, softwareReleases, saveSoftwareRelease } from './team-workspace.mjs';
 import {publicationPanel,publishStudio} from './studio-publishing.mjs';
+import {reviewPreview,reviewDecision} from './studio-review.mjs';
 import {sendWorkerImage} from './worker-images.mjs';
 import {readerDocument} from './article-reader.mjs';
 import {articleImage} from './studio-articles.mjs';
@@ -84,6 +85,20 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       res.statusCode=200;return res.end(readerDocument(r,articleImage(r)));
     }
     if(section==='book-file')return await sendBookFile(req,res,params,data);
+    if(section==='review-preview'){
+      let status=200,retained={};
+      if(req.method==='POST'){
+        try{
+          if(!['review-decision','review-retry'].includes(f.action))throw new HttpError(400,'Choose a review action.');
+          const result=await reviewDecision(params,f,data,api,env,fetcher);
+          data.byId.set(result.id,result.record);data.items=data.items.map(r=>r.id===result.id?result.record:r);params.set('reviewed',result.reviewed);
+        }catch(e){status=e instanceof HttpError?e.status:503;retained={...f,message:e instanceof HttpError?e.message:'Could not save your review. Your feedback is still here.'};}
+      }else if(req.method!=='GET')throw new HttpError(405,'Use GET to open a preview.');
+      const body=reviewPreview(params,data,retained);
+      res.setHeader('Cache-Control','private, no-store');
+      if(params.get('fragment')==='1'){res.statusCode=status;res.setHeader('Content-Type','text/html; charset=utf-8');return res.end(body);}
+      return write(res,status,body+'<script type="module" src="/studio-review.js"></script>','review',actor,meta);
+    }
     if(section==='article-image'){const r=data.byId.get(params.get('id'));if(r?.workerImage&&!r.articleImage)return await sendWorkerImage(res,r,env,fetcher);return await sendArticleImage(req,res,params,data);}
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){

@@ -281,8 +281,9 @@ export function newItem(params,data,values={}){
 }
 export function reviewPage(params,data){
   const rows=data.items.filter(r=>['In review','Changes requested'].includes(r.status)&&(data.actor.role==='admin'||data.assigned.has(r.id)));
-  return heading('Needs checking','Open an item to read, edit and mark it checked.')+
-    pages(params,rows,rs=>list(rs,contentRow,'There is no content waiting for review.'));
+  return heading('Needs checking','Preview the saved work, approve it or request changes.')+
+    pages(params,rows,rs=>list(rs,r=>'<div><a data-review-preview href="'+url('review-preview',{id:r.id})+'">'+esc(r.title)+'</a><small>'+esc(kinds[r.kind]||r.kind)+'</small></div>'+badge(r.status),'There is no content waiting for review.'))+
+    '<dialog class="review-popup" data-review-dialog aria-labelledby="review-popup-title"><div data-review-mount></div></dialog><script type="module" src="/studio-review.js"></script>';
 }
 export function calendar(data){
   const events=data.projects.flatMap(p=>[
