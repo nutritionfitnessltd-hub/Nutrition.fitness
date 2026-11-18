@@ -1,4 +1,4 @@
-import {DraftError,draftDocument,draftResult,draftId} from './worker-drafts.mjs';
+import {DraftError,draftDocument,draftResult,draftId,reviewGuidance} from './worker-drafts.mjs';
 const base=Deno.env.get('SUPABASE_URL')!,key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const website='https://team.nutrition.fitness';
 const headers={apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'};
@@ -31,14 +31,22 @@ Deno.serve(async(req:Request)=>{
   const connection=connections[0];if(!connection)throw new DraftError(401,'Worker connection required.');
   const input=await readBody(req),namespace=connection.namespace;
   const rowFor=async(id:string)=>(await api('/rest/v1/nufi_studio_items?select=*&id=eq.'+encodeURIComponent(draftId(id,namespace))))[0];
+  const guidanceFor=async(workerId:string)=>{
+   const records=[];
+   for(let offset=0;;offset+=500){const batch=await api('/rest/v1/nufi_studio_items?select=id,payload&id=like.'+encodeURIComponent(namespace+'*')+'&order=id&limit=500&offset='+offset);records.push(...batch.map((r:any)=>({...r.payload,id:r.id})));if(batch.length<500)break;}
+   return reviewGuidance(records,workerId);
+  };
+  const withGuidance=async(row:any)=>{const result=draftResult(row,website);return {...result,workerGuidance:await guidanceFor(result.workerId)};};
   if(input.action==='status')return respond({contentManager:'connected',website:'connected',storage:'Website Content Manager',livePublishing:false,binaryAssetUpload:true,reviewUrl:website+'/content-library/?work=1&studio=library&bucket=drafts',workflow:'Draft → Submit for approval → Approve → Test website → Final approval'});
   if(input.action==='list'){
    const offset=Number(input.offset||0),limit=Math.min(Number(input.limit||50),100);
    if(!Number.isInteger(offset)||offset<0||!Number.isInteger(limit)||limit<1)throw new DraftError(400,'Invalid page.');
    const rows=await api('/rest/v1/nufi_studio_items?select=*&id=like.'+encodeURIComponent(namespace+'*')+'&order=id&limit='+limit+'&offset='+offset);
-   return respond({items:rows.map((r:unknown)=>draftResult(r,website)),nextOffset:rows.length===limit?offset+limit:null});
+   const items=rows.map((r:unknown)=>draftResult(r,website));
+   const workerGuidance=Object.fromEntries(await Promise.all([...new Set(items.map((r:any)=>r.workerId))].map(async(worker:any)=>[worker,await guidanceFor(worker)])));
+   return respond({items,workerGuidance,nextOffset:rows.length===limit?offset+limit:null});
   }
-  if(input.action==='get'){const r=await rowFor(input.id);if(!r)throw new DraftError(404,'Draft not found.');return respond(draftResult(r,website));}
+  if(input.action==='get'){const r=await rowFor(input.id);if(!r)throw new DraftError(404,'Draft not found.');return respond(await withGuidance(r));}
   if(input.action==='save'){
    const r=await rowFor(input.draft?.id),document=draftDocument(input.draft,r,namespace);
    const rows=await api('/rest/v1/rpc/nufi_studio_save','POST',{item:document.id,expected:input.draft.revision,document,editor_name:'worker:'+connection.id});

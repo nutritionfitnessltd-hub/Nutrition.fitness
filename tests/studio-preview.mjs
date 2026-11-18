@@ -8,6 +8,7 @@ const root=path.resolve(import.meta.dirname,'../dist');
 const actor={role:'admin',id:'00000000-0000-4000-8000-000000000001'};
 const make=(id,kind,title,fields)=>({id,kind,title,status:'Draft',fields:{...blankFields(kind),...fields},files:[]});
 const records=[
+ {...make('worker:review-demo','article','Can magnesium help if your vitamin D stays low?',{bodyFormat:'html',shortAnswer:'A clear explanation for review.',body:'<h2>A useful question</h2><p>This is a local review fixture. It does not change live content.</p>',imageUrl:'/assets/photos/knowledge-1.jpg'}),status:'In review',workerId:'nina'},
  make('training:workout-plan','programme','Workout day editing',{weeks:2}),
  {...make('training:workout-days','structure','3 days',{frequency:3,weeks:[1,2].map(number=>({number,sessionIds:['workout-a','workout-b','workout-c']}))}),parent:'training:workout-plan'},
  ...['a','b','c'].map(id=>make('training:workout-'+id,'session','Workout '+id,{warmup:['Walk'],blocks:[{referenceId:'squat',sets:2,repMin:8}],cooldown:['Walk'],adjustmentRuleIds:['rule-adjust']})),
