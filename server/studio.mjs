@@ -1,3 +1,4 @@
+import { shinyThingsPage, changeShinyThing, ideaProjectPage } from './studio-shiny-things.mjs';
 import {workerIdeaSummaries} from './studio-ideas.mjs';
 import {workerChatPage,changeHq} from './studio-hq.mjs';
 import { assetsPage, brandMediaPage, workspaceArchive, softwareReleases, saveSoftwareRelease } from './team-workspace.mjs';
@@ -92,6 +93,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='review-preview'){
       let status=200,retained={};
       if(req.method==='POST'){
+      if(f.action?.startsWith('idea-')){const next=await changeShinyThing(params,f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();}
         try{
           if(!['review-decision','review-retry','review-schedule'].includes(f.action))throw new HttpError(400,'Choose a review action.');
           const result=await reviewDecision(params,f,data,api,env,fetcher);
@@ -201,6 +203,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     let body;
     switch(section){
       case 'home':body=home(data,meta);break;
+      case 'shiny-things':body=shinyThingsPage(params,data,{},env);break;
       case 'assets':body=assetsPage(data);break;
       case 'brand-media':body=brandMediaPage(data);break;
       case 'workspace-archive':body=workspaceArchive(params,data);break;
@@ -213,7 +216,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       case 'worker-chat':body=await workerChatPage(params,data,env,fetcher);break;
       case 'worker-requests':body=workerRequestsPage(params,data);break;
       case 'projects':body=projectList(params,data);break;
-      case 'project':body=projectPage(params,data);break;
+      case 'project':body=data.projects.find(p=>p.id===params.get('project'))?.studio?.ideaId?ideaProjectPage(params,data):projectPage(params,data);break;
       case 'item':body=itemPage(params,data);if(data.byId.has(params.get('id')))body+=publicationPanel(data.byId.get(params.get('id')),data);break;
       case 'new':body=newItem(params,data);break;
       case 'review':body=reviewPage(params,data);break;
@@ -263,6 +266,8 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         const editParams=new URLSearchParams(params);editParams.set('tab','edit');
         body+='<p>Your unsaved edits are shown below. For a version conflict, open the latest saved copy in another tab before combining changes.</p>'+itemPage(editParams,data);
       }catch{body+='<details><summary>Unsaved content</summary><pre class="source-text">'+esc(f.fields||'')+'</pre></details>';}
+    }else if(req.method==='POST'&&f.action?.startsWith('idea-')&&data?.actor.role==='admin'){
+      body+=shinyThingsPage(params,data,f,env);
     }else if(req.method==='POST'&&f.action==='workout-days-save'&&data){
       const schedule=data.byId.get(f.schedule),week=schedule?.fields.weeks?.find(w=>String(w.number)===String(f.week));
       if(schedule?.kind==='structure'&&week&&(data.actor.role==='admin'||data.assigned.has(schedule.id))){
