@@ -38,3 +38,5 @@ test('future returned drafts always route to a worker, preserve assignment and c
  assert.equal(draftDocument(input,null,'worker:test:').workerId,'imogen');
  assert.throws(()=>draftDocument({...input,fields:{workerId:'unknown'}},null,'worker:test:'),/fields.workerId/);
 });
+
+test('editorial preface and embedded chat citations do not leak into the public article body',()=>{const raw='EDITORIAL WORKFLOW STATUS: private\n\n**Proposed title:** Example\n\n:::writing{title="Example"}\n# Example\n\nArticle prose.\n:::\n\n### Sources checked today\n\n- [Source](https://example.test) \uE200genui\uE202{"citation":{}}\uE201\n\n### Proposed real hero photograph\nImage metadata';const text=cleanArticleBody(raw,'Example');assert.match(text,/Article prose/);assert.match(text,/Sources checked/);assert.doesNotMatch(text,/EDITORIAL|Proposed|Image metadata|genui|writing/);});

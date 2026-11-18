@@ -1,3 +1,4 @@
+@font-face{font-family:Kalam;font-style:normal;font-weight:400;font-display:swap;src:url('/assets/fonts/kalam-400.woff2') format('woff2')}
 @font-face { font-family:Studio Sans; src:url("/content-library/?work=1&studio=media&preview=brand-font") format("woff2"); font-weight:100 1000; font-display:swap; }
 .studio { background: #f7f9f8; font-family:"Studio Sans","DM Sans",Arial,sans-serif; }
 .studio .side,.studio .top { background: white; }

@@ -7,7 +7,9 @@ export function knowledgeDocument(r,{preview=false,image=''}={}){
 }
 export function cleanArticleBody(body,title=''){
  let text=String(body||'').trim();
- if(/^:::writing\{[^\n]*\}\s*\n/.test(text))text=text.replace(/^:::writing\{[^\n]*\}\s*\n/,'').replace(/\n:::\s*$/,'');
+ const block=/^:::writing\{[^\n]*\}[^\n]*\n([\s\S]*?)^:::[ \t]*$/m.exec(text);
+ if(block){const after=text.slice(block.index+block[0].length);const sources=/^#{2,3} Sources(?: checked)?[^\n]*\n[\s\S]*/m.exec(after)?.[0]||'';text=block[1]+'\n\n'+sources.split(/\n#{2,3} Proposed /)[0];}
+ text=text.replace(/\uE200genui\uE202[\s\S]*?\uE201/g,'');
  const lines=text.split('\n');if(lines[0]?.replace(/^#\s+/,'').trim()===title.trim())lines.shift();
  return lines.join('\n').trim();
 }
