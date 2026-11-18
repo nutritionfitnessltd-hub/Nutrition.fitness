@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { sendBookFile } from './studio-books.mjs';
 import { HttpError } from './platform.mjs';
 import { displayEntry } from './library-display.mjs';
 import { studioData, editable, projectFor, saveRecord, mergeStudioRecord } from './studio-store.mjs';
@@ -61,6 +62,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env}){
     }
     [data,meta]=await Promise.all([studioData(api,actor,load),displayEntry(env,'shelves').catch(()=>({}))]);
     data.aiReady=Boolean(env.OPENAI_API_KEY);
+    if(section==='book-file')return await sendBookFile(req,res,params,data);
     if(req.method==='POST'){
       if(f.action==='plan-preview'){
         projectDraft(f,data);
