@@ -6,8 +6,13 @@ export function articleUrl(value){
  try{const u=new URL(value,origin);return ['https:','http:'].includes(u.protocol)?u.href:'';}catch{return '';}
 }
 export function articleImage(r){
+ if(r.kind==='article'&&r.articleImage?.type==='image/webp'&&/^nutrition-library\/article-images\/v1\/[a-f0-9-]{36}\.webp$/.test(r.articleImage.pathname))return url('article-image',{id:r.id,v:r.articleImage.pathname.split('/').pop()}).replaceAll('&amp;','&');
  const value=r.kind==='article'&&r.fields?.imageUrl;
  return typeof value==='string'&&/^\/assets\/(?:photos\/knowledge-\d+\.jpg|phone-in-hand\.webp)$/.test(value)?value:'';
+}
+export function articleImageEditor(r){
+ const photo=articleImage(r),f=r.fields||{};
+ return '<section class="panel article-image-editor" data-article-upload><h2>Article image</h2><p>Used for this article and its library thumbnail.</p><div class="article-image-drop"><label>Choose an image<input type="file" accept="image/jpeg,image/png,image/webp" data-article-file></label><p>Or drag an image here. JPG, PNG or WebP, up to 10 MB.</p></div><input type="hidden" name="imageUpload" value=""><img class="article-image-preview" data-article-preview'+(photo?' src="'+esc(photo)+'"':' hidden')+' alt="Article image preview"><p data-article-image-status role="status" aria-live="polite"></p><label>Image description<input name="uploadAlt" maxlength="500" value="'+esc(f.imageAlt||'')+'" placeholder="Describe the image"></label><label>Image credit (optional)<input name="uploadCredit" maxlength="500" value="'+esc(f.imageCredit||'')+'"></label><p class="meta">Choose your image, then Save draft to apply it.</p></section><script type="module" src="/article-image-upload.js"></script>';
 }
 // Preserve the source's headings, lists and tables, without executing imported markup.
 export function articleHtml(value){
