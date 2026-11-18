@@ -7,9 +7,22 @@ import { brandKit } from './studio-brand.mjs';
 const settingsId='studio:notifications';
 export const notificationPrefix='studio:notification:';
 const sender='notifications@nutrition.fitness';
-const defaults={enabled:false,reviewer:'kasia@nutrition.fitness'};
 const adminOnly=actor=>{if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');};
-export const notificationSettings=data=>({...defaults,...data.byId.get(settingsId)?.fields});
+const reviewerList=values=>[...new Set(values.map(value=>email(value)))];
+export function notificationSettings(data){
+  const fields=data.byId.get(settingsId)?.fields||{};
+  return {enabled:fields.enabled===true,reviewers:reviewerList(Array.isArray(fields.reviewers)?fields.reviewers:[fields.reviewer||'kasia@nutrition.fitness'])};
+}
+function reviewerSelector(data,settings){
+  const selected=new Set(settings.reviewers),people=new Map();
+  for(const person of data.people||[]){
+    try{const address=email(person.email);if(!people.has(address))people.set(address,person.name||address);}catch{}
+  }
+  for(const address of selected)if(!people.has(address))people.set(address,address);
+  return hidden('reviewersVersion','1')+'<fieldset class="notification-reviewers"><legend>Send review requests to</legend><p class="meta" id="reviewer-help">Select everyone who should receive a review request.</p><div class="notification-reviewer-options">'+
+    [...people].map(([address,name],i)=>'<label class="check"><input type="checkbox" name="reviewer_'+i+'" value="'+esc(address)+'"'+(selected.has(address)?' checked':'')+' aria-describedby="reviewer-help"><span>'+esc(name)+(name!==address?'<small>'+esc(address)+'</small>':'')+'</span></label>').join('')+
+    '</div><details><summary>Add other email addresses</summary>'+input('additionalReviewers','Email addresses','','text','maxlength="6600" placeholder="name@example.com, another@example.com"')+'<p class="meta">Separate addresses with commas. They will appear in the list after saving.</p></details></fieldset>';
+}
 export function exchangeConfigured(env){return ['EXCHANGE_TENANT_ID','EXCHANGE_CLIENT_ID','EXCHANGE_CLIENT_SECRET'].every(k=>Boolean(env[k]?.trim()));}
 const recordUrl=id=>itemTable+'?id=eq.'+encodeURIComponent(id)+'&select=id,payload,revision,updated_at';
 const recordFrom=row=>row?{...row.payload,revision:row.revision}:null;
@@ -72,16 +85,17 @@ export function workflowNotifications(params,f,data,env){
   const settings=notificationSettings(data);if(!settings.enabled)return [];
   const events=[],person=id=>data.people.find(p=>p.id===id);
   const add=(recipient,key,title,message,section,values)=>{if(recipient)events.push({recipient,key,title,message,link:notificationLink(env,section,values)});};
+  const review=(key,...details)=>{for(const recipient of settings.reviewers)add(recipient,key+':'+recipient,...details);};
   const project=data.projects.find(p=>p.id===params.get('project'));
   if(f.action==='project-create')add(person(f.creator)?.email,'assigned:'+f.id+':0','New work: '+f.name,'You have been assigned '+f.name+'.','project',{project:f.id});
   if(f.action==='project-save'&&project){
     if(f.creator&&f.creator!==project.creator_id)add(person(f.creator)?.email,'assigned:'+project.id+':'+project.revision,'New work: '+f.name,'You have been assigned '+f.name+'.','project',{project:project.id});
-    if(f.status==='Ready for review'&&project.status!==f.status)add(settings.reviewer,'project-review:'+project.id+':'+project.revision,'Ready for review: '+project.name,'Please review the finished work.','project',{project:project.id});
+    if(f.status==='Ready for review'&&project.status!==f.status)review('project-review:'+project.id+':'+project.revision,'Ready for review: '+project.name,'Please review the finished work.','project',{project:project.id});
   }
   if(f.action==='task-save'&&project){
     const task=project.entries.find(e=>e.id===f.entry);
     if(task&&task.status!==f.status){
-      if(f.status==='Ready for review')add(settings.reviewer,'task-review:'+project.id+':'+project.revision,'Ready for review: '+f.title,'Please review this task.','project',{project:project.id,week:f.week});
+      if(f.status==='Ready for review')review('task-review:'+project.id+':'+project.revision,'Ready for review: '+f.title,'Please review this task.','project',{project:project.id,week:f.week});
       if(['Changes requested','Done'].includes(f.status))add(person(project.creator_id)?.email,'task-result:'+project.id+':'+project.revision,f.status+': '+f.title,'The review of your task has been updated.','project',{project:project.id,week:f.week});
     }
   }
@@ -89,7 +103,7 @@ export function workflowNotifications(params,f,data,env){
   const status=f.action==='content-review'?f.status:f.action==='content-save'?({review:'In review',approve:'Approved'}[f.intent]):null;
   if(record&&status&&(status!==record.status||f.action==='content-save')){
     const key='content-review:'+record.id+':'+record.revision;
-    if(status==='In review')add(settings.reviewer,key,'Please review: '+(f.title||record.title),'This content is ready for your review.','item',{id:record.id,tab:'preview'});
+    if(status==='In review')review(key,'Please review: '+(f.title||record.title),'This content is ready for your review.','item',{id:record.id,tab:'preview'});
     if(['Changes requested','Approved'].includes(status)){
       const people=new Set(data.projects.filter(p=>p.studio?.allowedIds?.includes(record.id)||p.entries.some(e=>e.record===record.id||e.scopeIds?.includes(record.id))).map(p=>person(p.creator_id)?.email).filter(Boolean));
       for(const recipient of people)add(recipient,key+':'+recipient,status+': '+record.title,'The review of your content has been updated.','item',{id:record.id,tab:'preview'});
@@ -111,7 +125,7 @@ export async function connectionsPage(data,env,api,params){
     (params.get('saved')?'<p role="status">Notification settings saved.</p>':'')+
     (params.get('mail')?'<p role="status">'+esc(statuses[params.get('mail')]||'Check the recent email activity below.')+'</p>':'')+
     '<section class="panel"><h2>Email notifications</h2><p><strong>Microsoft 365 · '+(configured?'Ready to test':'Not connected')+'</strong></p><p>From '+sender+'</p>'+(!configured?'<p>Authorise your Microsoft 365 sender to turn on notifications.</p>':'')+
-    form('notifications-save',hidden('revision',r?.revision||0)+'<label class="check"><input type="checkbox" name="enabled" value="yes"'+(settings.enabled?' checked':'')+(!configured?' disabled':'')+'> Send workflow notifications</label>'+input('reviewer','Send review requests to',settings.reviewer,'email','required maxlength="254"')+'<p class="meta">Email the assigned person when work is assigned, the approver when work is ready, and the creator when a review is finished. Saving a draft does not send an email.</p>',{section:'connections'},'Save settings')+
+    form('notifications-save',hidden('revision',r?.revision||0)+'<label class="check"><input type="checkbox" name="enabled" value="yes"'+(settings.enabled?' checked':'')+(!configured?' disabled':'')+'> Send workflow notifications</label>'+reviewerSelector(data,settings)+'<p class="meta">Email the assigned person when work is assigned, the selected reviewers when work is ready, and the creator when a review is finished. Saving a draft does not send an email.</p>',{section:'connections'},'Save settings')+
     (configured?'<details><summary>Send a test email</summary>'+form('notifications-test',hidden('requestId',randomUUID())+input('recipient','Send to','james@nutrition.fitness','email','required'),{section:'connections'},'Send test email')+'</details>':'')+
     '<details><summary>Microsoft 365 setup</summary><p>Use a Microsoft Entra app authorised to send from '+sender+'. Scope its Exchange permission to this mailbox.</p><p>Add the tenant ID, app ID and client secret in this project’s Vercel environment settings as <code>EXCHANGE_TENANT_ID</code>, <code>EXCHANGE_CLIENT_ID</code> and <code>EXCHANGE_CLIENT_SECRET</code>. Keep the secret in Vercel, then redeploy and send a test.</p><p>'+button('Open Vercel settings','https://vercel.com/nufi2/nutrition-fitness-website-2/settings/environment-variables')+'</p></details>'+
     (rows.length?'<details><summary>Recent email activity</summary><ul class="studio-list">'+rows.map(row=>{const f=row.payload.fields;return '<li><div><strong>'+esc(row.payload.title)+'</strong><small>'+esc(f.recipient)+' · '+esc(statuses[f.state]||f.state)+' · '+esc(row.updated_at?.slice(0,16).replace('T',' '))+'</small><p>'+esc(f.detail||'')+'</p>'+(f.state==='failed'?form('notifications-retry',hidden('notification',row.id),{section:'connections'},'Retry email'):'')+'</div></li>';}).join('')+'</ul><p class="meta">Accepted means Microsoft has queued the email. Delivery can take a moment. Uncertain sends are not retried automatically.</p></details>':'')+'</section>'+
@@ -121,7 +135,11 @@ export async function changeNotifications(f,data,api,env,fetcher){
   adminOnly(data.actor);
   if(f.action==='notifications-save'){
     if(f.enabled==='yes'&&!exchangeConfigured(env))throw new HttpError(400,'Connect Microsoft 365 before turning on notifications.');
-    await saveRecord(api,data.actor,{id:settingsId,kind:'settings',title:'Email notifications',status:'Draft',fields:{enabled:f.enabled==='yes',reviewer:email(f.reviewer)}},Number(f.revision));
+    const values=f.reviewersVersion==='1'?[...Object.entries(f).filter(([key])=>/^reviewer_\d+$/.test(key)).map(([,value])=>value),...String(f.additionalReviewers||'').split(/[,;\n]/).map(value=>value.trim()).filter(Boolean)]:[f.reviewer];
+    const reviewers=reviewerList(values);
+    if(reviewers.length>25)throw new HttpError(400,'Choose up to 25 review recipients.');
+    if(f.enabled==='yes'&&!reviewers.length)throw new HttpError(400,'Select at least one person to receive review requests.');
+    await saveRecord(api,data.actor,{id:settingsId,kind:'settings',title:'Email notifications',status:'Draft',fields:{enabled:f.enabled==='yes',reviewers}},Number(f.revision));
     return {saved:'1'};
   }
   if(f.action==='notifications-test'){

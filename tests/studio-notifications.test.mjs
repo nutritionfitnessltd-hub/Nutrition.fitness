@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { deliverNotification, sendExchange, workflowNotifications, changeNotifications } from '../server/studio-notifications.mjs';
+import { deliverNotification, sendExchange, workflowNotifications, changeNotifications, notificationSettings, connectionsPage, notifyWorkflow } from '../server/studio-notifications.mjs';
 import { handleStudio } from '../server/studio.mjs';
 import { brandInstructions, sendBrandFile } from '../server/studio-brand.mjs';
 import { studioData } from '../server/studio-store.mjs';
@@ -69,6 +69,41 @@ test('workflow mails require an explicit transition, never ordinary draft saves'
   assert.equal(workflowNotifications(params,{action:'content-review',status:'Approved'},data,env)[0].recipient,'joyce@nutrition.fitness');
   data.byId.get('studio:notifications').fields.enabled=false;
   assert.deepEqual(workflowNotifications(params,{action:'content-save',intent:'review'},data,env),[]);
+});
+test('multiple reviewers save, reload, and retain legacy selections without sending email',async()=>{
+  const {api,rows}=fixture();
+  const data={actor,byId:new Map([['studio:notifications',{revision:1,fields:{enabled:false,reviewer:'kasia@nutrition.fitness'}}]]),people:[{name:'Kasia',email:'kasia@nutrition.fitness'},{name:'Joyce',email:'joyce@nutrition.fitness'}]};
+  assert.deepEqual(notificationSettings(data).reviewers,['kasia@nutrition.fitness']);
+  let html=await connectionsPage(data,env,api,new URLSearchParams());
+  assert.match(html,/type="checkbox" name="reviewer_0" value="kasia@nutrition.fitness" checked/);
+  assert.match(html,/type="checkbox" name="reviewer_1" value="joyce@nutrition.fitness"/);
+  const fields=Object.fromEntries(new URLSearchParams({action:'notifications-save',revision:'0',reviewersVersion:'1',enabled:'yes',reviewer_0:'kasia@nutrition.fitness',reviewer_1:'joyce@nutrition.fitness',additionalReviewers:'KASIA@nutrition.fitness, james@nutrition.fitness'}));
+  await changeNotifications(fields,data,api,env,()=>assert.fail('Saving settings must not send mail'));
+  const saved=rows.get('studio:notifications');data.byId.set(saved.id,{...saved.payload,revision:saved.revision});
+  assert.deepEqual(notificationSettings(data).reviewers,['kasia@nutrition.fitness','joyce@nutrition.fitness','james@nutrition.fitness']);
+  html=await connectionsPage(data,env,api,new URLSearchParams());
+  assert.equal((html.match(/name="reviewer_\d+"[^>]+ checked/g)||[]).length,3);
+  await assert.rejects(changeNotifications({...fields,revision:'1',additionalReviewers:'invalid address'},data,api,env),{status:400});
+  await assert.rejects(changeNotifications({action:'notifications-save',revision:'1',enabled:'yes',reviewersVersion:'1'},data,api,env),/Select at least one/);
+  await assert.rejects(changeNotifications(fields,data,api,env),{status:409});
+  await changeNotifications({action:'notifications-save',revision:'1',reviewersVersion:'1'},data,api,env);
+  assert.deepEqual(rows.get(saved.id).payload.fields,{enabled:false,reviewers:[]});
+  assert.equal(rows.size,1);
+});
+test('content, project and task reviews reach every selected reviewer once, including repeated requests',async()=>{
+  const record={id:'article',title:'An article',revision:1,status:'Draft'};
+  const data={byId:new Map([[record.id,record],['studio:notifications',{fields:{enabled:true,reviewers:['kasia@nutrition.fitness','joyce@nutrition.fitness','KASIA@nutrition.fitness']}}]]),people:[],projects:[{id:'p',name:'Course',revision:3,status:'Planning',entries:[{id:'task',status:'Draft'}]}]};
+  const params=new URLSearchParams({id:record.id,project:'p'}),{api,rows}=fixture(),requests=[];
+  for(const fields of [{action:'content-save',intent:'review'},{action:'project-save',status:'Ready for review'},{action:'task-save',entry:'task',status:'Ready for review',title:'Lesson'}]){
+    const events=workflowNotifications(params,fields,data,env);
+    assert.deepEqual(events.map(e=>e.recipient),['kasia@nutrition.fitness','joyce@nutrition.fitness']);
+    assert.equal(new Set(events.map(e=>e.key)).size,2);
+    await notifyWorkflow(events,{api,actor,env,fetcher:graph(requests)});
+    await notifyWorkflow(events,{api,actor,env,fetcher:graph(requests)});
+  }
+  const sends=requests.filter(r=>r.url.endsWith('/sendMail'));
+  assert.equal(sends.length,6);assert.equal(rows.size,6);
+  for(const address of ['kasia@nutrition.fitness','joyce@nutrition.fitness'])assert.equal(sends.filter(r=>JSON.parse(r.options.body).message.toRecipients[0].emailAddress.address===address).length,3);
 });
 test('email actions and private brand files require administrator access',async()=>{
   const data={actor:{role:'staff'},byId:new Map()};
