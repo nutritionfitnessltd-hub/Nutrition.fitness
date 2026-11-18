@@ -1,4 +1,4 @@
-export const workerNames={nina:'Nina',imogen:'Imogen',marcus:'Marcus',rory:'Rory'};
+export const workerNames={nina:'Nina',imogen:'Imogen',marcus:'Marcus',rory:'Rory',nigel:'Nigel',martina:'Martina',andy:'Andy',alex:'Alex'};
 const workerKey=value=>typeof value==='string'&&Object.hasOwn(workerNames,value.toLowerCase())?value.toLowerCase():'';
 
 export function contentWorker(record,byId=new Map(),seen=new Set()){

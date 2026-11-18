@@ -352,6 +352,10 @@
 .worker-imogen { --worker-tint:#e7edde; --worker-accent:#6d886a; }
 .worker-marcus { --worker-tint:#f8e5d7; --worker-accent:#bd815e; }
 .worker-rory { --worker-tint:#e1edf5; --worker-accent:#668da7; }
+.worker-nigel { --worker-tint:#f6ead8; --worker-accent:#b68b51; }
+.worker-martina { --worker-tint:#f4e3ed; --worker-accent:#a76c91; }
+.worker-andy { --worker-tint:#e4efdf; --worker-accent:#7b9a62; }
+.worker-alex { --worker-tint:#e7e4f3; --worker-accent:#7972a2; }
 .dashboard-worker { overflow:hidden; border-color:#deded6; }
 .dashboard-worker header { background:var(--worker-tint,#e7edde); margin:-24px -24px 0; padding:22px 24px; border-top:4px solid var(--worker-accent,#6d886a); gap:18px; min-height:140px; }
 .worker-portrait { display:block; width:96px; height:96px; flex:0 0 96px; object-fit:cover; border-radius:24px; border:3px solid #ffffffd9; }
