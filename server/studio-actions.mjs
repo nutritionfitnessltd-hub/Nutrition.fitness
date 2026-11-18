@@ -1,3 +1,4 @@
+import { workerNames } from './studio-worker-content.mjs';
 import { saveWorkoutDays } from './studio-workout-days.mjs';
 import { randomUUID } from 'node:crypto';
 import { HttpError, uuid } from './platform.mjs';
@@ -7,6 +8,12 @@ import { extractDrafts } from './studio-import.mjs';
 import { refreshMealPlan } from './studio-mealplans.mjs';
 
 const adminOnly=data=>{if(data.actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');};
+function assignWorker(record,f,data){
+  if(f.workerId===undefined)return;
+  adminOnly(data);
+  if(f.workerId!=='none'&&!Object.hasOwn(workerNames,f.workerId))throw new HttpError(400,'Choose a valid worker.');
+  record.workerId=f.workerId;
+}
 function number(value,min,max){
   const n=Number(value);if(!Number.isInteger(n)||n<min||n>max)throw new HttpError(400,'Check the number of weeks or the saved version.');return n;
 }
@@ -81,6 +88,7 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
     if(data.byId.has(id))return {section:'item',id};
     if(f.intent&&!['draft','preview'].includes(f.intent))throw new HttpError(400,'Save this new draft before checking it.');
     const record={id,title,kind:f.kind,status:'Draft',fields:f.fields?readFields(f.fields,f.kind):blankFields(f.kind),parent:null,comments:[]};
+    assignWorker(record,f,data);
     await createItem(record,f.project,f.entry,data,api);return {section:'item',id,tab:f.intent==='preview'?'preview':'edit'};
   }
   if(action==='import-save'){
@@ -100,6 +108,7 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
     if(action==='content-save'){
       next.title=cleanText(f.title,200);if(!next.title)throw new HttpError(400,'Add a title.');
       if(f.intent&&!['draft','preview','approve','review'].includes(f.intent))throw new HttpError(400,'Choose a save action.');
+      assignWorker(next,f,data);
       next.fields=readFields(f.fields,next.kind);
       if(next.kind==='mealplan'&&r.fields.plannerVersion===1)next.fields=refreshMealPlan(next.fields,data,r.fields);
       if(next.source&&f.sourceChecked==='yes')next.source.needsChecking=false;
