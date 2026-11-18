@@ -1,6 +1,13 @@
 @font-face { font-family:Studio Sans; src:url("/content-library/?work=1&studio=media&preview=brand-font") format("woff2"); font-weight:100 1000; font-display:swap; }
 .studio { background: #f7f9f8; font-family:"Studio Sans","DM Sans",Arial,sans-serif; }
 .studio .side,.studio .top { background: white; }
+.login-page { font-family:Arial,sans-serif; }
+.login-shell { max-width:520px; margin:8vh auto; padding:24px; }
+.login-shell>.brand { text-align:center; margin-bottom:28px; }
+.login-shell .auth { background:white; margin:0; max-width:none; }
+.login-shell .auth h1 { font-size:28px; }
+.login-shell .auth form { margin:24px 0; }
+.team-row .studio-actions form { margin:0; }
 .studio .side { height:100dvh; position:sticky; }
 .studio .workspace main { max-width: 1640px; margin: auto; padding: 32px 40px 64px; }
 .studio .top .studio-form { margin:0; display:block; width:auto; }
@@ -28,6 +35,9 @@
 .studio-tools { margin:32px 12px 16px; color:var(--muted); font-size:14px; }
 .studio-tools summary { padding:12px 0; cursor:pointer; }
 .studio-tools nav { margin-top:8px; }
+.studio-subnav { margin:4px 0 14px 14px; border-left:1px solid var(--line); padding-left:8px; }
+.studio .studio-subnav a { font-size:13px; padding:8px 12px; }
+.studio-subnav summary { padding:9px 12px; font-size:13px; }
 .studio-workbar,.studio-programme-bar { display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:0 0 24px; }
 .studio-workbar .btn { font-size:14px; }
 .studio-start-options { display:flex; flex-wrap:wrap; gap:24px; align-items:start; }
