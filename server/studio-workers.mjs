@@ -3,16 +3,20 @@ import { brandInstructions } from './studio-brand.mjs';
 import { HttpError, uuid } from './platform.mjs';
 import { cleanText } from './studio-model.mjs';
 import { saveRecord } from './studio-store.mjs';
+import { contentPhoto, workerPortrait } from './studio-visuals.mjs';
 import { esc, url, heading, button, hidden, input, textarea, select, form, list, pages } from './studio-ui.mjs';
 
 // These roles were checked against James HQ and the saved Rory role on 18 November 2026.
 // A named employee or scheduled chat is not a published API-triggerable Workspace Agent.
 export const workers={
-  nina:{name:'Nina',role:'Content & marketing',employeeId:'employee:Nutrition.Fitness:content',reason:'Newsletters, articles, emails and campaign copy.'},
-  imogen:{name:'Imogen',role:'Courses & production',employeeId:'employee:Nutrition.Fitness:course-production',reason:'Course structure, lesson scripts and production preparation.'},
-  rory:{name:'Rory',role:'Social & video',employeeId:null,reason:'Social posts and short video scripts. HQ directory connection still needs confirming.'}
+  nina:{portrait:'/assets/studio-team/nina.jpg',defaultBuild:'newsletter',name:'Nina',role:'Content & marketing',employeeId:'employee:Nutrition.Fitness:content',reason:'Newsletters, articles, emails and campaign copy.'},
+  imogen:{portrait:'/assets/studio-team/imogen.jpg',defaultBuild:'course',name:'Imogen',role:'Courses & production',employeeId:'employee:Nutrition.Fitness:course-production',reason:'Course structure, lesson scripts and production preparation.'},
+  marcus:{portrait:'/assets/studio-team/marcus.jpg',defaultBuild:'programme',name:'Marcus',role:'Training & Programme Designer',employeeId:'11e08be4-caa8-45de-b972-b333bb4e274c',reason:'Workouts, exercise choices, weekly schedules and progression.'},
+  rory:{portrait:'/assets/studio-team/rory.jpg',defaultBuild:'socials',name:'Rory',role:'Social & video',employeeId:null,reason:'Social posts and short video scripts. HQ directory connection still needs confirming.'}
 };
 export const outputs={
+  programme:{label:'Training programme',worker:'marcus',brief:'Read the original programme and preserve its evidenced structure. Prepare the goal, audience, weekly schedule, workout sequence, exercise choices and progression. Specify sets, reps, rest, intensity, recovery and suitable alternatives where the sources support them. Identify missing goals, experience, equipment, training days, session length and limitations before prescribing details. Flag uncertain exercise or safety claims and keep the programme as a draft for James to review; never claim clinical suitability or professional approval.'},
+  workout:{label:'Workout session',worker:'marcus',brief:'Read the original workout and exercise material. Prepare the warm-up, main exercises, sets and reps or duration, rest, intensity, coaching cues, alternatives and cool-down. Explain how the session fits the programme and its progression. Flag missing goals, experience, equipment, available time and limitations. Keep the workout as a draft for James to review; never claim clinical suitability or professional approval.'},
   challenge:{label:'Challenge structure',worker:'imogen',brief:'Prepare the challenge overview, source-supported sequence, activities and check-ins. Flag missing or unclear material.'},
   course:{label:'Course & lesson plan',worker:'imogen',brief:'Preserve the evidenced module and lesson order. Prepare an overview and lesson plan. Identify missing lessons and supporting files.'},
   branding:{label:'Brand & export course',worker:'imogen',brief:'Work on Canva copies in confirmed lesson order. Apply the approved nutrition.fitness colours, fonts and registered logo. Export the first lesson for James to check, then continue with the agreed treatment. Save exports to the team SharePoint folder and link each file to its course and lesson.'},
@@ -59,6 +63,7 @@ export function sourceBundle(values,data,meta={}){
   return {title,group:shelf||records[0].group,records,selection:{source:id,folder,shelf}};
 }
 export function suggestedOutputs(bundle){
+  if(bundle.group==='Programs')return ['programme','workout'];
   if(bundle.group==='Challenges')return ['challenge','emails','landing','socials'];
   if(bundle.group==='Courses')return ['course','branding','scripts','emails'];
   if(bundle.group==='Socials')return ['socials','video'];
@@ -76,8 +81,8 @@ function sourceSummary(bundle){
     (readable<bundle.records.length?'<p class="meta">Some sources contain links or files only. The worker must open those originals before using their content.</p>':'')+
     '<details><summary>Source material</summary>'+list(bundle.records,r=>'<div><strong>'+esc(r.title)+'</strong><small>'+esc(r.kind)+'</small></div>'+button('Open original',originalLink(r.id)))+'</details></section>';
 }
-const buildTitles={challenge:'A challenge',course:'A course',branding:'Brand a course',scripts:'Lesson scripts',newsletter:'A newsletter',emails:'An email sequence',article:'An article',landing:'A landing page',socials:'Social posts',video:'A video script'};
-const buildDescriptions={challenge:'Turn an original into a clear challenge and daily activities.',course:'Organise the lessons, modules and supporting material.',branding:'Prepare Canva branding, exports and checked course files.',scripts:'Prepare narration to copy into ElevenLabs.',newsletter:'Create a useful email from your archive content.',emails:'Plan welcome messages and follow-up emails.',article:'Build an article from your original material.',landing:'Explain an offer and give people a clear next step.',socials:'Turn the original into posts, captions and visual ideas.',video:'Prepare a hook, narration and shot notes.'};
+const buildTitles={programme:'A programme',workout:'A workout',challenge:'A challenge',course:'A course',branding:'Brand a course',scripts:'Lesson scripts',newsletter:'A newsletter',emails:'An email sequence',article:'An article',landing:'A landing page',socials:'Social posts',video:'A video script'};
+const buildDescriptions={programme:'Plan the weeks, workouts and progression from your originals.',workout:'Build a complete session with exercises, sets, reps and coaching cues.',challenge:'Turn an original into a clear challenge and daily activities.',course:'Organise the lessons, modules and supporting material.',branding:'Prepare Canva branding, exports and checked course files.',scripts:'Prepare narration to copy into ElevenLabs.',newsletter:'Create a useful email from your archive content.',emails:'Plan welcome messages and follow-up emails.',article:'Build an article from your original material.',landing:'Explain an offer and give people a clear next step.',socials:'Turn the original into posts, captions and visual ideas.',video:'Prepare a hook, narration and shot notes.'};
 const flowKeys=['build','source','folder','shelf','requestId','audience','instructions','sourceText','configured',...Object.keys(outputs).flatMap(k=>['output_'+k,'worker_'+k])];
 const flowState=f=>Object.fromEntries(flowKeys.filter(k=>f[k]!==undefined).map(k=>[k,f[k]]));
 const stateFields=(state,exclude=[])=>Object.entries(flowState(state)).filter(([k])=>!exclude.includes(k)).map(([k,v])=>hidden(k,v)).join('');
@@ -93,7 +98,7 @@ function buildStart(state={},bundle){
     '<div class="studio-build-grid">'+Object.entries(outputs).map(([key,o])=>{
       const next={...flowState(state),build:key};
       if(state.build!==key){delete next.configured;for(const k of Object.keys(outputs)){delete next['output_'+k];delete next['worker_'+k];}}
-      return '<form method="post" action="'+url('builder')+'">'+hidden('action','worker-step')+stateFields(next)+'<button class="studio-build-choice"><span class="build-worker">'+workers[o.worker].name+' suggested</span><strong>'+esc(buildTitles[key])+'</strong><span>'+esc(buildDescriptions[key])+'</span><span class="build-arrow" aria-hidden="true">→</span></button></form>';
+      return '<form method="post" action="'+url('builder')+'">'+hidden('action','worker-step')+stateFields(next)+'<button class="studio-build-choice worker-'+o.worker+'">'+contentPhoto(key,'build-photo')+'<span class="build-worker">'+workerPortrait(workers[o.worker],'worker-mini')+workers[o.worker].name+' suggested</span><strong>'+esc(buildTitles[key])+'</strong><span>'+esc(buildDescriptions[key])+'</span><span class="build-arrow" aria-hidden="true">→</span></button></form>';
     }).join('')+'</div>';
 }
 export function workerStart(){return buildStart();}
@@ -102,7 +107,7 @@ export function builderPage(params,data,meta={},values){
   const state=values||Object.fromEntries(params),build=Object.hasOwn(outputs,state.build||'')?state.build:'';
   if(!build||state.step==='build')return buildStart(state,state.source||state.folder?sourceBundle(state,data,meta):null);
   if(state.step==='source'||(!state.source&&!state.folder)){
-    const q=cleanText(state.q||'',160),shelf=state.shelf||(['course','branding','scripts'].includes(build)?'Courses':'Challenges');
+    const q=cleanText(state.q||'',160),shelf=state.shelf||(['programme','workout'].includes(build)?'Programs':['course','branding','scripts'].includes(build)?'Courses':'Challenges');
     const rows=archiveRows(data).filter(r=>r.group===shelf&&[r.title,r.fields?.collection,meta.assets?.[r.id]?.shelf].join(' ').toLowerCase().includes(q.toLowerCase()));
     const groups=new Map();
     for(const r of rows){const title=meta.assets?.[r.id]?.shelf||r.fields?.collection;if(title){if(!groups.has(title))groups.set(title,[]);groups.get(title).push(r);}}
@@ -121,8 +126,9 @@ export function builderPage(params,data,meta={},values){
   return heading('Make it your own',primary.label+' from '+bundle.title)+steps(3)+
     form('worker-preview',stateFields({...state,...bundle.selection,build,requestId:state.requestId||randomUUID()},['audience','instructions','sourceText','configured',...Object.keys(outputs).map(k=>'output_'+k)])+hidden('configured','yes')+
       '<div class="studio-flow-back"><button name="step" value="source" formaction="'+url('builder',{flowBack:'1'})+'" formnovalidate>← Change original</button><button name="step" value="build" formaction="'+url('builder',{flowBack:'1'})+'" formnovalidate>Change what to build</button></div>'+
-      '<section class="panel studio-chosen-build"><h2>'+esc(primary.label)+'</h2><p>'+esc(buildDescriptions[build])+'</p><p class="meta">Original: '+esc(bundle.title)+' · Suggested worker: '+workers[primary.worker].name+'</p>'+hidden('output_'+build,'yes')+'</section>'+
+      '<section class="panel studio-chosen-build">'+workerPortrait(workers[primary.worker])+'<div><h2>'+esc(primary.label)+'</h2><p>'+esc(buildDescriptions[build])+'</p><p class="meta">Original: '+esc(bundle.title)+' · Suggested worker: '+workers[primary.worker].name+'</p></div>'+hidden('output_'+build,'yes')+'</section>'+
       input('audience','Who is this for?',state.audience??'Nutrition.fitness members','text','maxlength="500"')+
+      (['programme','workout'].includes(build)?'<p class="meta">Tell Marcus the goal, experience level, equipment, days per week and session length. Include any known limitations. Missing details will be flagged for your review.</p>':'')+
       textarea('instructions','What would you like them to do?',state.instructions||'',4)+
       '<details class="panel"'+(selected.some(k=>k!==build)?' open':'')+'><summary>Add related content (optional)</summary><p>Keep it to one piece, or plan supporting content at the same time.</p><div class="studio-worker-choices">'+other.map(([key,o])=>'<label class="check"><input type="checkbox" name="output_'+key+'" value="yes"'+(selected.includes(key)?' checked':'')+'> <span>'+esc(o.label)+'<small>'+workers[o.worker].name+' suggested</small></span></label>').join('')+'</div></details>'+
       '<details class="panel"'+(state.sourceText?' open':'')+'><summary>Add source text (optional)</summary><p>Paste text from an original the worker may not be able to open.</p>'+textarea('sourceText','Text from the original',state.sourceText||'',8)+'</details>',{section:'builder'},'Next: review plan');

@@ -1,5 +1,6 @@
 import { canEditDays, workoutDaysEditor } from './studio-workout-days.mjs';
 import { workoutDays, workoutSession } from './studio-workouts.mjs';
+import { contentPhoto } from './studio-visuals.mjs';
 import { workspaceDashboard } from './studio-dashboard.mjs';
 import { workerStart } from './studio-workers.mjs';
 import { contentSections } from './studio-navigation.mjs';
@@ -65,7 +66,7 @@ export function home(data,meta={}){
 function typeCards(sections,counts,bucket){
   return '<nav class="studio-cards studio-type-grid" aria-label="Content types">'+sections.map(([id,title])=>{
     const count=counts.get(id)||0,icon=collections[id]?.[2]||'FileText';
-    return '<a class="studio-card studio-type-card" href="'+url('library',{kind:id,bucket})+'"><div class="studio-type-icon" aria-hidden="true">'+icons[icon]+'</div><h2>'+esc(title)+'</h2><div class="studio-type-count">'+count.toLocaleString('en-GB')+' '+(count===1?'item':'items')+'</div><span aria-hidden="true">→</span></a>';
+    return '<a class="studio-card studio-type-card has-photo" href="'+url('library',{kind:id,bucket})+'">'+contentPhoto(id,'studio-type-photo')+'<div class="studio-type-icon" aria-hidden="true">'+icons[icon]+'</div><h2>'+esc(title)+'</h2><div class="studio-type-count">'+count.toLocaleString('en-GB')+' '+(count===1?'item':'items')+'</div><span aria-hidden="true">→</span></a>';
   }).join('')+'</nav>';
 }
 export function library(params,data,meta={}){
