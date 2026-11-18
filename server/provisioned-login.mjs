@@ -9,8 +9,7 @@ export async function provisionedLoginAvailable(api) {
   return true;
 }
 
-export async function signInProvisioned(address,input,api,env,res) {
-  const suppliedPassword=password(input.password,{existing:true});
+export async function consumePasswordAttempt(address,api,env,res) {
   const bucket=createHmac('sha256',env.SUPABASE_SERVICE_ROLE_KEY).update('nufi-login-v1:'+address).digest('hex');
   const budget=await api('/rest/v1/rpc/nufi_consume_password_attempt',{
     method:'POST',service:true,payload:{account_bucket:bucket},
@@ -19,6 +18,10 @@ export async function signInProvisioned(address,input,api,env,res) {
     throw new HttpError(503,'Sign-in protection could not be confirmed. Please try again.');
   }
   if(!budget.allowed){res.setHeader('Retry-After',String(Math.max(1,budget.retry_after)));throw new HttpError(429,'Too many sign-in attempts. Please wait before trying again.');}
+}
+export async function signInProvisioned(address,input,api,env,res,{attemptConsumed=false}={}) {
+  const suppliedPassword=password(input.password,{existing:true});
+  if(!attemptConsumed)await consumePasswordAttempt(address,api,env,res);
   // Do not disable provider protection. When Turnstile is configured, send its real token.
   let security={};
   if(env.TURNSTILE_SITE_KEY||env.TURNSTILE_SECRET_KEY){
