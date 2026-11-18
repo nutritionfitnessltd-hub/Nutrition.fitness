@@ -5,7 +5,8 @@
   "outputDirectory": "dist",
   "trailingSlash": true,
   "functions": {
-    "api/content.js": { "includeFiles": "server/{guest-catalogue.enc,brand-assets/**}" }
+    "api/content.js": { "includeFiles": "server/{guest-catalogue.enc,brand-assets/**}" },
+    "api/course-production.js": { "includeFiles": "server/guest-catalogue.enc" }
   },
   "rewrites": [
     {
