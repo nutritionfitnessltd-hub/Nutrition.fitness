@@ -23,7 +23,8 @@ export function archivePage(params,data,meta={}){
   });
   body=body.replace('<form class="filters" action="/content-library/">','<form class="filters" action="/content-library/">'+hidden('work','1')+hidden('studio','archive'));
   return heading('Originals','Source files, grouped by category.',button('Import a file',url('import')))+navigation+
-    (record?'<div class="studio-workbar">'+button('Use as a starting point',url('import',{source:record.id}),true)+button('Original assets',link({work:'1',assets:record.id}))+'</div>':'')+body;
+    (data.actor.role==='admin'&&(record||state.get('folder'))?'<div class="studio-workbar">'+button('Create with a worker',url('builder',record?{source:record.id}:{folder:state.get('folder'),shelf}),true)+'</div>':'')+
+    (record?'<div class="studio-workbar">'+button('Import source text',url('import',{source:record.id}),true)+button('Original assets',link({work:'1',assets:record.id}))+'</div>':'')+body;
 }
 export function importPage(params,data,error='',values={}){
   const source=data.index.records.find(r=>r.id===(params.get('source')||values.source));

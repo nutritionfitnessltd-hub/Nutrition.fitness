@@ -226,3 +226,6 @@
 @media(max-width:760px){.meal-plan-meals{grid-template-columns:1fr}.meal-plan-meal{display:grid;grid-template-columns:110px minmax(0,1fr);gap:14px}.meal-plan-meal:not(:has(img)){display:block}.meal-shopping{columns:1}}
 .studio-content-card:has(img[src*="book-file"])>img{object-fit:contain;background:#eaf0ef;padding:12px;}
 @media(max-width:480px){.studio-cards,.studio-content-grid,.studio .studio-simple-grid,.studio .studio-type-grid {grid-template-columns:1fr;}.studio-list>li {gap:8px;}.studio-card {min-height:130px;}.studio-book-cover{height:340px;}}
+
+/* Archive-led worker requests */
+.studio-worker-intro{border-left:4px solid var(--accent,#074b60);max-width:950px}.studio-worker-intro h2{margin-top:.5rem}.studio-worker-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}.studio-worker-choices .check{align-items:flex-start}.studio-worker-choices small{display:block;color:#566d7b;margin-top:5px}.studio-notice{padding:22px;background:#edf4f5;border-left:3px solid #074b60;margin:22px 0;max-width:1000px}.studio-notice h2{font-size:1.1rem;margin-top:0}

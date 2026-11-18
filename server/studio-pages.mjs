@@ -1,4 +1,5 @@
 import { workoutDays, workoutSession } from './studio-workouts.mjs';
+import { workerStart } from './studio-workers.mjs';
 import { contentSections } from './studio-navigation.mjs';
 import { editorForm, referenceData, contentPreview, videoTools } from './studio-editor.mjs';
 import { fieldLabel } from '../public/studio-fields.mjs';
@@ -106,7 +107,8 @@ export function library(params,data,meta={}){
 export function createPage(params,data,values={}){
   if(params.get('template')==='mealplan')return mealPlanForm(data,values);
   const choice=params.get('template'),t=data.actor.role==='admin'?templates[choice]:null;
-  if(!t)return heading('Create content','Choose what you want to make.')+
+  if(!t)return heading('Studio','Create from your originals, with the right worker for each job.',data.actor.role==='admin'?button('Saved worker requests',url('worker-requests')):'')+
+    (data.actor.role==='admin'?workerStart():'')+'<h2>Create manually</h2>'+
     '<div class="studio-cards studio-type-grid">'+contentSections.map(([kind,title])=>card(title,'',createLink(kind))).join('')+'</div>'+
     '<details class="panel"><summary>More content types</summary><div class="studio-actions">'+Object.entries(kinds).filter(([kind])=>!contentSections.some(([key])=>key===kind)).map(([kind,title])=>button(title,createLink(kind))).join('')+'</div></details>'+
     '<div class="studio-actions">'+button('Use an original',url('archive'))+button('Import a file',url('import'))+'</div>'+
@@ -263,6 +265,7 @@ export function newItem(params,data,values={}){
   let fields=blankFields(kind);if(values.fields)try{fields=JSON.parse(values.fields);}catch{}
   const r={id:values.id||'studio:'+randomUUID(),kind,title:values.title??params.get('title')??'',fields};
   return '<a class="back" href="'+url('create')+'">← Create content</a>'+heading('Create '+kinds[kind].toLowerCase())+
+    (data.actor.role==='admin'&&!values.fields?'<p class="studio-workbar">'+button('Start from an original with a worker',url('builder',{shelf:kind==='course'||kind==='lesson'?'Courses':kind==='challenge'?'Challenges':''}))+'</p>':'')+
     editorForm(r,data,{create:true,project:values.project||params.get('project')||'',entry:values.entry||params.get('entry')||'',unsaved:data.unsaved===true})+referenceData(data);
 }
 export function reviewPage(params,data){
