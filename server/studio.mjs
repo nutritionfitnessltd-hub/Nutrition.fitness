@@ -1,3 +1,4 @@
+import { builderPage, workerPreview, saveWorkerRequest, workerRequestsPage } from './studio-workers.mjs';
 import { randomUUID } from 'node:crypto';
 import { sendBookFile } from './studio-books.mjs';
 import { saveArticleImage, sendArticleImage } from './studio-article-images.mjs';
@@ -65,11 +66,17 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       res.setHeader('Content-Type',file.type);res.statusCode=200;return res.end(Buffer.from(file.data,'base64'));
     }
     [data,meta]=await Promise.all([studioData(api,actor,load),displayEntry(env,'shelves').catch(()=>({}))]);
+    meta=meta||{};
     data.aiReady=Boolean(env.OPENAI_API_KEY);
     if(section==='book-file')return await sendBookFile(req,res,params,data);
     if(section==='article-image')return await sendArticleImage(req,res,params,data);
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
+      if(f.action==='worker-preview')return write(res,200,workerPreview(f,data,meta),'builder',actor,meta);
+      if(f.action==='worker-save'){
+        const id=await saveWorkerRequest(f,data,meta,api);
+        res.statusCode=303;res.setHeader('Location',url('worker-requests',{id}).replaceAll('&amp;','&'));return res.end();
+      }
       if(f.action==='mealplan-generate'){
         const current=params.get('id')?editable(data,params.get('id')):null;
         if(current&&(current.kind!=='mealplan'||current.revision!==Number(f.revision)))throw new HttpError(409,'Reopen the latest meal plan before generating it again.');
@@ -138,6 +145,8 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       case 'home':body=home(data,meta);break;
       case 'library':case 'exercises':body=library(params,data,meta||{});break;
       case 'create':body=createPage(params,data);break;
+      case 'builder':body=builderPage(params,data,meta);break;
+      case 'worker-requests':body=workerRequestsPage(params,data);break;
       case 'projects':body=projectList(params,data);break;
       case 'project':body=projectPage(params,data);break;
       case 'item':body=itemPage(params,data);break;
@@ -180,6 +189,8 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         const editParams=new URLSearchParams(params);editParams.set('tab','edit');
         body+='<p>Your unsaved edits are shown below. For a version conflict, open the latest saved copy in another tab before combining changes.</p>'+itemPage(editParams,data);
       }catch{body+='<details><summary>Unsaved content</summary><pre class="source-text">'+esc(f.fields||'')+'</pre></details>';}
+    }else if(req.method==='POST'&&['worker-preview','worker-save'].includes(f.action)&&data?.actor.role==='admin'){
+      try{body+=f.action==='worker-save'?workerPreview(f,data,meta):builderPage(params,data,meta,f);}catch{body+=button('Choose original material',url('builder'));}
     }else if(req.method==='POST'&&f.action==='content-create'&&data){
       data.unsaved=true;body+=newItem(params,data,f);
     }else if(req.method==='POST'&&f.action==='mealplan-generate'&&data){

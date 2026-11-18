@@ -28,7 +28,7 @@ test('library retains separate content types while creation and programme naviga
   const nav=frame.match(/aria-label="Studio navigation">(.*?)<\/nav>/s)[1];
   assert.equal((nav.match(/class="studio-nav-section"/g)||[]).length,5);
   assert.ok(nav.indexOf('Content library')<nav.indexOf('Originals'));
-  for(const label of ['Create','Work','Settings'])assert.ok(nav.includes(label));
+  for(const label of ['Studio','Work','Settings'])assert.ok(nav.includes(label));
   assert.doesNotMatch(nav,/Published|Drafts/); // Status controls have one home, in the library.
   assert.match(html,/<summary>More content types<\/summary>/);
   const create=createPage(new URLSearchParams(),data);

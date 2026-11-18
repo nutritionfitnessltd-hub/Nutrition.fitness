@@ -177,3 +177,6 @@
 @media(max-width:480px){.studio-cards,.studio-content-grid,.studio .studio-simple-grid,.studio .studio-type-grid {grid-template-columns:1fr;}.studio-list>li {gap:8px;}.studio-card {min-height:130px;}.studio-book-cover{height:340px;}}
 /* Messaging keeps the writing and the two everyday actions together. */
 .message-editor{max-width:820px}.message-editor .studio-save-bar{position:static;margin-top:20px}.message-options{margin:20px 0 0;padding:0;border:0}.message-options>summary{font-size:14px;color:var(--muted);cursor:pointer}.message-options[open]>summary{margin-bottom:20px}.message-options .studio-actions{margin-top:20px}.message-preview{max-width:820px}.message-link-text{font-weight:600}
+
+/* Archive-led worker requests */
+.studio-worker-intro{border-left:4px solid var(--accent,#074b60);max-width:950px}.studio-worker-intro h2{margin-top:.5rem}.studio-worker-choices{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}.studio-worker-choices .check{align-items:flex-start}.studio-worker-choices small{display:block;color:#566d7b;margin-top:5px}.studio-notice{padding:22px;background:#edf4f5;border-left:3px solid #074b60;margin:22px 0;max-width:1000px}.studio-notice h2{font-size:1.1rem;margin-top:0}
