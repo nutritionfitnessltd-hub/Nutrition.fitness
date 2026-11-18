@@ -322,6 +322,7 @@
 @media(max-width:760px){.dashboard-welcome { padding:24px; gap:22px; }.studio .studio-type-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }.dashboard-worker header { margin:-24px -24px 0; }.studio .welcome-copy h1 { font-size:30px; }}
 @media(max-width:600px){.dashboard-worker header { margin:-20px -20px 0; padding:18px 20px; }.worker-portrait { width:76px; height:76px; flex-basis:76px; border-radius:20px; }.welcome-pictures { gap:8px; }.welcome-pictures>a { min-height:154px; }.welcome-pictures span { font-size:13px; left:12px; bottom:14px; }.studio-chosen-build { align-items:start; gap:14px; }.studio .studio-build-choice { padding:0 20px 38px; }.studio-build-choice .build-photo { width:calc(100% + 40px); margin:0 -20px; }.studio-type-card.has-photo h2 { font-size:18px; }.studio-type-photo { height:106px; }}
 @media(prefers-reduced-motion:reduce){.studio *, .studio *:before,.studio *:after { scroll-behavior:auto!important; transition:none!important; }}
+
 .team-member { border-bottom:1px solid #d6dedb; padding-bottom:20px; margin-bottom:20px; }
 .team-member:last-child { margin-bottom:0; }
 .team-member .team-row { border:0; padding-bottom:12px; }
