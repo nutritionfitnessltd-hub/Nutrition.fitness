@@ -64,6 +64,7 @@ export function validateShape(kind,fields){
   for(const [key,sample] of Object.entries(expected)){
     if(!Object.hasOwn(fields,key))continue;
     const value=fields[key];
+    if(kind==='recipe'&&value===null&&['prepMinutes','cookMinutes','nutrition'].includes(key))continue;
     const matches=Array.isArray(sample)?Array.isArray(value):sample&&typeof sample==='object'?value&&typeof value==='object'&&!Array.isArray(value):typeof sample===typeof value;
     if(!matches)throw new HttpError(400,'Check the format of '+key.replace(/([A-Z])/g,' $1').toLowerCase()+'.');
   }
