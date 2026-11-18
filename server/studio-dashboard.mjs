@@ -23,9 +23,10 @@ function workerCards(data){
     '<p class="dashboard-connection">Plans are saved here. Automatic worker start and progress updates are not connected yet.</p><div class="dashboard-workers">'+Object.entries(workers).map(([id,w])=>{
       const plans=requests.flatMap(request=>(request.fields.outputs||[]).filter(o=>o.worker===id).map(output=>({request,output})));
       return '<article class="dashboard-worker"><header><span class="worker-initial" aria-hidden="true">'+w.name[0]+'</span><div><h3>'+w.name+'</h3><p>'+esc(w.role)+'</p></div></header><p class="worker-state">'+(plans.length?plans.length+' planned · not started':'No work planned')+'</p>'+
+        (w.setupNote?'<p class="worker-empty">'+esc(w.setupNote)+'</p>':'')+
         (plans.length?'<ul class="worker-plan-list">'+plans.slice(0,3).map(({request,output})=>'<li><a href="'+url('worker-requests',{id:request.id})+'">'+esc(output.title)+'</a><small>From '+esc(request.title)+'</small><details><summary>What '+w.name+' will do</summary><p>'+esc(output.brief)+'</p></details></li>').join('')+'</ul>':'<p class="worker-empty">'+esc(w.reason.split(' HQ directory')[0])+'</p>')+
         (plans.length>3?button('View all '+w.name+'’s plans',url('worker-requests',{worker:id})):'')+
-        '<a class="worker-new" href="'+url('builder',{build:id==='nina'?'newsletter':id==='imogen'?'course':'socials'})+'">Plan work for '+w.name+' →</a></article>';
+        '<a class="worker-new" href="'+url('builder',{build:w.defaultBuild})+'">Plan work for '+w.name+' →</a></article>';
     }).join('')+'</div></section>';
 }
 

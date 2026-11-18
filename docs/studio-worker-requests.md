@@ -1,6 +1,6 @@
 # Archive-to-worker requests
 
-The workspace opens on Dashboard, including after sign-in. My work contains open assignments and project tasks for the signed-in person; review work follows existing role permissions. Administrators also see Nina, Imogen and Rory with their actual saved output assignments. Counts and plans come from saved records, not example activity or inferred worker runs. Legacy assignments remain accessible explicitly with `assignments=1`.
+The workspace opens on Dashboard, including after sign-in. My work contains open assignments and project tasks for the signed-in person; review work follows existing role permissions. Administrators also see Nina, Imogen, Marcus and Rory with their actual saved output assignments. Counts and plans come from saved records, not example activity or inferred worker runs. Legacy assignments remain accessible explicitly with `assignments=1`.
 
 Studio starts with “What do you want to build today?” and guides administrators through four steps: output type, archive material, brief, then worker review. Links from Originals retain their selected source while offering the build choice first. Only the requested output is selected initially; supporting content is optional. Back controls and source search/pagination retain the brief, source text and worker overrides in POST bodies rather than URLs. Changing the primary build resets output choices while retaining the brief and original.
 
@@ -9,6 +9,7 @@ Workers are suggested by output type and each suggestion can be changed. Saving 
 Verified role mapping on 18 November 2026:
 - Nina: newsletters, emails, articles and landing copy. Confirmed Nutrition.Fitness Content & Marketing Specialist in James HQ.
 - Imogen: course structure, challenge preparation and lesson scripts. Confirmed Canva & Course Production Specialist in James HQ.
+- Marcus: Training & Programme Designer. Workouts, exercise choices, weekly structure, sets/reps, recovery and progression. Added to Studio at James’s request. HQ identity verification is pending; the Studio profile must not imply automatic dispatch.
 - Rory: social posts and short video scripts. Role verified in the Content Manager record `nf-worker-rory-social-video-producer`; no matching active HQ directory entry was present.
 
 ## What is connected
