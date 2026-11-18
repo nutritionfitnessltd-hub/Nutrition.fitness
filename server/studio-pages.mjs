@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { recipeImage, recipePreview } from './studio-recipes.mjs';
 import { kinds, templates, blankFields, references, descendants, issues } from './studio-model.mjs';
 import { projectFor } from './studio-store.mjs';
 import { icons } from './library-icons.mjs';
@@ -82,7 +83,8 @@ export function library(params,data,meta={}){
     (!rows.length?'<p class="studio-empty">'+(q||state?'No content matches these filters.':(bucket==='published'?'No content has been published here yet. Approved drafts stay under Drafts until they are released.':'Nothing here yet. Create the first item or import a starting point from the Reference Library.'))+'</p>':'')+
     pages(params,rows,rs=>'<div class="studio-content-grid">'+rs.map(r=>{
       const preview=meta.training?.[r.id]||meta.assets?.[r.id]?.preview||meta.training?.[r.parent];
-      return '<a class="studio-content-card" href="'+url('item',{id:r.id})+'">'+(preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(r.kind==='programme-family'?'Training programmes':kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks · '+(r.id==='training:nufi365'?'Year-round programme':'Standalone programme')+'</p>':r.kind==='programme-family'?'<p>Start · Progress · Develop · Own It</p>':'')+badge(r.status)+'</div></a>';
+      const photo=recipeImage(r);
+      return '<a class="studio-content-card" href="'+url('item',{id:r.id})+'">'+(photo?'<img src="'+esc(photo)+'" alt="" loading="lazy">':preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(r.kind==='programme-family'?'Training programmes':kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks · '+(r.id==='training:nufi365'?'Year-round programme':'Standalone programme')+'</p>':r.kind==='programme-family'?'<p>Start · Progress · Develop · Own It</p>':'')+badge(r.status)+'</div></a>';
     }).join('')+'</div>');
 }
 export function createPage(params,data,values={}){
@@ -206,7 +208,7 @@ export function itemPage(params,data){
   const admin=data.actor.role==='admin',canEdit=admin||data.assigned.has(r.id),state={section:'item',id:r.id,tab:'edit'};
   const children=data.items.filter(x=>(x.parent===r.id||(r.fields.sharedContentIds||[]).includes(x.id))&&x.status!=='Archived'),refs=references(r,data.byId).map(id=>data.byId.get(id));
   const parents=data.items.filter(x=>x.id!==r.id&&(x.id===r.parent||references(x,data.byId).includes(r.id)));
-  const checks=issues(r,data.items),preview=params.get('tab')==='preview',schedule=r.kind==='structure'&&params.get('tab')!=='edit'&&!preview;
+  const checks=issues(r,data.items),preview=params.get('tab')==='preview'||(r.kind==='recipe'&&r.publication?.status==='published'&&!params.has('tab')),schedule=r.kind==='structure'&&params.get('tab')!=='edit'&&!preview;
   let out=(r.kind==='programme'?'<a class="back" href="'+url('item',{id:r.id})+'">← Programme overview</a>':'')+heading(r.title,(kinds[r.kind]||r.kind)+(r.kind==='programme'?' · '+r.fields.weeks+' weeks':''),button(preview||schedule?'Edit content':'Member preview',url('item',{id:r.id,tab:preview||schedule?'edit':'preview'}))+(admin&&r.kind!=='programme'?button('Assign work',url('project-from',{id:r.id})):''))+
     '<p>'+badge(r.status)+' <span class="meta">Version '+(r.revision||1)+(r.updatedAt?' · Saved '+esc(new Date(r.updatedAt).toLocaleDateString('en-GB')):'')+'</span></p>';
   if(children.length&&r.kind!=='programme'){
@@ -219,7 +221,7 @@ export function itemPage(params,data){
     const selected=new URLSearchParams(params);selected.set('schedule',r.id);
     return out+weeklyPlan(selected,data,frequencies);
   }
-  if(preview)return out+'<article class="studio-preview"><h2>'+esc(r.title)+'</h2>'+readable(r.fields,data)+'</article>';
+  if(preview)return out+(r.kind==='recipe'?recipePreview(r):'<article class="studio-preview"><h2>'+esc(r.title)+'</h2>'+readable(r.fields,data)+'</article>');
   if(canEdit){
     out+='<div class="studio-columns editor-columns"><section>'+form('content-save',hidden('revision',r.revision)+input('title','Title',r.title,'text','required maxlength="200"')+
       '<textarea hidden id="studio-fields" name="fields">'+esc(JSON.stringify({...blankFields(r.kind),...r.fields}))+'</textarea><div id="studio-editor"></div><noscript><p>Enable JavaScript to edit structured content.</p></noscript>'+
