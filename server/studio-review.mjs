@@ -14,8 +14,9 @@ export function reviewPreview(params,data,retained={}){
  const feedback=r.reviewFeedback||[],latest=feedback.at(-1),pending=latest?.decision==='changes'&&latest.delivery!=='sent';
  return '<section data-review-content><header class="review-popup-header"><div><p class="kicker">Review saved version '+esc(r.revision)+'</p><h2 id="review-popup-title">'+esc(r.title)+'</h2><p>'+esc(workerNames[worker]||'No worker assigned')+' · '+esc(r.status)+'</p></div><button type="button" data-review-close aria-label="Close preview">×</button></header>'+
  '<div class="review-popup-body">'+itemPage(preview,data)+
- (feedback.length?'<details class="panel"><summary>Review feedback ('+feedback.length+')</summary>'+feedback.map(f=>'<article><h3>'+esc(f.decision==='approve'?'Approved':'Changes requested')+'</h3><p class="prose">'+esc(f.changes||'')+'</p>'+(f.guidance?'<p><strong>Remember for future work:</strong> '+esc(f.guidance)+'</p>':'')+'<small>'+esc(f.author)+' · '+esc(f.at)+'</small></article>').join('')+'</details>':'')+'</div>'+
- (admin?'<footer class="review-popup-footer"><p role="status" tabindex="-1" data-review-status>'+(retained.message?esc(retained.message):pending?'Feedback saved for '+esc(name)+'’s next worker check.':params.get('reviewed')==='approve'?'Approved. Nothing has been published.':params.get('reviewed')==='changes'?'Feedback saved and sent to '+esc(name)+'.':'Approval checks this saved version; publishing is separate.')+'</p><div class="studio-actions">'+
+ (feedback.length?'<details class="panel"><summary>Review feedback ('+feedback.length+')</summary>'+feedback.map(f=>'<article><h3>'+esc(f.decision==='approve'?'Approved':f.decision==='submit'?'Submitted for review':'Changes requested')+'</h3><p class="prose">'+esc(f.changes||'')+'</p>'+(f.guidance?'<p><strong>Remember for future work:</strong> '+esc(f.guidance)+'</p>':'')+'<small>'+esc(f.author)+' · '+esc(f.at)+'</small></article>').join('')+'</details>':'')+'</div>'+
+ (admin?'<footer class="review-popup-footer"><p role="status" tabindex="-1" data-review-status>'+(retained.message?esc(retained.message):params.get('reviewed')==='submit'?'Submitted for review.':pending?'Feedback saved for '+esc(name)+'’s next worker check.':params.get('reviewed')==='approve'?'Approved. Nothing has been published.':params.get('reviewed')==='changes'?'Feedback saved and sent to '+esc(name)+'.':'Approval checks this saved version; publishing is separate.')+'</p><div class="studio-actions">'+
+ (['Draft','Changes requested'].includes(r.status)?form('review-decision',hidden('revision',r.revision)+hidden('decision','submit')+hidden('reviewId',randomUUID()),{section:'review-preview',id:r.id},'Submit for review'):'')+
  (r.status!=='Approved'?form('review-decision',hidden('revision',r.revision)+hidden('decision','approve')+hidden('reviewId',randomUUID()),{section:'review-preview',id:r.id},'Approve','data-review-form'):'<span class="studio-status">Approved</span>')+
  '<button type="button" data-open-schedule>Schedule</button>'+button('Edit',url('item',{id:r.id,tab:'edit'}))+'<button type="button" data-request-changes>Request changes</button></div>'+
  '<section data-review-schedule'+(retained.action==='review-schedule'?'':' hidden')+'><h3>Schedule this article</h3>'+form('review-schedule',hidden('revision',r.revision)+'<label>Planned publication date<input type="date" name="scheduledDate" value="'+esc(retained.scheduledDate||r.publicationPlan?.date||'')+'" required></label><p class="meta">Adds this article to the content calendar. Approval and publishing remain separate.</p>',{section:'review-preview',id:r.id},'Save schedule')+'</section>'+
@@ -63,15 +64,15 @@ export async function reviewDecision(params,f,data,api,env={},fetcher=fetch){
   if(!previous||previous.decision!=='changes')throw new HttpError(400,'Choose a saved change request.');
  }else if(!previous){
   if(!Number.isSafeInteger(Number(f.revision))||Number(f.revision)!==r.revision)throw new HttpError(409,'This item changed. Reopen the latest preview before reviewing it. Your feedback has been kept below.');
-  if(!['approve','changes'].includes(f.decision))throw new HttpError(400,'Choose Approve or Request changes.');
+  if(!['approve','changes','submit'].includes(f.decision))throw new HttpError(400,'Choose Approve, Submit for review or Request changes.');
   const changes=cleanText(f.feedback||'',4000),guidance=cleanText(f.guidance||'',2000),workerId=contentWorker(r,data.byId);
   if(f.decision==='changes'&&!changes.trim())throw new HttpError(400,'Describe what needs changing.');
   if(f.decision==='changes'&&!workerId)throw new HttpError(400,'Assign a worker to this item before requesting changes.');
   if(f.decision==='approve'){const missing=issues(r,data.items);if(missing.length)throw new HttpError(400,missing.join(' '));}
-  next=withoutVersion(r);next.status=f.decision==='approve'?'Approved':'Changes requested';delete next.approval;
+  next=withoutVersion(r);next.status=f.decision==='approve'?'Approved':f.decision==='submit'?'In review':'Changes requested';delete next.approval;
   const at=new Date().toISOString(),entry={id:f.reviewId,decision:f.decision,reviewedRevision:r.revision,workerId,changes,guidance,author:data.actor.name||'James',at,delivery:f.decision==='changes'?'pending':'not-required'};
   next.reviewFeedback=[...(r.reviewFeedback||[]),entry];
-  next.comments=[...(r.comments||[]),{id:entry.id,body:f.decision==='approve'?'Approved saved version '+r.revision+'.':changes+(guidance?'\n\nRemember for future work: '+guidance:''),author:entry.author,at}];
+  next.comments=[...(r.comments||[]),{id:entry.id,body:f.decision==='approve'?'Approved saved version '+r.revision+'.':f.decision==='submit'?'Submitted saved version '+r.revision+' for review.':changes+(guidance?'\n\nRemember for future work: '+guidance:''),author:entry.author,at}];
   if(f.decision==='approve')next.approval={by:data.actor.id,at,revision:r.revision+1};
   const saved=await saveRecord(api,data.actor,next,r.revision);next={...next,revision:saved.revision};
  }

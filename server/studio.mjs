@@ -191,7 +191,10 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       }
       let notifications=[],notificationError=false;
       try{notifications=workflowNotifications(params,f,data,env);}catch{notificationError=true;}
-      const next=await (['publish-test','publish-live'].includes(f.action)?publishStudio(params,f,data,api):f.action==='content-save'&&f.imageUpload?saveArticleImage(params,f,data,api,env):changeStudio(params,f,data,api));
+      const articlePreview=f.action==='content-save'&&f.intent==='preview'&&f.previewWindow==='yes';
+      if(articlePreview&&editable(data,params.get('id')).kind!=='article')throw new HttpError(400,'Choose an article to preview.');
+      const next=await (['publish-test','publish-live'].includes(f.action)?publishStudio(params,f,data,api):f.action==='content-save'&&f.imageUpload?saveArticleImage(params,f,data,api,env):changeStudio(params,f,data,api,{returnRecord:articlePreview}));
+      if(articlePreview){res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify({record:next.record,previewUrl:url('review-preview',{id:next.id}).replaceAll('&amp;','&')}));}
       if(notificationError||await notifyWorkflow(notifications,{api,actor,env,fetcher}))next.notification='pending';
       res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();
     }
@@ -244,6 +247,9 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(params.get('notification')==='pending')body='<p role="status">Your changes were saved, but an email needs attention. '+(actor.role==='admin'?button('Check email activity',url('connections')):'Please ask your administrator to check Connections.')+'</p>'+body;
     return write(res,200,body,section,actor,meta);
   }catch(error){
+    if(req.method==='POST'&&f.action==='content-save'&&f.previewWindow==='yes'){
+      res.statusCode=error instanceof HttpError?error.status:503;res.setHeader('Content-Type','application/json; charset=utf-8');return res.end(JSON.stringify({error:error instanceof HttpError?error.message:'Could not save the article. Your edits are still here.'}));
+    }
     if(req.method==='POST'&&f.action==='workout-inline-save'){
       res.statusCode=error instanceof HttpError?error.status:503;res.setHeader('Content-Type','application/json; charset=utf-8');
       return res.end(JSON.stringify({error:error instanceof HttpError?error.message:'Could not save the workout. Your edits are still here.'}));
