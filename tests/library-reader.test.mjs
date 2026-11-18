@@ -1,3 +1,4 @@
+import {ndaDocument} from './nda-fixture.mjs';
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
@@ -12,7 +13,7 @@ const index={version:1,records:[item],files:{[fileId]:{name:'A meal guide.pdf',t
 const env={NUFI_LIBRARY_PASSWORD_SHA256:createHash('sha256').update(password).digest('hex'), NUFI_LIBRARY_CATALOGUE_KEY:'a'.repeat(64)};
 let server,base,loads=0,files=0;
 before(async()=>{
-  const handler=createLibraryReader({env,load:async()=>{loads++;return index;},fetchFile:async key=>{files++;assert.equal(key,'nutrition-library/v1/files/'+fileId);return {stream:new Response('Private bytes').body};}});
+  const handler=createLibraryReader({env,apiFactory:()=>async path=>path.includes('nufi_library_nda_agreements')?[ndaDocument]:[{id:'existing-test-acceptance'}],load:async()=>{loads++;return index;},fetchFile:async key=>{files++;assert.equal(key,'nutrition-library/v1/files/'+fileId);return {stream:new Response('Private bytes').body};}});
   server=createServer(async(req,res)=>{if(req.method==='POST'){let body='';for await(const chunk of req)body+=chunk;req.body=body;}await handler(req,res);});
   server.listen(0,'127.0.0.1');await once(server,'listening');base='http://127.0.0.1:'+server.address().port;
 });

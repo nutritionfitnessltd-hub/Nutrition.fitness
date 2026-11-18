@@ -5,6 +5,7 @@ import { esc, link } from './library-shelves.mjs';
 import { projectScreen, changeProject } from './library-projects.mjs';
 
 import { libraryLogin } from './library-login.mjs';
+import { requireLibraryNda, ndaAdminScreen } from './library-nda.mjs';
 import { studioFrame } from './studio-ui.mjs';
 import { handleStudio } from './studio.mjs';
 import { assetButton, assetScreen } from './library-assets.mjs';
@@ -208,6 +209,12 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
     }
     actor=await readActor(req,res,api,env,key);
     if(!actor)return signInPage(res,401,item,destination);
+    if(await requireLibraryNda(req,res,{actor,api,params}))return;
+    if(studio==='nda'){
+      const page=await ndaAdminScreen(req,res,{actor,api,params});
+      if(page!==null)return writePage(res,200,page,actor,'nda');
+      return;
+    }
     if(studio==='team'){
       if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
       if(req.method==='POST'){
