@@ -8,9 +8,9 @@ import { saveSoftwareRelease } from '../server/team-workspace.mjs';
 const admin={role:'admin',id:randomUUID()};
 const load=async()=>({records:[],files:{}});
 function response(){return {statusCode:0,headers:{},setHeader(k,v){this.headers[k]=v;},end(body=''){this.body=body;}};}
-test('simple navigation retains six sections and only three Asset links',()=>{
+test('simple navigation retains seven sections and only three Asset links',()=>{
   const html=studioNavigation('library',admin).html;
-  assert.equal((html.match(/studio-nav-section/g)||[]).length,6);
+  assert.equal((html.match(/studio-nav-section/g)||[]).length,7);
   assert.equal((html.match(/studio-subnav/g)||[]).length,1);
   for(const label of ['Home','Projects','Assets','Software Releases','Team','Archive','Content Studio','Content Library','Brand & Media'])assert.ok(html.includes('>'+label+'<'));
 });

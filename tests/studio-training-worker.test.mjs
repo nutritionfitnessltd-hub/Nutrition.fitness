@@ -30,5 +30,6 @@ test('training plan save retains source evidence, Marcus identity and draft-only
 test('training worker is available as an override without reassigning course or content roles',()=>{
  const d=fixture(),html=workerPreview({requestId:randomUUID(),source:source.id,output_newsletter:'yes',worker_newsletter:'marcus'},d);
  assert.match(html,/value="marcus" selected/);assert.equal(outputs.course.worker,'imogen');assert.equal(outputs.branding.worker,'imogen');assert.equal(outputs.newsletter.worker,'nina');assert.equal(outputs.socials.worker,'rory');
- for(const worker of Object.values(workers))assert.ok(Object.hasOwn(outputs,worker.defaultBuild));
+ for(const [id,worker] of Object.entries(workers))if(id!=='morgan')assert.ok(Object.hasOwn(outputs,worker.defaultBuild));
+ assert.equal(workers.morgan.role,'Project Manager');
 });
