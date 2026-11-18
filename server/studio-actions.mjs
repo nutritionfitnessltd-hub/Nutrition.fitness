@@ -1,3 +1,4 @@
+import { saveWorkoutDays } from './studio-workout-days.mjs';
 import { randomUUID } from 'node:crypto';
 import { HttpError, uuid } from './platform.mjs';
 import { kinds, templates, blankFields, cleanText, validateFields, validateShape, issues, makeProjectPlan, descendants } from './studio-model.mjs';
@@ -67,6 +68,7 @@ export async function createItem(record,projectId,entryId,data,api){
 }
 export async function changeStudio(params,f,data,api){
   const action=f.action;
+  if(action==='workout-days-save')return saveWorkoutDays(params,f,data,api);
   if(action==='project-create'){
     const {project,root,existing}=projectDraft(f,data);
     await api('/rest/v1/rpc/nufi_studio_create_project',{service:true,method:'POST',payload:{project,records:existing?[]:[root],editor_name:'admin:'+data.actor.id}});

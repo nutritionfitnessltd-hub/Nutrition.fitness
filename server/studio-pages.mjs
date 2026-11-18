@@ -1,3 +1,4 @@
+import { canEditDays, workoutDaysEditor } from './studio-workout-days.mjs';
 import { workoutDays, workoutSession } from './studio-workouts.mjs';
 import { workspaceDashboard } from './studio-dashboard.mjs';
 import { workerStart } from './studio-workers.mjs';
@@ -180,7 +181,9 @@ function weeklyPlan(params,data,schedules,owner){
     const sessions=(week.sessionIds||[]).map(id=>data.byId.get(id)||data.byId.get('training:'+id));
     out+='<div class="workout-week-intro"><h2>Week '+esc(week.number)+(week.title?' · '+esc(week.title):'')+'</h2>'+(week.message?'<p class="prose">'+esc(week.message)+'</p>':'')+
       (week.progression?'<details><summary>This week’s progression</summary><p class="prose">'+esc(week.progression)+'</p></details>':'')+'</div>'+
-      workoutDays(params,data,sessions,day=>href(chosen,week.number,day));
+      (params.get('notice')==='days-saved'?'<p class="workout-save-notice" role="status">Days saved as a draft.</p>':'')+
+      (canEditDays(chosen,data)&&params.get('editDays')==='1'?workoutDaysEditor(params,data,chosen,week):
+        '<div class="workout-day-tools"><h3>Training days</h3>'+(canEditDays(chosen,data)?button('Edit days',href(chosen,week.number)+'&amp;editDays=1#days-editor'):'')+'</div>'+workoutDays(params,data,sessions,day=>href(chosen,week.number,day),week.dayLabels));
   }
   return out+'<details class="panel"><summary>Spacing, recovery & busy weeks</summary>'+readable({spacing:chosen.fields.spacing||'',rest:chosen.fields.restRules||'',busyWeek:chosen.fields.busyWeek||{}},data)+button('Edit this schedule',url('item',{id:chosen.id,tab:'edit'}))+'</details>';
 }
