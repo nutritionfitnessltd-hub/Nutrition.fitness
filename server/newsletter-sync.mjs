@@ -40,7 +40,7 @@ export async function syncNewsletter({record,revision,api,client,now=Date.now()}
  };
  try{
   if(state.hold){
-   if(state.campaignId){const r=await client.get(state.campaignId);state.diagnostic={status:r.status,name:r.name,editorType:r.editorType,contentType:typeof r.editorContent,contentLength:r.editorContent?.length,keys:Object.keys(r),initialHash:digest([r.name,r.editorType,r.editorContent])};}
+   if(state.campaignId){const r=await client.get(state.campaignId);const assets=record.newsletterAssetsId?(await api('/rest/v1/nufi_library_display?select=payload&id=eq.'+encodeURIComponent(record.newsletterAssetsId),privateRead))[0]?.payload:null;const expected=await newsletterPayload(newsletterSource(record,assets),media,async()=>{throw new Error('Inspection never uploads');},async()=>{});const actual=r.editorContent||'';let start=0,end=0;while(start<actual.length&&actual[start]===expected.editorContent[start])start++;while(end<actual.length-start&&actual[actual.length-1-end]===expected.editorContent[expected.editorContent.length-1-end])end++;state.diagnostic={status:r.status,name:r.name,editorType:r.editorType,contentLength:actual.length,expectedLength:expected.editorContent.length,differenceAt:start,actualDifference:actual.slice(start,actual.length-end).slice(0,1000),expectedDifference:expected.editorContent.slice(start,expected.editorContent.length-end).slice(0,1000)};}
    return {status:'held',id:state.campaignId};
   }
   let remote;
