@@ -5,8 +5,20 @@ import { randomUUID } from 'node:crypto';
 import { HttpError } from './platform.mjs';
 import { blankFields, cleanText } from './studio-model.mjs';
 import { esc, url, heading, button, hidden, input, textarea, select, form, pages } from './studio-ui.mjs';
+import {contentPhoto} from './studio-visuals.mjs';
+
+export function originalCollections(data,{embedded=false}={}){
+  const records=data.index.records.filter(r=>!r.id.startsWith('training:'));
+  const groups=[['Recipes','Recipes','recipe'],['Courses','Courses','course'],['Programs','Programmes','programme'],['Challenges','Challenges','challenge'],['Articles','Articles','article'],['E-Books','Books & guides','ebook'],['Business','Business resources','campaign'],['Socials','Social content','communication'],['Needs sorting','Needs sorting','asset']];
+  const count=name=>records.filter(r=>(r.group==='Unsorted'?'Needs sorting':r.group)===name).length;
+  return (embedded?'<h2>Original collections</h2><p>Browse a category, then open its collections and source files.</p>':heading('Original collections','Browse a category, then open its collections and source files.'))+
+    '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','archive')+hidden('shelf','All content')+input('q','Search original content','','search')+'<button>Search originals</button>'+button('Browse all originals',url('archive',{shelf:'All content'}))+button('Browse by source collection',url('archive',{shelf:'Source collections'}))+'</form>'+
+    '<nav class="studio-type-grid" aria-label="Original content categories">'+groups.filter(([name])=>count(name)>0).map(([name,title,kind])=>'<a class="studio-card studio-type-card has-photo" href="'+url('archive',{shelf:name})+'">'+contentPhoto(kind,'studio-type-photo')+'<h2>'+esc(title)+'</h2><div class="studio-type-count">'+count(name).toLocaleString('en-GB')+' '+(count(name)===1?'item':'items')+'</div><span aria-hidden="true">→</span></a>').join('')+'</nav>'+
+    (!records.length?'<p class="studio-empty">No original collections are available yet.</p>':'');
+}
 
 export function archivePage(params,data,meta={}){
+  if(!['shelf','group','category','item','folder','q'].some(key=>params.has(key)))return originalCollections(data);
   const index={...data.index,records:data.index.records.filter(r=>!r.id.startsWith('training:')).map(r=>canAccess(data.actor,'sources')?r:{...r,files:[]})};
   const state=new URLSearchParams(params);
   if(!state.has('shelf')&&state.has('category'))state.set('shelf',state.get('category')==='Unsorted'?'Needs sorting':state.get('category'));
@@ -23,7 +35,7 @@ export function archivePage(params,data,meta={}){
     return attribute+'="'+target+'"';
   });
   body=body.replace('<form class="filters" action="/content-library/">','<form class="filters" action="/content-library/">'+hidden('work','1')+hidden('studio','archive'));
-  return heading('Originals','Source files, grouped by category.',(canAccess(data.actor,'studio')?button('Import a file',url('import')):''))+navigation+
+  return '<a class="back" href="'+url('workspace-archive',{tab:'originals'})+'">← All original collections</a>'+heading('Originals','Source files, grouped by category.',(canAccess(data.actor,'studio')?button('Import a file',url('import')):''))+navigation+
     (data.actor.role==='admin'&&(record||state.get('folder'))?'<div class="studio-workbar">'+button('Create with a worker',url('builder',record?{source:record.id}:{folder:state.get('folder'),shelf}),true)+'</div>':'')+
     (record?'<div class="studio-workbar">'+(canAccess(data.actor,'studio')?button('Import source text',url('import',{source:record.id}),true):'')+(canAccess(data.actor,'sources')?button('Original assets',link({work:'1',assets:record.id})):'' )+'</div>':'')+body;
 }

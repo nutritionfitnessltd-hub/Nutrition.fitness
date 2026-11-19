@@ -83,7 +83,7 @@ export function library(params,data,meta={}){
   if(!worker&&!exercise&&!kind&&!q&&!state&&params.get('view')!=='all'){
     const counts=new Map();
     for(const r of data.items)if(r.status!=='Archived')counts.set(r.kind,(counts.get(r.kind)||0)+1);
-    return heading('Content library','',(canAccess(data.actor,'studio')?button('Create content',url('create'),true):''))+lifecycle+
+    return heading('Content library','Your working content.',(canAccess(data.actor,'studio')?button('Create content',url('create'),true):'')+(canAccess(data.actor,'originals')?button('Browse original collections',url('workspace-archive',{tab:'originals'})):''))+lifecycle+
       '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','library')+hidden('view','all')+hidden('bucket',bucket)+hidden('worker',worker)+input('q','Search all content','','search')+'<button>Search</button>'+button('Browse all content',url('library',{view:'all',bucket}))+'</form>'+
       typeCards(contentSections,counts,bucket)+
       '<details class="panel"><summary>More content types</summary>'+typeCards(Object.entries(collections).filter(([id])=>!contentSections.some(([key])=>key===id)).map(([id,[title]])=>[id,title]),counts,bucket)+'</details>';

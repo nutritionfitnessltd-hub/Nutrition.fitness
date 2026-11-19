@@ -60,7 +60,7 @@ export function shelfView(index,params,meta={}) {
   }
   for (const r of rows) {
     const m=meta.assets?.[r.id];
-    const names=courseNames.get(r.id)||(sources?(m?.sources||[r.fields.collection].filter(Boolean)):all||training?[]:[m?.shelf].filter(Boolean));
+    const names=courseNames.get(r.id)||(sources?(m?.sources||[r.fields.collection].filter(Boolean)):all||training?[]:[m?.shelf||r.fields.collection].filter(Boolean));
     if (!names.length) loose.push(r);
     for(const name of names){if(!groups.has(name))groups.set(name,[]);groups.get(name).push(r);}
   }
