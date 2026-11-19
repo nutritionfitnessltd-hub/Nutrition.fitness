@@ -7,6 +7,8 @@ import {hqRequest} from './studio-hq.mjs';
 import {esc,url,heading,button,form,hidden,input,textarea,select,list,badge} from './studio-ui.mjs';
 
 const prefix='studio:idea:';
+export const ideaUrgencies={urgent:'Urgent',soon:'Soon',normal:'Normal',someday:'Someday'};
+const urgencyOf=r=>Object.hasOwn(ideaUrgencies,r.fields.urgency)?r.fields.urgency:'normal';
 const admin=data=>{if(data.actor.role!=='admin')throw new HttpError(403,'Only the administrator can manage Shiny Things.');};
 const ideas=data=>data.items.filter(r=>r.kind==='settings'&&r.id.startsWith(prefix));
 const projectFor=(data,id)=>data.projects.find(p=>p.studio?.ideaId===id);
@@ -42,18 +44,22 @@ export function shinyThingsPage(params,data,retained={},env={}){
   if(id&&!idea&&params.get('new')!=='1')throw new HttpError(404,'This idea is unavailable.');
   if(!idea&&params.get('new')!=='1'){
     const parked=params.get('view')==='parked';
-    const rows=ideas(data).filter(r=>parked?r.fields.state==='Parked':r.fields.state!=='Parked').sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''));
-    return heading('Shiny Things','A home for ideas until you are ready to turn them into projects.',button('New idea',url('shiny-things',{new:'1'}),true))+
-      '<section class="panel"><h2>Morgan · Project Manager</h2><p>Save an idea, ask Morgan to scope it in James HQ, review the plan, then create the project when you are ready.</p>'+button('Message Morgan',url('worker-chat',{worker:'morgan'}))+'</section>'+
-      '<nav class="tabs" aria-label="Ideas">'+button('Ideas',url('shiny-things'))+button('Parked',url('shiny-things',{view:'parked'}))+'</nav>'+
-      list(rows,r=>'<div><a href="'+url('shiny-things',{id:r.id})+'">'+esc(r.title)+'</a><small>'+esc(r.fields.summary||'')+'</small></div>'+badge(projectFor(data,r.id)?'Project created':r.fields.state||'Saved'),'No ideas here yet. Save a thought, opportunity or something to explore.');
+    const ranks={urgent:0,soon:1,normal:2,someday:3};
+    const rows=ideas(data).filter(r=>parked?r.fields.state==='Parked':r.fields.state!=='Parked').sort((a,b)=>ranks[urgencyOf(a)]-ranks[urgencyOf(b)]||(b.updatedAt||'').localeCompare(a.updatedAt||''));
+    return '<div class="shiny-notice-workspace">'+heading('Shiny Things','Catch the spark. Give it a little room to grow.',button('Pin a new idea',url('shiny-things',{new:'1'}),true))+
+      '<div class="shiny-board-tools"><nav class="shiny-board-tabs" aria-label="Ideas"><a href="'+url('shiny-things')+'"'+(!parked?' aria-current="page"':'')+'>On the board <span>'+ideas(data).filter(r=>r.fields.state!=='Parked').length+'</span></a><a href="'+url('shiny-things',{view:'parked'})+'"'+(parked?' aria-current="page"':'')+'>Parked for later <span>'+ideas(data).filter(r=>r.fields.state==='Parked').length+'</span></a></nav><div class="shiny-legend" aria-label="Note colours by urgency">'+Object.entries(ideaUrgencies).map(([key,label])=>'<span><i class="shiny-swatch shiny-'+key+'" aria-hidden="true"></i>'+label+'</span>').join('')+'</div></div>'+
+      '<section class="shiny-board" aria-label="'+(parked?'Parked ideas':'Idea notice board')+'"><div class="shiny-board-caption"><span>'+(parked?'A little later, not forgotten.':'Big plans start as little notes.')+'</span><span>'+rows.length+' '+(rows.length===1?'idea':'ideas')+'</span></div><div class="shiny-note-grid">'+
+      rows.map(r=>{const urgency=urgencyOf(r),state=projectFor(data,r.id)?'Project created':r.fields.state||'Saved';return '<a class="shiny-note shiny-'+urgency+'" href="'+url('shiny-things',{id:r.id})+'"><span class="shiny-note-tape" aria-hidden="true"></span><span class="shiny-note-urgency">'+ideaUrgencies[urgency]+'</span><h2>'+esc(r.title)+'</h2><p>'+esc(r.fields.summary||'A spark worth coming back to.')+'</p><span class="shiny-note-footer"><span>'+esc(state)+'</span><span>Open note</span></span></a>';}).join('')+
+      '<a class="shiny-add-note" href="'+url('shiny-things',{new:'1'})+'"><span aria-hidden="true">+</span><h2>'+(rows.length?'Another bright idea?':'Your first bright idea…')+'</h2><p>'+(rows.length?'There’s always room for one more.':'A thought, a what-if, a thing to try. Pin it here before it disappears.')+'</p><strong>Pin an idea</strong></a></div></section>'+
+      '<aside class="shiny-morgan"><div><strong>Morgan can help it grow.</strong><p>Ask your project manager in James HQ to turn a note into a plan. You decide when it becomes a project.</p></div>'+button('Chat with Morgan',url('worker-chat',{worker:'morgan'}))+'</aside></div>';
+
   }
   const f={...(idea?.fields||{}),...retained},p=idea&&projectFor(data,idea.id),locked=Boolean(p||idea?.fields.state==='Converting');
   const base=hidden('id',idea?.id||retained.id||prefix+randomUUID())+hidden('revision',idea?.revision||0),state={section:'shiny-things',...(idea?{id:idea.id}:{new:'1'})};
   let body=heading(idea?.title||'New shiny thing','Keep the idea here until it is worth an active project.',button('All ideas',url('shiny-things')));
   if(p)return body+'<section class="panel"><h2>Project created</h2><p>The original idea remains here for reference.</p>'+button('Open project',url('project',{project:p.id}),true)+'</section><p class="prose">'+esc(idea.fields.summary)+'</p>';
   if(!locked)body+=form('idea-save',base+input('title','Idea',retained.title??idea?.title??'','text','required maxlength="160"')+textarea('summary','What is the idea, and why might it matter?',f.summary||'',5)+
-    '<div class="studio-columns">'+input('weeks','Indicative duration in weeks',f.weeks||4,'number','min="1" max="52" required')+select('state','Keep it as',{Saved:'An idea',Parked:'Parked for later'},f.state==='Parked'?'Parked':'Saved')+'</div>',state,'Save idea');
+    select('urgency','How soon does this need attention?',ideaUrgencies,Object.hasOwn(ideaUrgencies,f.urgency)?f.urgency:'normal')+'<div class="studio-columns">'+input('weeks','Indicative duration in weeks',f.weeks||4,'number','min="1" max="52" required')+select('state','Keep it as',{Saved:'An idea',Parked:'Parked for later'},f.state==='Parked'?'Parked':'Saved')+'</div>',state,'Save idea');
   if(!idea)return body;
   if(!locked)body+='<section class="panel"><h2>Ask Morgan to scope it</h2><p>Morgan checks overlap with existing projects and proposes an outcome, tasks, milestones, workers and open questions. The request runs in James HQ.</p>'+
     form('idea-scope',base,state,'Ask Morgan for a plan')+button('Open Morgan’s HQ conversation',url('worker-chat',{worker:'morgan'}))+
@@ -82,7 +88,9 @@ export async function changeShinyThing(params,f,data,api,env,fetcher=fetch){
   if(f.action==='idea-save'){
     const weeks=Number(f.weeks);next.title=cleanText(f.title||'',160);
     if(!next.title||!Number.isInteger(weeks)||weeks<1||weeks>52)throw new HttpError(400,'Add a name and a duration between 1 and 52 weeks.');
-    next.fields={summary:cleanText(f.summary||'',6000),weeks,state:f.state==='Parked'?'Parked':'Saved'};
+    if(f.urgency!==undefined&&!Object.hasOwn(ideaUrgencies,f.urgency))throw new HttpError(400,'Choose an available urgency.');
+    const summary=cleanText(f.summary||'',6000),unchanged=idea&&idea.title===next.title&&idea.fields.summary===summary&&idea.fields.weeks===weeks;
+    next.fields={...(unchanged?idea.fields:{}),summary,weeks,urgency:f.urgency||idea?.fields.urgency||'normal',state:f.state==='Parked'?'Parked':unchanged&&idea.fields.state!=='Parked'?idea.fields.state:'Saved'};
   }else{
     if(!idea)throw new HttpError(400,'Save the idea first.');
     if(f.action==='idea-scope'){
@@ -111,7 +119,7 @@ export async function changeShinyThing(params,f,data,api,env,fetcher=fetch){
       return {section:'project',project:pid};
     }else throw new HttpError(400,'Choose an available idea action.');
   }
-  await saveRecord(api,data.actor,next,revision);return done;
+  await saveRecord(api,data.actor,next,revision);return f.action==='idea-save'?{section:'shiny-things'}:done;
 }
 
 export function ideaProjectPage(params,data){
