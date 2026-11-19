@@ -21,7 +21,7 @@ test('imported markup cannot introduce scripts, event handlers or unsafe links',
 });
 test('published articles open as reading pages with notes collapsed and editing limited by role',()=>{
  const a=articles[0],r={id:'website-article:'+a.slug,kind:'article',title:a.title,status:'Approved',publication:{status:'published'},fields:{bodyFormat:'html',body:a.bodyHtml,shortAnswer:a.shortAnswer,imageUrl:'/assets/photos/knowledge-1.jpg',sources:a.sources,salesUse:a.salesUse}};
- const data={actor:{role:'staff'},assigned:new Set(),items:[r],byId:new Map([[r.id,r]]),projects:[],people:[]};
+ const data={actor:{role:'staff',access:{library:true,edit:false}},assigned:new Set([r.id]),items:[r],byId:new Map([[r.id,r]]),projects:[],people:[]};
  const html=itemPage(new URLSearchParams({id:r.id}),data);assert.match(html,/<iframe[^>]+data-article-reader/);assert.match(html,/Open full-width preview/);assert.match(html,/Sales &amp; sharing notes|Sales & sharing notes/);assert.doesNotMatch(html,/<form|Edit article|<details[^>]* open/);
  const reader=readerDocument(r,articleImage(r));assert.match(reader,/The short answer/);assert.match(reader,/Sources and checks/);assert.match(reader,/In this guide/);assert.match(reader,/knowledge-centre\/knowledge-centre.css/);assert.doesNotMatch(reader,/Sales &amp; sharing notes/);
  assert.match(library(new URLSearchParams({bucket:'published',kind:'article'}),data),/knowledge-1.jpg/);

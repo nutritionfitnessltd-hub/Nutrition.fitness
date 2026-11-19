@@ -1,4 +1,4 @@
-import { requireAccess } from './library-permissions.mjs';
+import { requireAccess, canReadContent, reviewsKind } from './library-permissions.mjs';
 import { HttpError } from './platform.mjs';
 import { canonical, descendants } from './studio-model.mjs';
 
@@ -42,7 +42,21 @@ export async function studioData(api,actor,load){
       }
     }
   }
-  return {index,items,byId:records,projects,tasks,people,releases,assigned,actor};
+  const data={index,items,byId:records,projects,tasks,people,releases,assigned,actor};
+  data.reviewHistory=items.flatMap(r=>(r.reviewFeedback||[]).filter(f=>['approve','changes'].includes(f.decision)&&
+    (actor.role==='admin'||f.authorId===actor.id&&reviewsKind(actor,r.kind))).map(f=>({
+      ...f,recordId:r.id,title:f.reviewedTitle||r.title,kind:r.kind
+    })));
+  if(actor.role!=='admin'){
+    data.items=items.filter(r=>canReadContent(data,r));
+    data.byId=new Map(data.items.map(r=>[r.id,r]));
+  }
+  return data;
+}
+export function readable(data,id){
+  const r=data.byId.get(id);
+  if(!canReadContent(data,r))throw new HttpError(403,'This item is outside your assigned work or review responsibilities.');
+  return r;
 }
 export function editable(data,id){
   if(data.actor.role!=='admin'&&!data.assigned.has(id))throw new HttpError(403,'This item is outside your assigned work.');

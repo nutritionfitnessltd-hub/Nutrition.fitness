@@ -3,7 +3,7 @@ import {get,put,del} from '@vercel/blob';
 import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 import {HttpError} from './platform.mjs';
-import {editable} from './studio-store.mjs';
+import {readable} from './studio-store.mjs';
 import {validateFields,validateShape,cleanText} from './studio-model.mjs';
 import {changeStudio} from './studio-actions.mjs';
 
@@ -20,7 +20,7 @@ export function imageBytes(encoded){
  return {bytes,width,height};
 }
 export async function saveArticleImage(params,f,data,api,env,{store=put,remove=del}={}){
- const r=editable(data,params.get('id'));
+ const r=readable(data,params.get('id'));
  if(r.kind!=='article')throw new HttpError(400,'Choose an article for this image.');
  if(r.revision!==Number(f.revision))throw new HttpError(409,'This article changed. Open the latest copy before saving your image.');
  let fields;try{fields=JSON.parse(f.fields);}catch{throw new HttpError(400,'The article fields could not be read.');}

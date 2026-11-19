@@ -24,7 +24,7 @@ test('training plan save retains source evidence, Marcus identity and draft-only
  assert.equal(saved.fields.state,'prepared');assert.equal(saved.status,'Draft');assert.equal(saved.fields.production,null);
  assert.deepEqual(saved.fields.outputs.map(o=>o.worker),['marcus','marcus']);assert.ok(saved.fields.outputs.every(o=>o.employeeId===workers.marcus.employeeId));
  assert.equal(saved.fields.sources[0].text,source.fields.body);assert.match(saved.fields.constraints,/drafts for James/);assert.match(saved.fields.constraints,/Do not publish/);
- d.byId.set(saved.id,saved);const home=workspaceDashboard(d);assert.match(home,/2 planned · not started/);assert.match(home,/What Marcus will do/);assert.match(home,/<h3>Marcus<\/h3>/);assert.match(home,/build=programme[^>]*>Plan work for Marcus/);
+ d.byId.set(saved.id,saved);const home=workspaceDashboard(d);assert.match(home,/Requested \(2\)/);assert.match(home,/Not started/);assert.match(home,/<strong>Marcus<\/strong>/);assert.match(home,/studio=worker-requests/);
 });
 
 test('training worker is available as an override without reassigning course or content roles',()=>{

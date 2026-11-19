@@ -6,7 +6,7 @@ document.addEventListener('click',event=>{
 });
 document.querySelector('[data-request-changes]')?.addEventListener('click',()=>{
  const panel=document.querySelector('[data-review-feedback]');panel.hidden=!panel.hidden;
- if(!panel.hidden){document.querySelector('[data-review-schedule]').hidden=true;panel.querySelector('textarea').focus();}
+ if(!panel.hidden){const schedule=document.querySelector('[data-review-schedule]');if(schedule)schedule.hidden=true;panel.querySelector('textarea').focus();}
 });
 document.querySelector('[data-open-schedule]')?.addEventListener('click',()=>{
  const panel=document.querySelector('[data-review-schedule]');panel.hidden=!panel.hidden;

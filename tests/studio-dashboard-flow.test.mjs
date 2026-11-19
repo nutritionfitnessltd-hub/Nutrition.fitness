@@ -18,7 +18,7 @@ test('dashboard is the first navigation item and shows only the signed-in person
  d.tasks=[{staff_id:'owner',title:'My assignment',status:'Changes requested'},{staff_id:'other',title:'Other assignment',status:'To do'}];
  d.items=[{id:'review',title:'Ready for checking',status:'In review'}];
  assert.equal(dashboardWork(d).mine.length,2);
- const html=workspaceDashboard(d);assert.match(html,/<h1>Dashboard/);assert.match(html,/My open task|My assignment/);assert.doesNotMatch(html,/Their task|Other assignment|My finished task/);assert.match(html,/Ready for checking/);
+ const html=workspaceDashboard(d);assert.match(html,/<h1>Dashboard/);assert.match(html,/My open task|My assignment/);assert.match(html,/Their task|Other assignment/);assert.doesNotMatch(html,/My finished task/);assert.match(html,/Ready for checking/);
  const nav=studioNavigation('home',d.actor);assert.equal(nav.label,'Home');assert.match(nav.html,/studio=home" aria-current="page"/);assert.ok(nav.html.indexOf('Home')<nav.html.indexOf('Assets'));
 });
 
@@ -32,8 +32,8 @@ test('staff retain the branded welcome and colour cards with only permitted dest
 test('worker cards derive plans from saved assignments and never invent activity; staff cannot see private plans',()=>{
  const d=fixture();d.byId.set('request',{id:'request',kind:'worker-request',title:'Source <script>',fields:{state:'prepared',outputs:[{type:'newsletter',title:'Member newsletter',worker:'imogen',workerName:'Imogen',brief:'Read the source, then draft it.'}]}});
  const html=workspaceDashboard(d);
- assert.match(html,/1 planned · not started/);assert.match(html,/What Imogen will do/);assert.match(html,/Source &lt;script&gt;/);assert.doesNotMatch(html,/No work planned|In progress|Completed today|<script>/);
- assert.equal((html.match(/class="dashboard-worker worker-/g)||[]).length,1);assert.match(html,/href="#workers-title"><strong>1<\/strong><span>AI workers with updates/);
+ assert.match(html,/Not started/);assert.match(html,/>Imogen</);assert.match(html,/Source &lt;script&gt;/);assert.doesNotMatch(html,/No work planned|Completed today|<script>/);
+ assert.equal((html.match(/class="team-work-row"/g)||[]).length,1);assert.match(html,/Requested \(1\)/);
  const nina=workerRequestsPage(new URLSearchParams({worker:'nina'}),d);assert.doesNotMatch(nina,/Source &lt;script&gt;/);
  d.actor.role='staff';assert.doesNotMatch(workspaceDashboard(d),/AI workers|Source &lt;script&gt;|Member newsletter/);
 });
@@ -50,10 +50,11 @@ test('an empty dashboard hides the workers section and overview link while keepi
 test('a saved idea makes its worker visible without draft content, while declined and superseded ideas stay out',()=>{
  const d=fixture();d.hqIdeas={alex:{title:'An offer <proposal>',state:'pending'},andy:{title:'Declined campaign',state:'rejected'},martina:{title:'Replaced theme',state:'superseded'}};
  let html=workspaceDashboard(d);
- assert.match(html,/dashboard-worker worker-alex/);assert.match(html,/An offer &lt;proposal&gt;/);assert.match(html,/Awaiting your approval/);
+ assert.match(html,/data-work-id="idea:alex"/);assert.match(html,/An offer &lt;proposal&gt;/);assert.match(html,/Awaiting your approval/);
  assert.doesNotMatch(html,/dashboard-worker worker-(andy|martina|ellis)|Declined campaign|Replaced theme|first proposal|No work planned/);
+ d.hqIdeas.alex.updatedAt=new Date().toISOString();
  for(const state of ['scoping','scoped','active','done']){
-  d.hqIdeas.alex.state=state;assert.match(workspaceDashboard(d),/dashboard-worker worker-alex/);
+  d.hqIdeas.alex.state=state;assert.match(workspaceDashboard(d),/data-work-id="idea:alex"/);
  }
  d.hqIdeas.alex.state='rejected';html=workspaceDashboard(d);assert.doesNotMatch(html,/AI workers|workers-title/);
 });
@@ -63,7 +64,7 @@ test('dashboard reviews and worker approvals open the reading window, with draft
  const html=workspaceDashboard(d),work=dashboardWork(d);
  assert.match(work.reviews[0].href,/studio=review-preview/);
  assert.equal((html.match(/data-review-preview target="_blank" rel="noopener"/g)||[]).length,3);
- assert.match(html,/studio=review-preview&amp;id=worker%3Adraft/);
+ assert.match(html,/studio=item&amp;id=worker%3Adraft/);
  assert.doesNotMatch(html,/studio=item&amp;id=worker%3Areview/);
 });
 

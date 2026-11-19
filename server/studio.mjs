@@ -5,6 +5,8 @@ import {workerIdeaSummaries} from './studio-ideas.mjs';
 import {workerChatPage,changeHq} from './studio-hq.mjs';
 import { assetsPage, brandMediaPage, workspaceArchive, softwareReleases, saveSoftwareRelease } from './team-workspace.mjs';
 
+import { teamWorkPage } from './studio-team-work.mjs';
+import { reviewHistoryPage } from './studio-review-history.mjs';
 import {publicationPanel,publishStudio} from './studio-publishing.mjs';
 import {reviewPreview,reviewDecision,reviewWindowDocument} from './studio-review.mjs';
 import {sendWorkerImage} from './worker-images.mjs';
@@ -22,7 +24,7 @@ import { sendBookFile } from './studio-books.mjs';
 import { saveArticleImage, sendArticleImage } from './studio-article-images.mjs';
 import { HttpError } from './platform.mjs';
 import { displayEntry } from './library-display.mjs';
-import { studioData, editable, projectFor, saveRecord, mergeStudioRecord } from './studio-store.mjs';
+import { studioData, readable, editable, projectFor, saveRecord, mergeStudioRecord } from './studio-store.mjs';
 import { templates, blankFields, issues, descendants, cleanText } from './studio-model.mjs';
 import { home, library, createPage, projectList, projectPage, itemPage, newItem, reviewPage, calendar, journey, releasePage } from './studio-pages.mjs';
 import { archivePage, importPage, extractDrafts, importPreview } from './studio-import.mjs';
@@ -81,12 +83,12 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }
     [data,meta]=await Promise.all([studioData(api,actor,load),displayEntry(env,'shelves').catch(()=>({}))]);
     meta=meta||{};
-    if(section==='home'&&actor.role==='admin'&&env.NUFI_HQ_SITE_TOKEN)data.hqIdeas=await workerIdeaSummaries(env,fetcher);
+    if(['home','team-work'].includes(section)&&actor.role==='admin'&&env.NUFI_HQ_SITE_TOKEN)data.hqIdeas=await workerIdeaSummaries(env,fetcher);
     data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');
     data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';
     if(section==='article-preview'||(section==='item'&&params.get('tab')==='knowledge-document')){
       if(req.method!=='GET')throw new HttpError(405,'Use GET to open an article preview.');
-      const r=editable(data,params.get('id'));if(r?.kind!=='article')throw new HttpError(404,'Article unavailable.');
+      const r=readable(data,params.get('id'));if(r?.kind!=='article')throw new HttpError(404,'Article unavailable.');
       res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','private, no-store');
       res.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'self'; img-src 'self'; font-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'self'");
       res.statusCode=200;return res.end(readerDocument(r,articleImage(r)));
@@ -218,6 +220,8 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       case 'project':body=data.projects.find(p=>p.id===params.get('project'))?.studio?.ideaId?ideaProjectPage(params,data):projectPage(params,data);break;
       case 'item':body=itemPage(params,data);if(data.byId.has(params.get('id')))body+=publicationPanel(data.byId.get(params.get('id')),data);break;
       case 'new':body=newItem(params,data);break;
+      case 'team-work':body=teamWorkPage(params,data);break;
+      case 'review-history':body=await reviewHistoryPage(params,data,api);break;
       case 'review':body=reviewPage(params,data);break;
       case 'calendar':body=calendar(data);break;
       case 'journey':body=journey(params,data);break;

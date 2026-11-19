@@ -1,6 +1,6 @@
 import { imageCaption } from './knowledge-article.mjs';
 import { workerNames, workerContent } from './studio-worker-content.mjs';
-import { canAccess, canEditContent } from './library-permissions.mjs';
+import { canReadContent, canReviewContent, canAccess, canEditContent } from './library-permissions.mjs';
 import { canEditDays, workoutDaysEditor } from './studio-workout-days.mjs';
 import { workoutDays, workoutSession } from './studio-workouts.mjs';
 import { contentPhoto } from './studio-visuals.mjs';
@@ -223,7 +223,7 @@ function programmePage(params,data,r){
   return out;
 }
 export function itemPage(params,data){
-  const r=data.byId.get(params.get('id'));if(!r)return heading('Content unavailable');
+  const r=data.byId.get(params.get('id'));if(!canReadContent(data,r))return heading('Content unavailable');
   if(r.kind==='article'&&params.get('tab')!=='edit')return articlePage(r,data);
   if(r.kind==='mealplan'&&r.fields.plannerVersion===1&&params.get('tab')!=='edit')return mealPlanPage(params,data,r);
   if(r.kind==='ebook'&&r.bookAssets&&params.get('tab')!=='edit')return bookPage(r,data);
@@ -280,7 +280,7 @@ export function newItem(params,data,values={}){
     editorForm(r,data,{create:true,project:values.project||params.get('project')||'',entry:values.entry||params.get('entry')||'',unsaved:data.unsaved===true})+referenceData(data);
 }
 export function reviewPage(params,data){
-  const rows=data.items.filter(r=>['In review','Changes requested'].includes(r.status)&&(data.actor.role==='admin'||data.assigned.has(r.id)));
+  const rows=data.items.filter(r=>['In review','Changes requested'].includes(r.status)&&(canReviewContent(data,r)||data.assigned.has(r.id)));
   return heading('Needs checking','Preview the saved work, approve it or request changes.')+
     pages(params,rows,rs=>list(rs,r=>'<div><a data-review-preview target="_blank" rel="noopener" href="'+url('review-preview',{id:r.id})+'">'+esc(r.title)+'</a><small>'+esc(kinds[r.kind]||r.kind)+'</small></div>'+badge(r.status),'There is no content waiting for review.'))+
     '<script type="module" src="/studio-review.js"></script>';

@@ -1,16 +1,16 @@
-import { canAccess, canEditContent } from './library-permissions.mjs';
+import { canAccess, canReadContent, canEditContent } from './library-permissions.mjs';
 import {get} from '@vercel/blob';
 import {Readable} from 'node:stream';
 import {pipeline} from 'node:stream/promises';
 import {HttpError} from './platform.mjs';
-import {editable} from './studio-store.mjs';
+import {readable} from './studio-store.mjs';
 import {esc,url,button,badge} from './studio-ui.mjs';
 
 export const bookAssetUrl=(id,asset)=>url('book-file',{id,asset});
 export function bookFile(params,data){
  const r=data.byId.get(params.get('id')),key=params.get('asset');
  if(r?.kind!=='ebook'||!['front','back','digital','print'].includes(key))throw new HttpError(404,'Book file unavailable.');
- if(key==='digital'||key==='print')editable(data,r.id);
+ if(key==='digital'||key==='print')readable(data,r.id);
  const file=r.bookAssets?.[key];
  const type=key==='front'||key==='back'?'image/webp':'application/pdf';
  if(!file||file.type!==type||!/^nutrition-library\/books\/v1\/[a-f0-9]{64}\.(?:pdf|webp)$/.test(file.pathname)||!file.pathname.endsWith(type==='image/webp'?'.webp':'.pdf'))throw new HttpError(404,'This book file has not been added yet.');
@@ -28,7 +28,7 @@ export async function sendBookFile(req,res,params,data,fetchFile=name=>get(name,
  res.statusCode=200;await pipeline(Readable.fromWeb(result.stream),res);
 }
 export function bookPage(r,data){
- const allowed=data.actor.role==='admin'||data.assigned.has(r.id),f=r.fields||{};
+ const allowed=canReadContent(data,r),f=r.fields||{};
  const asset=(key,title)=>'<section class="panel"><h2>'+title+'</h2>'+(r.bookAssets?.[key]?'<a href="'+bookAssetUrl(r.id,key)+'" target="_blank" rel="noopener"><img class="studio-book-cover" src="'+bookAssetUrl(r.id,key)+'" alt="'+esc(r.title+' — '+title)+'" loading="lazy"></a>':'<p>Not added yet.</p>')+'</section>';
  const edition=(key,title,note)=>'<section class="panel"><h2>'+title+'</h2><p>'+esc(note)+'</p>'+(r.bookAssets?.[key]?(allowed?'<a class="btn" href="'+bookAssetUrl(r.id,key)+'" target="_blank" rel="noopener">Open '+title+'</a>':'<p>Available to administrators and the team assigned to this book.</p>'):'<p class="studio-status">Not available yet</p>')+'</section>';
  const reading=r.bookAssets?.digital&&allowed;
