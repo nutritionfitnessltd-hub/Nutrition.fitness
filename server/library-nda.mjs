@@ -16,7 +16,7 @@ async function serveReceipt(req,res,{api,actor,params,id,admin}){
  const filter='id=eq.'+uuid(id)+(admin?'':'&'+identityFilter(actor));
  const rows=await api(table+'?'+filter+'&select='+receiptColumns+'&limit=1',service),r=rows[0];
  if(!r)throw new HttpError(404,'Signed agreement not found.');
- const base=admin?{work:'1',studio:'nda',receipt:r.id}:{work:actor.role==='guest'?undefined:'1',nda:'record'};
+ const base=admin?{work:'1',studio:'nda',receipt:r.id}:{work:actor.role==='guest'?undefined:'1',...(actor.role==='guest'?{}:{studio:'account'}),nda:'record'};
  if(params.get('nda')==='identity'||params.get('identity')==='1'){
   if(!r.identity_received||r.identity_removed_at)throw new HttpError(404,'The ID image is not available.');
   const images=await api(table+'?'+filter+'&select=identity_image&limit=1',service);
@@ -31,7 +31,7 @@ async function serveReceipt(req,res,{api,actor,params,id,admin}){
  }
  let actions='<div class="nda-record-actions"><a class="btn" href="'+link({...base,download:'1'})+'">Download signed agreement</a><button type="button" data-nda-print>Print / save as PDF</button>';
  if(r.identity_received&&!r.identity_removed_at)actions+='<a class="btn" href="'+link({...base,identity:'1'})+'" target="_blank" rel="noopener">View ID photo</a>';
- actions+='<a class="btn primary" href="/content-library/">Continue to the workspace</a></div>';
+ actions+=!admin&&actor.role!=='guest'?'<a class="btn primary" href="/content-library/?work=1&amp;studio=account">Back to My account</a></div>':'<a class="btn primary" href="/content-library/">Continue to the workspace</a></div>';
  const remove=admin&&r.identity_received&&!r.identity_removed_at?'<form class="nda-id-removal" method="post" action="'+link({work:'1',studio:'nda'})+'"><input type="hidden" name="action" value="remove-nda-id"><input type="hidden" name="receipt" value="'+esc(r.id)+'"><h2>Remove ID image</h2><p>This permanently removes the uploaded ID image. The signed agreement, signature and record that ID was supplied remain.</p><label class="remember-me"><input type="checkbox" name="confirm_remove" value="1" required>I confirm that this ID image is no longer needed.</label><button>Remove ID image</button></form>':'';
  render(res,200,actions+details+remove);
 }
