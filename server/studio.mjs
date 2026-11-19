@@ -1,5 +1,6 @@
 import {sendNewsletter} from './studio-newsletters.mjs';
 import {changeSoftwareRelease,softwareReleaseErrorForm} from './software-releases.mjs';
+import {projectCreatePage} from './studio-project-create.mjs';
 import {generateIdeaSummary} from './studio-idea-ai.mjs';
 import {hqRequest} from './studio-hq.mjs';
 import { shinyThingsPage, changeShinyThing, ideaProjectPage } from './studio-shiny-things.mjs';
@@ -126,6 +127,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='article-image'){const r=data.byId.get(params.get('id'));if(r?.workerImage&&!r.articleImage)return await sendWorkerImage(res,r,env,fetcher);return await sendArticleImage(req,res,params,data);}
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
+      if(f.action==='project-setup')return write(res,200,projectCreatePage(params,data,f),'project-create',actor,meta);
       if(f.action?.startsWith('idea-')){const next=await changeShinyThing(params,f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();}
       if(['hq-message','hq-idea','hq-approve-plan'].includes(f.action)){const result=await changeHq(params,f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url(result.section,result).replaceAll('&amp;','&'));return res.end();}
 
@@ -247,6 +249,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       case 'release':body=releasePage(params,data);break;
       case 'export':return exportPackage(params,data,res);
       case 'history':body=await history(params,data,api);break;
+      case 'project-create':body=projectCreatePage(params,data);break;
       case 'archive':body=archivePage(params,data,meta||{});break;
       case 'import':body=importPage(params,data);break;
       case 'settings':
@@ -304,6 +307,9 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       body+=await workerChatPage(new URLSearchParams({worker:f.worker}),data,env,fetcher,f);
     }else if(req.method==='POST'&&['worker-step','worker-preview','worker-save'].includes(f.action)&&data?.actor.role==='admin'){
       try{body+=f.action==='worker-save'?workerPreview(f,data,meta):builderPage(params,data,meta,f);}catch{body+=button('Choose original material',url('builder'));}
+    }else if(req.method==='POST'&&['project-setup','project-blank-create'].includes(f.action)&&data?.actor.role==='admin'){
+      let retainedTasks='[]';try{if(Array.isArray(JSON.parse(f.tasks||'[]')))retainedTasks=f.tasks||'[]';}catch{}
+      try{body+=projectCreatePage(params,data,{...f,tasks:retainedTasks,taskAction:'',step:!f.name?.trim()?'details':data.people.some(p=>p.id===f.creator)?'tasks':'owner'});}catch{body+=projectCreatePage(params,data,{...f,tasks:'[]',taskAction:'',step:'details'});}
     }else if(req.method==='POST'&&f.action==='content-create'&&data){
       data.unsaved=true;body+=newItem(params,data,f);
     }else if(req.method==='POST'&&f.action==='mealplan-generate'&&data){

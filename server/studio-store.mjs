@@ -1,3 +1,4 @@
+import {ownsTask} from './studio-project-tasks.mjs';
 import { requireAccess, canReadContent, canReviewContent, reviewsKind } from './library-permissions.mjs';
 import { HttpError } from './platform.mjs';
 import { canonical, descendants, references } from './studio-model.mjs';
@@ -23,7 +24,7 @@ export async function allRows(api,url){
 export async function studioData(api,actor,load){
   const [index,overlays,projects,tasks,people,releases]=await Promise.all([
     load(),allRows(api,itemTable+'?select=id,payload,revision,updated_at&order=id&id=not.like.studio:notification:*'),
-    allRows(api,projectTable+'?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&creator_id=eq.'+actor.id)),
+    allRows(api,projectTable+'?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&or=(creator_id.eq.'+actor.id+',entries.cs.'+encodeURIComponent(JSON.stringify([{assignee:actor.id}]))+')')),
     allRows(api,'/rest/v1/nufi_library_tasks?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&staff_id=eq.'+actor.id)),
     actor.role==='admin'?api('/rest/v1/nufi_library_staff?select=id,name,email&order=name',service):Promise.resolve([{id:actor.id,name:actor.name}]),
     actor.role==='admin'?allRows(api,'/rest/v1/nufi_studio_releases?select=item_id,environment,source_revision,published_at&order=item_id'):Promise.resolve([])
@@ -36,8 +37,8 @@ export async function studioData(api,actor,load){
   ],index.records);
   if(actor.role!=='admin'){
     for(const p of projects){
-      for(const id of p.studio?.allowedIds||[])assigned.add(id);
-      for(const e of p.entries.filter(e=>e.assignedAsset)){
+      for(const id of p.creator_id===actor.id?p.studio?.allowedIds||[]:[])assigned.add(id);
+      for(const e of p.entries.filter(e=>e.assignedAsset&&(p.creator_id===actor.id||ownsTask(p,e,actor.id)))){
         for(const id of e.scopeIds||[e.record])if(id)assigned.add(id);
       }
     }
@@ -89,7 +90,7 @@ export async function saveRecord(api,actor,record,expected){
 }
 export async function saveProject(api,actor,p,update){
   requireAccess(actor,'work','edit');
-  const rows=await api(projectTable+'?id=eq.'+p.id+'&revision=eq.'+p.revision+(actor.role==='admin'?'':'&creator_id=eq.'+actor.id),{
+  const rows=await api(projectTable+'?id=eq.'+p.id+'&revision=eq.'+p.revision+(actor.role==='admin'?'':'&or=(creator_id.eq.'+actor.id+',entries.cs.'+encodeURIComponent(JSON.stringify([{assignee:actor.id}]))+')'),{
     service:true,method:'PATCH',headers:{Prefer:'return=representation'},payload:{...update,revision:p.revision+1}
   });
   if(!rows.length)throw new HttpError(409,'This project changed. Reopen it before saving.');

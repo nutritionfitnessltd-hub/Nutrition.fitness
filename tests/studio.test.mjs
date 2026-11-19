@@ -22,7 +22,7 @@ function fixture(actor=admin){
 
 test('library retains separate content types while creation and programme navigation stay simple',()=>{
   const data=fixture(),html=library(new URLSearchParams(),data);
-  assert.equal((html.match(/class="[^"]*\bstudio-type-card\b[^"]*"/g)||[]).length,21);
+  assert.equal((html.match(/class="[^"]*\bstudio-type-card\b[^"]*"/g)||[]).length,22);
   for(const type of ['recipe','mealplan','course','article','ebook','communication','workflow','asset'])assert.ok(html.includes('kind='+type));
   const frame=studioFrame(html,'library',admin);
   const nav=frame.match(/aria-label="Studio navigation">(.*?)<\/nav>/s)[1];
@@ -138,7 +138,7 @@ test('changing content links cannot expand staff edit permissions',async()=>{
   const saved={...canonical(session),fields:{blocks:[{referenceId:'ex-other'}]}};
   const api=async url=>{
     if(url.includes('nufi_studio_items'))return [{id:session.id,revision:1,payload:saved}];
-    if(url.includes('nufi_library_projects'))return [{studio:{allowedIds:[session.id,exercise.id]},entries:[]}];
+    if(url.includes('nufi_library_projects'))return [{creator_id:staff.id,studio:{allowedIds:[session.id,exercise.id]},entries:[]}];
     return [];
   };
   const data=await studioData(api,staff,load);
