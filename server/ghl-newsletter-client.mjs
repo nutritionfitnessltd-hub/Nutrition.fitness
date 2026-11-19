@@ -14,7 +14,13 @@ export function ghlClient(token,fetcher=fetch){
   const multipart=payload instanceof FormData;
   let response;try{response=await fetcher('https://services.leadconnectorhq.com'+path,{method,redirect:'error',headers:{Authorization:'Bearer '+token,Version:'v3',Accept:'application/json',...(!multipart?{'Content-Type':'application/json'}:{}),...(key?{'Idempotency-Key':key}:{})},body:payload===undefined?undefined:multipart?payload:JSON.stringify(payload),signal:AbortSignal.timeout(20000)});}catch{throw new HttpError(503,'GHL did not confirm the request. The next sync will check its saved state.');}
   const result=await response.json().catch(()=>null);
-  if(!response.ok)throw new HttpError(response.status===401||response.status===403?403:response.status===409?409:503,'GHL returned HTTP '+response.status+'. Check the connection and draft before retrying.');
+  if(!response.ok){
+   // Validation diagnostics only. Never retain credentials, request HTML or headers.
+   const raw=[400,409,422].includes(response.status)?result?.message||result?.error_description||result?.error||'':'';
+   const detail=(Array.isArray(raw)?raw.join('; '):typeof raw==='string'?raw:'').replaceAll(token,'[redacted]').replace(/pit-[a-z]+-[a-f0-9-]+/gi,'[redacted]').replace(/<[^>]*>/g,'').replace(/[\x00-\x1f]/g,' ').slice(0,240);
+   const error=new HttpError(response.status===401||response.status===403?403:response.status===409?409:503,'GHL returned HTTP '+response.status+(detail?': '+detail:'. Check the connection and draft before retrying.'));
+   error.upstreamStatus=response.status;throw error;
+  }
   if(!result||typeof result!=='object')throw new HttpError(503,'GHL returned an incomplete response.');
   return result;
  }

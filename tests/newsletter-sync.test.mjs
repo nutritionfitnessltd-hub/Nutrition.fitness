@@ -78,3 +78,11 @@ test('GHL client only exposes draft and image endpoints; recipients and schedule
  test('lost update confirmations recover without overwriting unrelated GHL edits',async()=>{
  const f=fixture();await syncNewsletter({...f,revision:1});f.record.fields.subject='Updated subject';const update=f.client.update;let fail=true;f.client.update=async(...args)=>{const v=await update(...args);if(fail){fail=false;throw Error('Lost response');}return v;};assert.equal((await syncNewsletter({...f,revision:1})).status,'attention');assert.equal((await syncNewsletter({...f,revision:1})).status,'synced');assert.equal(f.creates,1);
  });
+
+test('provider validation details are useful without retaining credentials',async()=>{
+ const token='pit-us-private-credential-12345';const client=ghlClient(token,async()=>new Response(JSON.stringify({message:['editorType must be supported',token]}),{status:422}));
+ await assert.rejects(client.create({name:'Draft',editorType:'html',editorContent:'<p>Hi</p>'},'key'),e=>e.upstreamStatus===422&&e.message.includes('editorType')&&!e.message.includes(token));
+});
+test('confirmed create validation failures allow corrected drafts to retry',async()=>{
+ const f=fixture();f.client.create=async()=>{throw Object.assign(new Error('Rejected'),{upstreamStatus:422});};await syncNewsletter({...f,revision:1});assert.equal(f.db.state.pendingCreate,undefined);
+});
