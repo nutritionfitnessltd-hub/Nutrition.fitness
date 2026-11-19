@@ -1,0 +1,31 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {contents} from '../server/library-view.mjs';
+import {assetScreen} from '../server/library-assets.mjs';
+import {shelfView} from '../server/library-shelves.mjs';
+import {videoLength} from '../server/course-lessons.mjs';
+const id='course:Example',record={id,title:'Example',kind:'Course outline',group:'Courses',fields:{},files:[]};
+const entries=Array.from({length:11},(_,i)=>({key:'lesson-'+i,id:i<2?'catalogue:'+i:null,title:'Lesson topic '+i,position:i+1,videoSeconds:249.706,scriptAvailable:true,canvaAvailable:i<2}));
+const course={order:'confirmed',note:'Separate Canva links need checking.',members:['catalogue:0','catalogue:1'],support:[],sections:[{title:'Lessons',entries}]};
+const index={records:[record,...entries.slice(0,2).map(e=>({id:e.id,title:e.title,kind:'Video',group:'Courses',fields:{collection:'Example'},files:[]}))],files:{}};
+const meta={courses:{Example:course}},params=new URLSearchParams({assets:id,lesson:'lesson-2'});
+test('course includes all verified lessons even when only two have separate catalogue links',()=>{
+ const html=contents(index,new URLSearchParams({item:id}),meta);
+ for(const e of entries)assert.match(html,new RegExp(e.title));
+ assert.match(html,/Lessons \(11\)/);assert.match(html,/Original video 4:10/);assert.match(html,/Script available/);assert.match(html,/Canva link needs checking/);
+ assert.match(html,/lesson=lesson-10/);assert.doesNotMatch(html,/File unavailable/);
+ assert.match(shelfView(index,new URLSearchParams({shelf:'Courses'}),meta),/11 lessons/);
+ const restricted=contents(index,new URLSearchParams({item:id}),meta,{sources:false});assert.doesNotMatch(restricted,/assets=|lesson=/);
+ assert.equal(videoLength(0),'');assert.equal(videoLength(359.8),'6:00');
+});
+const detail={title:'Topic',videoSeconds:249.706,canvaAvailable:false,script:'Unmodified narration. <script>not code</script>',links:[{label:'Original video',url:'https://example.test/video.mp4'},{label:'Bad',url:'javascript:alert(1)'}]};
+test('lesson script and video are private, assignment checked, and mapped by the course manifest',async()=>{
+ const reads=[],display=async key=>{reads.push(key);return key==='shelves'?meta:detail;};
+ const html=await assetScreen(params,{role:'admin'},null,async()=>index,display);
+ assert.match(html,/Lesson 3 of 11/);assert.match(html,/data-course-script-copy/);assert.match(html,/data-course-script hidden/);assert.match(html,/Unmodified narration\. &lt;script&gt;/);assert.match(html,/https:\/\/example.test\/video.mp4/);assert.doesNotMatch(html,/javascript:|<script>not code/);
+ assert.ok(reads.includes('course-lesson:Example:lesson-2'));
+ reads.length=0;await assert.rejects(assetScreen(params,{role:'staff',id:'staff'},async()=>false,async()=>index,display),e=>e.status===403);
+ assert.ok(!reads.some(key=>key.startsWith('course-lesson:')));
+ await assert.rejects(assetScreen(params,{role:'staff',access:{originals:true,sources:false}},null,async()=>index,display),e=>e.status===403);
+ await assert.rejects(assetScreen(new URLSearchParams({assets:id,lesson:'invented'}),{role:'admin'},null,async()=>index,display),e=>e.status===404);
+});
