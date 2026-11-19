@@ -1,6 +1,6 @@
 import {HttpError} from './platform.mjs';
 export const ghlLocation='C0BGBoXIG8FVn9G5mmA3';
-export const ghlCampaignUrl=id=>'https://app.gohighlevel.com/v2/location/'+ghlLocation+'/marketing/emails/campaigns/'+encodeURIComponent(id);
+export const ghlCampaignUrl=id=>'https://app.gohighlevel.com/location/'+ghlLocation+'/vibe-editor/'+encodeURIComponent(id)+'?pageNumber=1&type=campaign';
 const root='/emails/locations/'+ghlLocation+'/campaigns/emails';
 const identifier=id=>{if(typeof id!=='string'||! /^[a-zA-Z0-9_-]{1,100}$/.test(id))throw new HttpError(400,'Invalid GHL draft identifier.');return id;};
 const contentKeys=new Set(['name','editorType','editorContent','subject','previewText','fromName','fromEmail']);
