@@ -1,4 +1,49 @@
 @font-face{font-family:Kalam;font-style:normal;font-weight:400;font-display:swap;src:url('/assets/fonts/kalam-400.woff2') format('woff2')}
+/* Project overview: progress first, editing on demand. */
+.studio:has(.project-dashboard) .workspace main{padding:24px 28px 40px;max-width:1500px}
+.studio:has(.project-dashboard) .top{height:64px;padding-inline:28px}
+.project-dashboard{font-size:14px;line-height:1.5}
+.project-dashboard .studio-heading{gap:16px;margin-bottom:12px;align-items:center}
+.project-dashboard .studio-heading h1{font-size:26px;margin:0;letter-spacing:-.5px}
+.project-dashboard .studio-heading .studio-actions{flex-wrap:nowrap;flex-shrink:0}
+.project-dashboard .btn,.project-dashboard button{font-size:13px;padding:7px 12px;min-height:36px}
+.project-dashboard h2{font-size:18px;margin:0}.project-dashboard h3{font-size:15px;margin:0}
+.project-meta{display:flex;align-items:center;flex-wrap:wrap;gap:8px 18px;color:var(--muted);font-size:12px;margin-bottom:20px}
+.project-meta details{margin:0}.project-meta summary{cursor:pointer}.project-meta details[open]{flex-basis:100%}
+.project-meta details p{max-width:900px}
+.project-section-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.project-section-heading>span,.project-section-heading>small{font-size:12px;color:var(--muted)}
+.project-worker{display:flex;align-items:center;gap:10px}.project-worker img{border-radius:50%;object-fit:cover;width:42px;height:42px;background:#ede4db}
+.project-worker small{font-size:12px;color:var(--muted)}
+.project-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 16px}
+.project-metric{display:flex;flex-direction:column;align-items:stretch;gap:5px;padding:14px 16px;background:#eef4f2;border:1px solid #d1e0d9;border-radius:10px;min-width:0}
+.project-metric:nth-child(2){background:#edf2f8;border-color:#d4dfe9}.project-metric:nth-child(3){background:#fbf1e7;border-color:#ecd9c5}.project-metric:nth-child(4){background:#edf4e9;border-color:#d5e2cd}
+.project-metric>span{font-size:12px;font-weight:600}.project-metric>strong{font-size:28px;line-height:1.2;font-variant-numeric:tabular-nums}
+.project-metric small{font-size:11px;color:#526879;margin-top:auto}
+.project-production progress,.project-list-progress progress{display:block;appearance:none;border:0;width:100%;height:7px;border-radius:20px;overflow:hidden;background:#dae3e1;color:#176775}
+.project-production progress::-webkit-progress-bar,.project-list-progress progress::-webkit-progress-bar{background:#dae3e1;border-radius:20px}
+.project-production progress::-webkit-progress-value,.project-list-progress progress::-webkit-progress-value{background:#176775;border-radius:20px}
+.project-production progress::-moz-progress-bar,.project-list-progress progress::-moz-progress-bar{background:#176775;border-radius:20px}
+.project-production progress.approved::-webkit-progress-value{background:#518249}.project-production progress.approved::-moz-progress-bar{background:#518249}
+.project-progress-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.project-progress-card{background:white;border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+.project-progress-card p{margin:8px 0}.project-progress-card small,.project-muted{color:var(--muted);font-size:12px}
+.project-category-counts{display:grid;gap:5px;margin-bottom:8px;font-size:12px}.project-category-counts>div{display:flex;justify-content:space-between;gap:12px}
+.project-report{display:grid;gap:4px;padding:10px 14px;border-left:3px solid #bf8147;background:#fcf3e9;border-radius:0 7px 7px 0;font-size:12px;margin-bottom:16px}
+.project-recent-heading{margin-bottom:6px}.project-recent-heading>a{font-size:12px}
+.project-recent{list-style:none;margin:0;padding:0;background:white;border:1px solid var(--line);border-radius:8px}
+.project-recent li{display:flex;justify-content:space-between;gap:16px;padding:10px 14px;font-size:13px}.project-recent li+li{border-top:1px solid var(--line)}.project-recent a{overflow-wrap:anywhere}.project-recent span{font-size:12px;white-space:nowrap;color:var(--muted)}
+.project-count-note{font-size:11px;color:var(--muted);margin:10px 0 18px}
+.project-task-panel{background:white;border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0 0 14px}
+.project-task-row{border-top:1px solid var(--line);padding:0!important}.project-task-row summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;list-style:none}
+.project-task-row summary::-webkit-details-marker{display:none}.project-task-row summary:before{content:'›';font-size:19px;color:var(--muted)}.project-task-row[open] summary:before{transform:rotate(90deg)}
+.project-task-row summary>span:first-child{flex:1}.project-task-row summary small{display:block;font-size:11px;color:var(--muted)}
+.project-task-row .studio-form{margin:12px 0;gap:12px;max-width:100%}.project-task-row .studio-form label{font-size:12px}
+.project-task-fields{display:grid;grid-template-columns:100px 1fr 1fr;gap:12px}
+.project-settings{display:flex;gap:12px;align-items:flex-start;flex-wrap:wrap}.project-settings>.panel{padding:12px 16px;margin:0;font-size:13px;background:white}.project-settings>.panel[open]{width:100%}
+.project-settings .studio-form{margin-top:16px}.project-list-progress{display:block;font-size:12px;color:var(--muted);margin-top:8px;max-width:250px}.project-list-progress progress{margin-top:6px;height:5px}
+@media(max-width:1100px){.project-dashboard .studio-heading{align-items:flex-start;flex-direction:column}.project-metrics{gap:8px}.project-metric{padding:12px}}
+@media(max-width:760px){.studio:has(.project-dashboard) .workspace main{padding:20px 16px}.studio:has(.project-dashboard) .top{height:58px;padding-inline:12px}.project-dashboard .studio-heading h1{font-size:23px}.project-metrics{grid-template-columns:1fr 1fr}.project-progress-grid{grid-template-columns:1fr}.project-task-fields{grid-template-columns:1fr}.project-recent li{flex-direction:column;gap:4px}.project-section-heading{flex-wrap:wrap}}
 @font-face { font-family:Studio Sans; src:url("/content-library/?work=1&studio=media&preview=brand-font") format("woff2"); font-weight:100 1000; font-display:swap; }
 .studio { background: #f7f9f8; font-family:"Studio Sans","DM Sans",Arial,sans-serif; }
 .studio .side,.studio .top { background: white; }
