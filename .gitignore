@@ -15,3 +15,4 @@ server/guest-catalogue.enc
 supabase/.temp/
 __pycache__/
 *.py[cod]
+/server/generated/

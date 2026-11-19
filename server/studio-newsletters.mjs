@@ -1,4 +1,4 @@
-import {cleanNewsletterHtml} from './newsletter-sanitize.mjs';
+import {cleanNewsletterHtml} from './generated/newsletter-sanitize.mjs';
 import {displayEntry} from './library-display.mjs';
 import {HttpError} from './platform.mjs';
 import {esc, url, button} from './studio-ui.mjs';
