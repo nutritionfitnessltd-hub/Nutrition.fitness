@@ -86,3 +86,11 @@ test('provider validation details are useful without retaining credentials',asyn
 test('confirmed create validation failures allow corrected drafts to retry',async()=>{
  const f=fixture();f.client.create=async()=>{throw Object.assign(new Error('Rejected'),{upstreamStatus:422});};await syncNewsletter({...f,revision:1});assert.equal(f.db.state.pendingCreate,undefined);
 });
+
+test('provider Outlook font wrappers do not hide owner content edits',async()=>{
+ const {canonicalGhlHtml}=await import('../server/newsletter-sync.mjs');
+ const original='<head></head><body><a href="https://nutrition.fitness">Read</a></body>';
+ const returned='<head><!-- outlook-fixes-applied --></head><body><a href="https://nutrition.fitness"><!--[if mso]><font face="Arial"><![endif]-->Read<!--[if mso]></font><![endif]--></a></body>';
+ assert.equal(canonicalGhlHtml(returned),original);
+ assert.notEqual(canonicalGhlHtml(returned.replace('Read','Owner edit')),original);
+});

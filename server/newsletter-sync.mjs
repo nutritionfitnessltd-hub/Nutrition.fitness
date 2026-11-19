@@ -26,9 +26,11 @@ export async function saveNewsletterConnection(f,data,api,env,fetcher=fetch){
  return {connected:true};
 }
 const sourcePath=id=>'/rest/v1/nufi_studio_items?select=id,payload,revision&id=eq.'+encodeURIComponent(id);
+export function canonicalGhlHtml(html){return html.replace(/<!--\s*outlook-fixes-applied\s*-->/g,'').replace(/<!--\[if mso\]><font\b[^>]*><!\[endif\]-->/g,'').replace(/<!--\[if mso\]><\/font><!\[endif\]-->/g,'');}
+const initialFingerprint=r=>digest([r.name,r.editorType,typeof r.editorContent==='string'?canonicalGhlHtml(r.editorContent):r.editorContent]);
 export function remoteFingerprint(r){
  if(r.editorType!=='html'||typeof r.editorContent!=='string')throw new HttpError(409,'The GHL email is no longer an HTML draft. Automatic updates are paused.');
- return digest([r.name,r.editorType,r.editorContent,r.subject||'',r.previewText||'',r.fromName||'',r.fromEmail||'']);
+ return digest([r.name,r.editorType,canonicalGhlHtml(r.editorContent),r.subject||'',r.previewText||'',r.fromName||'',r.fromEmail||'']);
 }
 export async function syncNewsletter({record,revision,api,client,now=Date.now()}){
  const owner=randomUUID(),claimed=await api('/rest/v1/rpc/nufi_claim_newsletter',{service:true,method:'POST',payload:{item:record.id,owner}});
@@ -40,14 +42,14 @@ export async function syncNewsletter({record,revision,api,client,now=Date.now()}
  };
  try{
   if(state.hold){
-   if(state.campaignId){const r=await client.get(state.campaignId);const assets=record.newsletterAssetsId?(await api('/rest/v1/nufi_library_display?select=payload&id=eq.'+encodeURIComponent(record.newsletterAssetsId),privateRead))[0]?.payload:null;const expected=await newsletterPayload(newsletterSource(record,assets),media,async()=>{throw new Error('Inspection never uploads');},async()=>{});const actual=r.editorContent||'';let start=0,end=0;while(start<actual.length&&actual[start]===expected.editorContent[start])start++;while(end<actual.length-start&&actual[actual.length-1-end]===expected.editorContent[expected.editorContent.length-1-end])end++;state.diagnostic={status:r.status,name:r.name,editorType:r.editorType,contentLength:actual.length,expectedLength:expected.editorContent.length,differenceAt:start,actualDifference:actual.slice(start,actual.length-end).slice(0,1000),expectedDifference:expected.editorContent.slice(start,expected.editorContent.length-end).slice(0,1000)};}
+   if(state.campaignId){const r=await client.get(state.campaignId);const assets=record.newsletterAssetsId?(await api('/rest/v1/nufi_library_display?select=payload&id=eq.'+encodeURIComponent(record.newsletterAssetsId),privateRead))[0]?.payload:null;const expected=await newsletterPayload(newsletterSource(record,assets),media,async()=>{throw new Error('Inspection never uploads');},async()=>{});const actual=r.editorContent||'';let start=0,end=0;while(start<actual.length&&actual[start]===expected.editorContent[start])start++;while(end<actual.length-start&&actual[actual.length-1-end]===expected.editorContent[expected.editorContent.length-1-end])end++;state.diagnostic={status:r.status,name:r.name,editorType:r.editorType,contentLength:actual.length,canonicalMatches:canonicalGhlHtml(actual)===canonicalGhlHtml(expected.editorContent),expectedLength:expected.editorContent.length,differenceAt:start,actualDifference:actual.slice(start,actual.length-end).slice(0,1000),expectedDifference:expected.editorContent.slice(start,expected.editorContent.length-end).slice(0,1000)};}
    return {status:'held',id:state.campaignId};
   }
   let remote;
   if(state.campaignId){
    remote=await client.get(state.campaignId);
    if(remote.deleted||remote.status!=='draft'){state.hold=true;throw new HttpError(409,'The GHL copy is '+(remote.deleted?'deleted':remote.status||'not a draft')+'. Automatic updates are stopped.');}
-   if(!state.remoteHash&&state.initialHash&&digest([remote.name,remote.editorType,remote.editorContent])!==state.initialHash){state.hold=true;throw new HttpError(409,'The new GHL copy has changed. Automatic updates are paused.');}
+   if(!state.remoteHash&&state.initialHash&&initialFingerprint(remote)!==state.initialHash){state.hold=true;throw new HttpError(409,'The new GHL copy has changed. Automatic updates are paused.');}
    if(state.remoteHash&&remoteFingerprint(remote)!==state.remoteHash&&remoteFingerprint(remote)!==state.pendingUpdate?.hash){state.hold=true;throw new HttpError(409,'The GHL copy has been edited. Automatic updates are paused to keep your changes.');}
   }
   const assetId=record.newsletterAssetsId;
@@ -60,7 +62,7 @@ export async function syncNewsletter({record,revision,api,client,now=Date.now()}
   if(!latest||latest.revision!==revision||!newsletterEligible(latest.payload))throw new HttpError(409,'The newsletter changed during syncing. The next check will use the newest copy.');
   if(!state.campaignId){
    if(state.pendingCreate&&now-Date.parse(state.pendingCreate.at)>23*3600000){state.hold=true;throw new HttpError(409,'An earlier create was not confirmed. Check GHL before reconnecting this draft to avoid a duplicate.');}
-   if(!state.pendingCreate){state.initialHash=digest([payload.name,payload.editorType,payload.editorContent]);state.pendingCreate={at:new Date(now).toISOString(),key:'nufi-newsletter-'+randomUUID(),payload};await persist();}
+   if(!state.pendingCreate){state.initialHash=initialFingerprint(payload);state.pendingCreate={at:new Date(now).toISOString(),key:'nufi-newsletter-'+randomUUID(),payload};await persist();}
    let created;try{created=await client.create(state.pendingCreate.payload,state.pendingCreate.key);}catch(error){
     // A confirmed validation rejection created nothing; the corrected source may be retried.
     if([400,413,415,422].includes(error.upstreamStatus))delete state.pendingCreate;
@@ -70,7 +72,7 @@ export async function syncNewsletter({record,revision,api,client,now=Date.now()}
    state.campaignId=created.id;state.campaignUrl=ghlCampaignUrl(created.id);delete state.pendingCreate;
    // Commit the mapping before updating metadata; a retry always reuses this draft.
    await persist();remote=await client.get(created.id);
-   if(remote.status!=='draft'||digest([remote.name,remote.editorType,remote.editorContent])!==state.initialHash){state.hold=true;throw new HttpError(409,'The new GHL copy has changed. Automatic updates are paused.');}
+   if(remote.status!=='draft'||initialFingerprint(remote)!==state.initialHash){state.hold=true;throw new HttpError(409,'The new GHL copy has changed. Automatic updates are paused.');}
    state.remoteHash=remoteFingerprint(remote);await persist();
   }
   state.pendingUpdate={hash:remoteFingerprint(payload)};await persist();
