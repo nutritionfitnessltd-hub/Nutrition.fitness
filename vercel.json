@@ -98,7 +98,7 @@
   },
   "crons": [
     {
-      "path": "/api/newsletter-sync",
+      "path": "/api/newsletter-sync/",
       "schedule": "*/5 * * * *"
     }
   ]
