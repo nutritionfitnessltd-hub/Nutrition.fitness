@@ -1,4 +1,6 @@
-import {isNewsletter} from './studio-newsletters.mjs';
+import {ownsTask} from './studio-project-tasks.mjs';
+import {projectCreatePage} from './studio-project-create.mjs';
+import {isNewsletter,isNewsletterContent} from './studio-newsletters.mjs';
 import { imageCaption } from './knowledge-article.mjs';
 import {projectProductionSummary} from './studio-project-progress.mjs';
 import { workerNames, workerContent } from './studio-worker-content.mjs';
@@ -39,6 +41,7 @@ const collections={
   article:['Articles','Helpful advice and educational content.','FileText'],
   ebook:['Books & guides','Recipe books, workout books and other guides.','Book'],
   leadmagnet:['Lead magnets','Free guides, checklists and resources that introduce Nutrition.fitness.','FileText'],
+  newsletter:['Newsletters','Email newsletters, designs and plain-text drafts.','Mail'],
   communication:['Messages','WhatsApp messages, emails and member encouragement.','MessageCircle'],
   campaign:['Marketing','Campaigns, launch copy and promotional content.','Briefcase'],
   workflow:['GHL workflows','Triggers, timing, messages and follow-up steps.','Layers'],
@@ -58,7 +61,7 @@ const shelves={
   messages:{title:'Messages',description:'Coaching, email, WhatsApp and GHL workflows.',icon:'MessageCircle',types:['communication','workflow'],create:'communication'},
   marketing:{title:'Marketing & assets',description:'Campaigns, images, videos and supporting files.',icon:'Briefcase',types:['campaign','asset'],create:'campaign'}
 };
-const createLink=kind=>url('new',{kind});
+const createLink=kind=>kind==='newsletter'?url('builder',{build:'newsletter'}):url('new',{kind});
 function workSummary(data){
   const pending=data.items.filter(r=>r.status==='In review'&&(data.actor.role==='admin'||data.assigned.has(r.id))).length;
   const projects=data.projects.filter(p=>p.status!=='Complete');
@@ -84,14 +87,15 @@ export function library(params,data,meta={}){
   const exercise=params.get('studio')==='exercises',kind=params.get('kind')||shelves[params.get('category')]?.create||'',q=(params.get('q')||'').toLowerCase(),state=params.get('state')||'';
   if(!worker&&!exercise&&!kind&&!q&&!state&&params.get('view')!=='all'){
     const counts=new Map();
-    for(const r of data.items)if(r.status!=='Archived')counts.set(r.kind,(counts.get(r.kind)||0)+1);
+    for(const r of data.items)if(r.status!=='Archived'){const type=isNewsletterContent(r)?'newsletter':r.kind;counts.set(type,(counts.get(type)||0)+1);}
     return heading('Content library','Your working content.',(canAccess(data.actor,'studio')?button('Create content',url('create'),true):'')+(canAccess(data.actor,'originals')?button('Browse original collections',url('workspace-archive',{tab:'originals'})):''))+lifecycle+
       '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','library')+hidden('view','all')+hidden('bucket',bucket)+hidden('worker',worker)+input('q','Search all content','','search')+'<button>Search</button>'+button('Browse all content',url('library',{view:'all',bucket}))+'</form>'+
       typeCards(contentSections,counts,bucket)+
       '<details class="panel"><summary>More content types</summary>'+typeCards(Object.entries(collections).filter(([id])=>!contentSections.some(([key])=>key===id)).map(([id,[title]])=>[id,title]),counts,bucket)+'</details>';
 
   }
-  let rows=data.items.filter(r=>!['settings','programme-family'].includes(r.kind)&&(exercise?['exercise','activity'].includes(r.kind)&&(!kind||r.kind===kind):!kind||r.kind===kind)&&(!state?r.status!=='Archived':r.status===state));
+  const matchesKind=r=>!kind||(kind==='newsletter'?isNewsletterContent(r):r.kind===kind&&(kind!=='communication'||!isNewsletterContent(r)));
+  let rows=data.items.filter(r=>!['settings','programme-family'].includes(r.kind)&&(exercise?['exercise','activity'].includes(r.kind)&&(!kind||r.kind===kind):matchesKind(r))&&(!state?r.status!=='Archived':r.status===state));
   if(kind==='programme'){
     if(!q&&!state&&['all','drafts'].includes(bucket))rows=data.items.filter(r=>r.status!=='Archived'&&(r.kind==='programme-family'||r.kind==='programme'&&data.byId.get(r.parent)?.kind!=='programme-family'));
     const families=['stronger','build','fitter','run','swim','ride','back-to-it','nufi365'];
@@ -102,22 +106,23 @@ export function library(params,data,meta={}){
   if(kind==='ebook'&&params.get('bookType'))rows=rows.filter(r=>(r.fields.bookType||'Guide')===params.get('bookType'));
   rows=rows.filter(r=>(r.title+' '+words(r.fields.aliases)+' '+words(r.fields.equipment)+' '+words(r.fields.muscles)).toLowerCase().includes(q));
   const filter='<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio',exercise?'exercises':'library')+hidden('view','all')+hidden('bucket',bucket)+hidden('worker',worker)+input('q','Search',params.get('q')||'','search')+
-    (kind?hidden('kind',kind):select('kind','Content type',{'':'All types',...kinds},kind))+
+    (kind?hidden('kind',kind):select('kind','Content type',{'':'All types',...kinds,newsletter:'Newsletter'},kind))+
     (kind==='ebook'?select('bookType','Book type',{'':'All books','Recipe book':'Recipe books','Workout book':'Workout books',Guide:'Guides'},params.get('bookType')||''):'')+
     '<details class="filter-details"'+(state?' open':'')+'><summary>More filters</summary>'+select('state','Progress',{'':'Active content',Draft:'Draft','In review':'Needs checking','Changes requested':'Needs changes',Approved:'Checked',Archived:'Archived'},state)+'</details><button>Search</button></form>';
 
-  return (!exercise?'<a class="back" href="'+url('library',{bucket})+'">← Content types</a>':'')+heading(worker?workerNames[worker]+'’s work':exercise?'Exercises & drills':kind==='ebook'&&params.get('bookType')?params.get('bookType')+'s':collections[kind]?.[0]||'All content',worker?'Open content to edit, submit for approval or approve a submitted draft.':exercise?'Find instructions, coaching cues and demonstrations.':collections[kind]?.[1]||'Your working Nutrition.fitness content.',(canAccess(data.actor,'studio')?button(kind?'Create '+(kinds[kind]||'content').toLowerCase():'Create content',url('new',{kind:kind||(exercise?'exercise':'article')}),true):''))+lifecycle+filter+
+  return (!exercise?'<a class="back" href="'+url('library',{bucket})+'">← Content types</a>':'')+heading(worker?workerNames[worker]+'’s work':exercise?'Exercises & drills':kind==='ebook'&&params.get('bookType')?params.get('bookType')+'s':collections[kind]?.[0]||'All content',worker?'Open content to edit, submit for approval or approve a submitted draft.':exercise?'Find instructions, coaching cues and demonstrations.':collections[kind]?.[1]||'Your working Nutrition.fitness content.',(canAccess(data.actor,'studio')?button(kind?'Create '+(kind==='newsletter'?'newsletter':kinds[kind]||'content').toLowerCase():'Create content',(kind==='newsletter'?createLink(kind):url('new',{kind:kind||(exercise?'exercise':'article')})),true):''))+lifecycle+filter+
     (!rows.length?'<p class="studio-empty">'+(q||state?'No content matches these filters.':(bucket==='published'?'Nothing has been published here yet. Checked content is kept separately.':'Nothing here yet. Create an item or import an original.'))+'</p>':'')+
     '<div data-worker-updates="library">'+pages(params,rows,rs=>'<div class="studio-content-grid">'+rs.map(r=>{
       const preview=meta.training?.[r.id]||meta.assets?.[r.id]?.preview||meta.training?.[r.parent];
       const photo=r.kind==='ebook'&&r.bookAssets?.front?bookAssetUrl(r.id,'front').replaceAll('&amp;','&'):recipeImage(r)||articleImage(r);
-      return '<a class="studio-content-card" '+(r.kind==='article'?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+url(r.kind==='article'?'review-preview':'item',{id:r.id})+'">'+(photo?'<span class="studio-card-photo"><img src="'+esc(photo)+'" alt="" loading="lazy">'+(r.kind==='article'&&imageCaption(r)?'<span class="studio-photo-caption">'+esc(imageCaption(r))+'</span>':'')+'</span>':preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(r.kind==='programme-family'?'Training programmes':kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks · '+(r.id==='training:nufi365'?'Year-round programme':'Standalone programme')+'</p>':r.kind==='programme-family'?'<p>Start · Progress · Develop · Own It</p>':'')+badge(published(r)?'Published':r.status)+'</div></a>';
+      return '<a class="studio-content-card" '+(r.kind==='article'?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+url(r.kind==='article'?'review-preview':'item',{id:r.id})+'">'+(photo?'<span class="studio-card-photo"><img src="'+esc(photo)+'" alt="" loading="lazy">'+(r.kind==='article'&&imageCaption(r)?'<span class="studio-photo-caption">'+esc(imageCaption(r))+'</span>':'')+'</span>':preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(isNewsletterContent(r)?'Newsletter':r.kind==='programme-family'?'Training programmes':kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks · '+(r.id==='training:nufi365'?'Year-round programme':'Standalone programme')+'</p>':r.kind==='programme-family'?'<p>Start · Progress · Develop · Own It</p>':'')+badge(published(r)?'Published':r.status)+'</div></a>';
     }).join('')+'</div>')+'</div>';
 }
 export function createPage(params,data,values={}){
+  if(data.actor.role==='admin'&&(params.get('project')==='1'||params.get('blank')==='1'))return projectCreatePage(params,data,values);
   if(params.get('template')==='mealplan')return mealPlanForm(data,values);
   const choice=params.get('template'),t=data.actor.role==='admin'?templates[choice]:null;
-  if(!t)return (data.actor.role==='admin'?workerStart():heading('What do you want to build today?','Choose a content type to begin.'))+'<details class="panel studio-manual"><summary>Create it myself</summary>'+
+  if(!t)return (data.actor.role==='admin'?'<section class="panel">'+heading('Start a project','Build your own task list from scratch.',button('Blank project',url('project-create'),true))+'</section>'+workerStart():heading('What do you want to build today?','Choose a content type to begin.'))+'<details class="panel studio-manual"><summary>Create it myself</summary>'+
     '<div class="studio-cards studio-type-grid">'+contentSections.map(([kind,title])=>card(title,'',createLink(kind))).join('')+'</div>'+
     '<details class="panel"><summary>More content types</summary><div class="studio-actions">'+Object.entries(kinds).filter(([kind])=>!contentSections.some(([key])=>key===kind)).map(([kind,title])=>button(title,createLink(kind))).join('')+'</div></details>'+
     '<div class="studio-actions">'+(canAccess(data.actor,'originals')?button('Use an original',url('archive'))+button('Import a file',url('import')):'')+'</div></details>'+
@@ -137,8 +142,8 @@ export function projectList(params,data){
   const kind=params.get('kind')||'',categories={...collections,other:['Other projects','Projects without a content type.','Briefcase']};
   const projectKind=p=>data.byId.get(p.studio?.rootId)?.kind||templates[p.studio?.type]?.kind||'other';
   const selected=data.projects.filter(p=>!kind||projectKind(p)===kind);
-  return heading(kind?(categories[kind]?.[0]||'All')+' projects':'Projects','',data.actor.role==='admin'?button('Create a project',url('create',{project:'1'}),true):'')+
-    pages(params,selected,rows=>list(rows,p=>'<div><a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a><small>'+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+(p.studio.productionTracking?'':' · '+p.weeks+' weeks')+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</small>'+projectProductionSummary(p,data)+'</div>'+badge(p.status),'No projects of this type yet.'));
+  return heading(kind?(categories[kind]?.[0]||'All')+' projects':'Projects','',data.actor.role==='admin'?button('Create a project',url('project-create'),true):'')+
+    pages(params,selected,rows=>list(rows,p=>'<div><a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a><small>'+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+(p.studio.productionTracking||p.studio.type==='blank'?'':' · '+p.weeks+' weeks')+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</small>'+projectProductionSummary(p,data)+'</div>'+badge(p.status),'No projects of this type yet.'));
 }
 export function projectPage(params,data){
   const p=projectFor(data,params.get('project')),week=Math.max(0,Math.min(p.weeks,Number(params.get('week'))||0)),admin=data.actor.role==='admin';
@@ -146,29 +151,29 @@ export function projectPage(params,data){
 
   if(!canAccess(data.actor,'edit'))return heading(p.name,p.brief)+badge(p.status)+'<section class="panel">'+list(p.entries,e=>'<div><small>'+(e.week?'Week '+e.week:'Preparation')+'</small><h3>'+esc(e.title)+'</h3><p>'+esc(e.notes||'')+'</p>'+(e.record&&canAccess(data.actor,'library')?button('Open content',url('item',{id:e.record})):'' )+'</div>'+badge(e.status))+'</section>';
   const state={section:'project',project:p.id,week},base=hidden('projectRevision',p.revision);
-  const root=data.byId.get(p.studio.rootId);
-  const nav='<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','project')+hidden('project',p.id)+select('week','Week',Object.fromEntries(Array.from({length:p.weeks+1},(_,w)=>[w,w?'Week '+w:'Preparation'])),week)+'<button>Open week</button></form>';
-  const tasks=p.entries.filter(e=>e.week===week);
+  const blank=p.studio.type==='blank',root=data.byId.get(p.studio.rootId);
+  const nav=blank?'':'<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','project')+hidden('project',p.id)+select('week','Week',Object.fromEntries(Array.from({length:p.weeks+1},(_,w)=>[w,w?'Week '+w:'Preparation'])),week)+'<button>Open week</button></form>';
+  const tasks=p.entries.filter(e=>blank||e.week===week);
   const taskRows=new Map();
   for(const e of tasks){
-    const type=data.byId.get(e.record)?.kind||Object.keys(kinds).find(k=>kinds[k]===e.kind)||({'PT WhatsApp message':'communication','Content to create':'article'})[e.kind]||'article';
+    const type=e.kind==='Task'?'task':data.byId.get(e.record)?.kind||Object.keys(kinds).find(k=>kinds[k]===e.kind)||({'PT WhatsApp message':'communication','Content to create':'article'})[e.kind]||'article';
     if(!taskRows.has(type))taskRows.set(type,[]);taskRows.get(type).push(e);
   }
-  const rows=[...taskRows].map(([type,entries])=>'<section class="studio-task-group"><h3>'+esc(collections[type]?.[0]||'Content')+'</h3>'+entries.map(e=>{
+  const rows=[...taskRows].map(([type,entries])=>'<section class="studio-task-group"><h3>'+esc(collections[type]?.[0]||(type==='task'?'Tasks':'Content'))+'</h3>'+entries.map(e=>{
     const r=data.byId.get(e.record);
-    return '<section class="studio-task"><div class="studio-heading"><div><small>'+esc(e.kind)+'</small><h3>'+esc(e.title)+'</h3></div>'+badge(e.status)+'</div><p class="prose">'+esc(e.notes||'')+'</p>'+
-      (r?(canAccess(data.actor,'library')?button('Open content',url('item',{id:r.id})):'' ):canAccess(data.actor,'studio')?button('Create this content',url('new',{project:p.id,entry:e.id,kind:e.kind==='PT WhatsApp message'?'communication':e.kind==='Creative asset'?'asset':e.kind==='GHL workflow'?'workflow':'article',title:e.title})):'' )+
-      '<details><summary>Update task</summary>'+form('task-save',base+hidden('entry',e.id)+
-      input('title','Task',e.title,'text','required maxlength="160"')+textarea('notes','Brief and feedback',e.notes||'')+
+    return '<section class="studio-task"><div class="studio-heading"><div><small>'+esc(e.kind)+'</small><h3>'+esc(e.title)+'</h3></div>'+badge(e.status)+'</div><p>Assigned to: '+esc(data.people.find(person=>person.id===(e.assignee||p.creator_id))?.name||'Team member')+(e.due?' · Due '+esc(e.due):'')+'</p><p class="prose">'+esc(e.notes||'')+'</p>'+
+      (r?(canAccess(data.actor,'library')?button('Open content',url('item',{id:r.id})):'' ):canAccess(data.actor,'studio')&&e.kind!=='Task'?button('Create this content',url('new',{project:p.id,entry:e.id,kind:e.kind==='PT WhatsApp message'?'communication':e.kind==='Creative asset'?'asset':e.kind==='GHL workflow'?'workflow':'article',title:e.title})):'' )+
+      (admin||ownsTask(p,e,data.actor.id)?'<details><summary>Update task</summary>'+form('task-save',base+hidden('entry',e.id)+
+      (admin?select('assignee','Assign to',{'':'Project owner',...personOptions(data)},e.assignee||''):'')+input('title','Task',e.title,'text','required maxlength="160"')+textarea('notes','Brief and feedback',e.notes||'')+
       select('status','Progress',Object.fromEntries((admin?['To do','In progress','Ready for review','Changes requested','Done']:['To do','In progress','Ready for review','Changes requested']).map(x=>[x,x])),e.status)+
-      input('week','Week (0 is preparation)',e.week,'number','min="0" max="'+p.weeks+'"')+input('due','Due date',e.due||'','date'),state)+'</details></section>';
+      (blank?hidden('week',e.week):input('week','Week (0 is preparation)',e.week,'number','min="0" max="'+p.weeks+'"'))+input('due','Due date',e.due||'','date'),state)+'</details>':'')+'</section>';
   }).join('')+'</section>').join('');
   const candidates=data.items.filter(r=>(r.title+' '+r.kind).toLowerCase().includes((params.get('find')||'').toLowerCase())).slice(0,35);
-  return heading(p.name,p.studio.audience||p.brief,canAccess(data.actor,'library')?button('Preview journey',url('journey',{project:p.id}))+button('Export',url('release',{project:p.id})):'' )+
+  return heading(p.name,p.studio.audience||p.brief,canAccess(data.actor,'library')&&(!blank||p.entries.some(e=>e.record))?button('Preview journey',url('journey',{project:p.id}))+button('Export',url('release',{project:p.id})):'' )+
     '<p class="studio-project-meta">'+esc(p.status)+' · '+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</p>'+
-    (root&&canAccess(data.actor,'library')?'<p>Programme content · '+itemLink(root)+'</p>':'')+nav+'<div class="studio-columns project-columns"><section><h2>'+(week?'Week '+week:'Preparation')+'</h2>'+(rows||'<p>No tasks in this week yet.</p>')+'</section>'+
-    '<aside class="panel"><details><summary>Add work</summary>'+form('task-add',base+input('title','What needs doing?','','text','required maxlength="160"')+
-    select('kind','Content type',{'Content to create':'Content to create','PT WhatsApp message':'PT WhatsApp message','GHL workflow':'GHL workflow','Creative asset':'Creative asset','Marketing content':'Marketing content'})+textarea('notes','What does a finished result need?'),state,'Add task')+'</details>'+
+    (root&&canAccess(data.actor,'library')?'<p>Programme content · '+itemLink(root)+'</p>':'')+nav+'<div class="studio-columns project-columns"><section><h2>'+(blank?'Tasks':week?'Week '+week:'Preparation')+'</h2>'+(rows||(blank?'<p>No tasks yet. Add your first task to get started.</p>':'<p>No tasks in this week yet.</p>'))+'</section>'+
+    '<aside class="panel"><details'+(blank?' open':'')+'><summary>Add work</summary>'+form('task-add',base+input('title','What needs doing?','','text','required maxlength="160"')+
+    (admin?select('assignee','Assign to',{'':'Project owner',...personOptions(data)}):'')+input('due','Due date (optional)','','date')+select('kind',blank?'Task type':'Content type',{...(blank?{Task:'Task'}:{}),'Content to create':'Content to create','PT WhatsApp message':'PT WhatsApp message','GHL workflow':'GHL workflow','Creative asset':'Creative asset','Marketing content':'Marketing content'})+textarea('notes','What does a finished result need?'),state,'Add task')+'</details>'+
     (canAccess(data.actor,'library')?'<details><summary>Attach existing content</summary><form action="/content-library/">'+hidden('work','1')+hidden('studio','project')+hidden('project',p.id)+hidden('week',week)+input('find','Find content',params.get('find')||'')+'<button>Find</button></form>'+
     (params.has('find')?form('task-attach',base+select('record','Library item',Object.fromEntries(candidates.map(r=>[r.id,r.title]))),state,'Attach to this week'):'')+'</details>':'')+
     '<details><summary>Creator & details</summary>'+form('project-save',base+(admin?input('name','Name',p.name)+select('creator','Creator',personOptions(data),p.creator_id):'')+

@@ -1,3 +1,4 @@
+import {projectTasks,ownsTask} from './studio-project-tasks.mjs';
 import { workerNames } from './studio-worker-content.mjs';
 import { saveWorkoutDays } from './studio-workout-days.mjs';
 import { randomUUID } from 'node:crypto';
@@ -67,8 +68,9 @@ export async function createItem(record,projectId,entryId,data,api){
   if(!projectId){adminOnly(data);await saveRecord(api,data.actor,record,0);return;}
   const p=projectFor(data,projectId);
   const chosen=p.entries.find(e=>e.id===entryId);
+  if(data.actor.role!=='admin'&&chosen&&!ownsTask(p,chosen,data.actor.id))throw new HttpError(403,'You can only create content for your assigned tasks.');
   if(chosen?.record)throw new HttpError(409,'This task already has content attached.');
-  const entry={id:randomUUID(),week:chosen?.week||0,kind:kinds[record.kind],record:record.id,scopeIds:[record.id],title:record.title,notes:chosen?.notes||'',status:'In progress',assignedAsset:true};
+  const entry={id:randomUUID(),week:chosen?.week||0,assignee:chosen?.assignee||(data.actor.role==='admin'?'':data.actor.id),due:chosen?.due||'',kind:kinds[record.kind],record:record.id,scopeIds:[record.id],title:record.title,notes:chosen?.notes||'',status:'In progress',assignedAsset:true};
   // Creation and attachment are committed together, so retries cannot leave an unattached draft.
   await api('/rest/v1/rpc/nufi_studio_attach_item',{service:true,method:'POST',payload:{project_id:p.id,expected:p.revision,document:record,entry:{...entry,replaces:chosen?.id||null},editor_name:data.actor.role+':'+data.actor.id}});
   p.revision++;p.entries.push(entry);
@@ -76,6 +78,14 @@ export async function createItem(record,projectId,entryId,data,api){
 export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
   const action=f.action;
   if(action==='workout-days-save')return saveWorkoutDays(params,f,data,api);
+  if(action==='project-blank-create'){
+    adminOnly(data);
+    const name=cleanText(f.name||'',160);if(!name)throw new HttpError(400,'Give the project a name.');
+    if(!data.people.some(person=>person.id===f.creator))throw new HttpError(400,'Choose a project owner.');
+    const project={id:uuid(f.id),name,creator_id:f.creator,created_by:data.actor.id,weeks:1,brief:cleanText(f.brief||'',4000),entries:projectTasks(f.tasks||'[]',data.people),studio:{type:'blank',allowedIds:[],launchDate:date(f.launch||'')}};
+    await api('/rest/v1/rpc/nufi_studio_create_project',{service:true,method:'POST',payload:{project,records:[],editor_name:'admin:'+data.actor.id}});
+    return {section:'project',project:project.id};
+  }
   if(action==='project-create'){
     const {project,root,existing}=projectDraft(f,data);
     await api('/rest/v1/rpc/nufi_studio_create_project',{service:true,method:'POST',payload:{project,records:existing?[]:[root],editor_name:'admin:'+data.actor.id}});
@@ -131,6 +141,7 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
     const entries=structuredClone(p.entries);let update={};
     const week=number(params.get('week')||0,0,p.weeks);
     if(action==='project-save'){
+      if(data.actor.role!=='admin'&&p.creator_id!==data.actor.id)throw new HttpError(403,'Only the project owner can change project details.');
       const allowed=data.actor.role==='admin'?['Planning','In progress','Ready for review','Complete']:['Planning','In progress','Ready for review'];
       if(!allowed.includes(f.status))throw new HttpError(403,'Choose a permitted project status.');
       update={brief:cleanText(f.brief||'',4000),status:f.status,studio:{...p.studio,launchDate:date(f.launch||'')}};
@@ -140,14 +151,18 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
       }
     }else if(action==='task-save'){
       const entry=entries.find(e=>e.id===f.entry);if(!entry)throw new HttpError(404,'Task not found.');
+      if(data.actor.role!=='admin'&&!ownsTask(p,entry,data.actor.id))throw new HttpError(403,'You can only update your assigned tasks.');
       if(!['To do','In progress','Ready for review','Changes requested','Done'].includes(f.status))throw new HttpError(400,'Choose a status.');
       if(f.status==='Done')adminOnly(data);
+      if(f.assignee!==undefined){adminOnly(data);if(f.assignee&&!data.people.some(person=>person.id===f.assignee))throw new HttpError(400,'Choose a valid task assignee.');entry.assignee=f.assignee;}
       Object.assign(entry,{title:cleanText(f.title,160),notes:cleanText(f.notes||'',4000),status:f.status,week:number(f.week,0,p.weeks),due:date(f.due||'')});update.entries=entries;
     }else{
       const r=action==='task-attach'?data.byId.get(f.record):null;
       if(action==='task-attach'&&!r)throw new HttpError(404,'Choose a library item.');
       if(r&&entries.some(e=>e.record===r.id&&e.week===week))throw new HttpError(409,'This content already belongs to the selected week.');
-      entries.push({id:randomUUID(),week,title:r?.title||cleanText(f.title,160),kind:r?kinds[r.kind]:cleanText(f.kind||'Content to create',100),
+      const assignee=data.actor.role==='admin'?(f.assignee||''):data.actor.id;
+      if(assignee&&!data.people.some(person=>person.id===assignee))throw new HttpError(400,'Choose a valid task assignee.');
+      entries.push({id:randomUUID(),week,assignee,due:date(f.due||''),title:r?.title||cleanText(f.title,160),kind:r?kinds[r.kind]:cleanText(f.kind||'Content to create',100),
         record:r?.id||null,scopeIds:r&&data.actor.role==='admin'?[...descendants([r.id],data.items)]:[],assignedAsset:data.actor.role==='admin',status:'To do',notes:cleanText(f.notes||'',4000)});
       update.entries=entries;
     }

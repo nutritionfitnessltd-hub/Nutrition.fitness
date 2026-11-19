@@ -1,3 +1,4 @@
+import {participates,ownsTask} from './studio-project-tasks.mjs';
 import { teamWorkDashboard, teamWorkRows } from './studio-team-work.mjs';
 import { canReviewContent, canAccess } from './library-permissions.mjs';
 import { esc, url, heading, button, list, badge } from './studio-ui.mjs';
@@ -6,9 +7,9 @@ const complete=status=>['Done','Complete','Archived'].includes(status);
 const row=r=>'<div><a '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.title)+'</a><small>'+esc(r.context||'')+'</small></div>'+badge(r.status);
 
 export function dashboardWork(data){
-  const ownProjects=data.projects.filter(p=>p.creator_id===data.actor.id&&!complete(p.status));
+  const ownProjects=data.projects.filter(p=>participates(p,data.actor.id)&&!complete(p.status));
   const assigned=data.tasks.filter(t=>t.staff_id===data.actor.id&&!complete(t.status)).map(t=>({title:t.title,status:t.status,context:t.record_title,href:'/content-library/?work=1&assignments=1&staff='+encodeURIComponent(data.actor.id)}));
-  const projectTasks=ownProjects.flatMap(p=>(p.entries||[]).filter(e=>!complete(e.status)).map(e=>({title:e.title,status:e.status,context:p.name+(e.week?' · Week '+e.week:' · Preparation'),href:url('project',{project:p.id,week:e.week||0})})));
+  const projectTasks=ownProjects.flatMap(p=>(p.entries||[]).filter(e=>ownsTask(p,e,data.actor.id)&&!complete(e.status)).map(e=>({title:e.title,status:e.status,context:p.name+(p.studio?.type==='blank'?'':e.week?' · Week '+e.week:' · Preparation'),href:url('project',{project:p.id,week:e.week||0})})));
   const reviews=data.items.filter(r=>r.status==='In review'&&(canReviewContent(data,r)||data.assigned.has(r.id))).map(r=>({title:r.title,status:r.status,context:'Content',review:true,recordId:r.id,href:url('review-preview',{id:r.id})}));
   if(data.actor.role==='admin'){
     for(const p of data.projects.filter(p=>!complete(p.status)))for(const e of (p.entries||[]).filter(e=>e.status==='Ready for review'&&!reviews.some(r=>r.recordId===e.record)))reviews.push({title:e.title,status:e.status,context:p.name,review:Boolean(data.byId.get(e.record)),recordId:e.record,href:data.byId.has(e.record)?url('review-preview',{id:e.record}):url('project',{project:p.id,week:e.week||0})});

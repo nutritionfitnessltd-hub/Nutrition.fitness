@@ -1,3 +1,4 @@
+import {participates,ownsTask} from './studio-project-tasks.mjs';
 import {assignmentProjectId} from './team-assignments.mjs';
 import { canAccess, canReviewContent, canReadContent } from './library-permissions.mjs';
 import { contentWorker, workerNames } from './studio-worker-content.mjs';
@@ -14,7 +15,7 @@ export function teamWorkRows(data){
   const admin=data.actor.role==='admin',rows=[],linked=new Set();
   const person=id=>({owner:'person:'+id,ownerName:data.people.find(p=>p.id===id)?.name||(id===data.actor.id?data.actor.name||(admin?'Administrator':'You'):'Assigned team member'),type:'people'});
   const worker=id=>({owner:'worker:'+id,ownerName:workerNames[id],type:'ai'});
-  const projects=data.projects.filter(p=>admin||canAccess(data.actor,'work')&&p.creator_id===data.actor.id);
+  const projects=data.projects.filter(p=>admin||canAccess(data.actor,'work')&&participates(p,data.actor.id));
   const projectOf=id=>projects.find(p=>p.studio?.allowedIds?.includes(id)||p.entries?.some(e=>e.record===id));
   const tasks=(data.tasks||[]).filter(t=>admin||canAccess(data.actor,'work')&&t.staff_id===data.actor.id);
   const recordRows=new Map();
@@ -35,9 +36,9 @@ export function teamWorkRows(data){
     rows.push({id:'task:'+t.id,title:t.title,...person(t.staff_id),project:assignmentProjectId(t),projectName:t.record_title||'',state:stateFor(t.status),status:t.status,updated:date(t.updated_at||t.created_at),due:t.due_date||'',note:t.instructions||'',href:'/content-library/?work=1&amp;assignments=1&amp;staff='+encodeURIComponent(t.staff_id),action:'Open'});
   }
   for(const p of projects)for(const [i,e] of (p.entries||[]).entries()){
-    if(e.status==='Archived')continue;
+    if(e.status==='Archived'||!admin&&!ownsTask(p,e,data.actor.id))continue;
     const r=recordRows.get(e.record);if(r&&linked.has(r.recordId))continue;if(r)linked.add(r.recordId);
-    rows.push({...r,id:'project:'+p.id+':'+(e.id||i),title:e.title||r?.title,...(r?.type==='ai'?{owner:r.owner,ownerName:r.ownerName,type:r.type}:person(p.creator_id)),project:p.id,projectName:p.name,
+    rows.push({...r,id:'project:'+p.id+':'+(e.id||i),title:e.title||r?.title,...(r?.type==='ai'?{owner:r.owner,ownerName:r.ownerName,type:r.type}:person(e.assignee||p.creator_id)),project:p.id,projectName:p.name,
       state:stateFor(r&&['In review','Changes requested'].includes(r.status)?r.status:e.status),status:r&&['In review','Changes requested'].includes(r.status)?r.status:e.status,updated:[date(e.updatedAt||p.updated_at),r?.updated||''].sort().at(-1),due:e.due||'',note:e.notes||r?.note||'',
       href:r?.href||url('project',{project:p.id,week:e.week||0}),action:r?.action||'Open'});
   }
