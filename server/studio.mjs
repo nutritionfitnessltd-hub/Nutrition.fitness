@@ -1,3 +1,4 @@
+import {sendNewsletter} from './studio-newsletters.mjs';
 import {changeSoftwareRelease,softwareReleaseErrorForm} from './software-releases.mjs';
 import {generateIdeaSummary} from './studio-idea-ai.mjs';
 import {hqRequest} from './studio-hq.mjs';
@@ -93,6 +94,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(['home','team-work'].includes(section)&&actor.role==='admin'&&env.NUFI_HQ_SITE_TOKEN)data.hqIdeas=await workerIdeaSummaries(env,fetcher);
     data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');
     data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';
+    if(section==='newsletter-preview'||section==='newsletter-html')return await sendNewsletter(req,res,readable(data,params.get('id')),section,env);
     if(section==='article-preview'||(section==='item'&&params.get('tab')==='knowledge-document')){
       if(req.method!=='GET')throw new HttpError(405,'Use GET to open an article preview.');
       const r=readable(data,params.get('id'));if(r?.kind!=='article')throw new HttpError(404,'Article unavailable.');

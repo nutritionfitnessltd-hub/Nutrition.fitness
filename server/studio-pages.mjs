@@ -1,3 +1,4 @@
+import {isNewsletter} from './studio-newsletters.mjs';
 import { imageCaption } from './knowledge-article.mjs';
 import {projectProductionSummary} from './studio-project-progress.mjs';
 import { workerNames, workerContent } from './studio-worker-content.mjs';
@@ -238,9 +239,9 @@ export function itemPage(params,data){
   const admin=data.actor.role==='admin',canEdit=canEditContent(data,r.id),state={section:'item',id:r.id,tab:'edit'};
   const children=data.items.filter(x=>(x.parent===r.id||(r.fields.sharedContentIds||[]).includes(x.id))&&x.status!=='Archived'),refs=references(r,data.byId).map(id=>data.byId.get(id)).filter(Boolean);
   const parents=data.items.filter(x=>x.id!==r.id&&(x.id===r.parent||references(x,data.byId).includes(r.id)));
-  const checks=issues(r,data.items),preview=params.get('tab')==='preview'||!canEdit||(!params.has('tab')&&['course','recipe','session'].includes(r.kind)),schedule=r.kind==='structure'&&params.get('tab')!=='edit'&&!preview;
+  const checks=issues(r,data.items),preview=params.get('tab')==='preview'||!canEdit||(!params.has('tab')&&(['course','recipe','session'].includes(r.kind)||isNewsletter(r))),schedule=r.kind==='structure'&&params.get('tab')!=='edit'&&!preview;
   let out='<a class="back" href="'+(r.kind==='programme'?url('item',{id:r.id}):url('library',{kind:r.kind}))+'">← '+esc(r.kind==='programme'?'Programme overview':collections[r.kind]?.[0]||'Content library')+'</a>'+
-    heading(r.title,kinds[r.kind]||r.kind,preview||schedule?(canEdit?button('Edit content',url('item',{id:r.id,tab:'edit'}),true):''):'')+
+    heading(r.title,isNewsletter(r)?'Newsletter':kinds[r.kind]||r.kind,preview||schedule?(canEdit?button(isNewsletter(r)?'Edit HTML & text':'Edit content',url('item',{id:r.id,tab:'edit'}),true):''):'')+
     '<p>'+badge(r.publication?.status==='published'?'Published':r.status)+' <span class="meta">'+(r.updatedAt?'Saved '+esc(new Date(r.updatedAt).toLocaleDateString('en-GB')):'')+'</span></p>';
   if(schedule){
     const frequencies=data.items.filter(x=>x.kind==='structure'&&x.parent===r.parent&&x.status!=='Archived');

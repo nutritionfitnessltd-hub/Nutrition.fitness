@@ -1,3 +1,4 @@
+import './studio-newsletters.js';
 document.addEventListener('click',event=>{
  const link=event.target.closest?.('[data-review-preview]');if(!link)return;
  if(event.ctrlKey||event.metaKey||event.shiftKey||event.button!==0)return;
