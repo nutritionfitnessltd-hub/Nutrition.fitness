@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
 import {isNewsletter,newsletterDocument,newsletterPreview,sendNewsletter} from '../server/studio-newsletters.mjs';
 import {itemPage} from '../server/studio-pages.mjs';
 import {handleStudio} from '../server/studio.mjs';
@@ -8,6 +9,10 @@ const admin={role:'admin',id:'test-admin'};
 const r={id:'worker:test',kind:'communication',title:'Welcome newsletter',status:'Draft',revision:4,newsletterAssetsId:'newsletter-artwork:11111111-1111-1111-1111-111111111111',fields:{subject:'Hello',body:'Plain-text message',plainText:'Plain-text alternative',emailHtml:'<html><head><style>@media(max-width:660px){.card{display:block;width:100%}}</style></head><body><!--[if mso]><table><![endif]--><table width="640" style="background:#FAF6EF"><tr><td><img src="{{HERO_IMAGE_URL}}" alt="Approved artwork"><h1>Hi {{FIRST_NAME_OR_THERE}}</h1></td></tr></table><a href="{{UNSUBSCRIBE_URL}}">Unsubscribe</a></body></html>',designPackUrl:'https://chatgpt.com/library?file_id=test'}};
 const data=(actor=admin)=>({actor,items:[r],byId:new Map([[r.id,r]]),assigned:new Set([r.id]),people:[],projects:[],index:{records:[],files:{}}});
 const response=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},end(v){this.body=v;}});
+test('workspace loads when the serverless runtime disables require of ESM',()=>{
+  const run=spawnSync(process.execPath,['--no-experimental-require-module','--input-type=module','-e',"await import('./server/library-reader.mjs')"],{cwd:new URL('..',import.meta.url),encoding:'utf8'});
+  assert.equal(run.status,0,run.stderr);
+});
 test('saved newsletters open on their HTML design, with source tools and separate plain text',()=>{
   const html=itemPage(new URLSearchParams({id:r.id}),data());
   for(const label of ['Newsletter','Desktop','Mobile','Copy HTML','Download HTML','Plain-text version','Edit HTML &amp; text'])assert.ok(html.includes(label),label);

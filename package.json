@@ -8,18 +8,22 @@
     "node": "22.x"
   },
   "scripts": {
-    "prebuild": "node scripts/retain-library.mjs && node scripts/unpack-product-assets.mjs && node scripts/build-recipe-catalogue.mjs && node scripts/fetch-photo-assets.mjs",
+    "prebuild": "node scripts/build-newsletter-renderer.mjs && node scripts/retain-library.mjs && node scripts/unpack-product-assets.mjs && node scripts/build-recipe-catalogue.mjs && node scripts/fetch-photo-assets.mjs",
     "build": "node scripts/build.mjs && node scripts/build-launch.mjs && node scripts/build-knowledge-centre.mjs",
     "dev": "npm run build && node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
     "test": "node --test tests/*.test.mjs",
     "check": "npm run build && npm run test && node scripts/check-links.mjs && node scripts/check-launch-banner.mjs",
-    "review": "npm run build && node scripts/make-review.mjs"
+    "review": "npm run build && node scripts/make-review.mjs",
+    "pretest": "node scripts/build-newsletter-renderer.mjs"
   },
   "dependencies": {
     "@vercel/blob": "2.9.0",
     "pdfjs-dist": "6.5.438",
     "postcss": "8.5.33",
     "sanitize-html": "2.18.2"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
   }
 }

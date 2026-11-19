@@ -7,7 +7,7 @@ export function createContentHandler({env=process.env,fetcher=fetch}={}){
   return async(req,res)=>{try{
     const url = new URL(req.url || '/api/content', 'https://localhost');
     if (url.pathname === '/content-library/' || url.searchParams.get('view') === 'library' || req.query?.view === 'library') {
-      const {createLibraryReader} = await import('../server/library-reader.mjs');
+      const {createLibraryReader} = await import('../server/library-reader.mjs').catch(error=>{console.error('Workspace module load failed',error.name,error.code,error.message);throw error;});
       return await createLibraryReader({env})(req,res);
     }
     if(req.method!=='GET'){res.setHeader('Allow','GET');throw new HttpError(405,'Use GET to read published content.');}
