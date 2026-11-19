@@ -27,23 +27,33 @@ function reviewerSelector(data,settings){
 export function exchangeConfigured(env){return ['EXCHANGE_TENANT_ID','EXCHANGE_CLIENT_ID','EXCHANGE_CLIENT_SECRET'].every(k=>Boolean(env[k]?.trim()));}
 const recordUrl=id=>itemTable+'?id=eq.'+encodeURIComponent(id)+'&select=id,payload,revision,updated_at';
 const recordFrom=row=>row?{...row.payload,revision:row.revision}:null;
+async function saveNotification(api,actor,record,expected){
+  if(actor.role!=='system')return saveRecord(api,actor,record,expected);
+  // Only the server's password recovery flow may record its own email delivery.
+  // This grants no content-editing role or browser session to the requester.
+  if(actor.id!=='team-password-reset'||record.kind!=='notification'||record.fields?.type!=='team-access'||!record.id.startsWith(notificationPrefix))throw new HttpError(403,'This notification cannot be saved.');
+  const rows=await api('/rest/v1/rpc/nufi_studio_save',{service:true,method:'POST',payload:{item:record.id,expected,document:record,editor_name:'system:team-password-reset'}});
+  if(!rows.length)throw new HttpError(409,'The email delivery state changed.');
+  return rows[0];
+}
 async function findRecord(api,id){return recordFrom((await api(recordUrl(id),{service:true}))[0]);}
 function notificationLink(env,section,values){
   let base;try{base=new URL(env.NUFI_NOTIFICATION_BASE_URL||'https://nutrition-fitness-website-2.vercel.app');}catch{throw new HttpError(503,'Check the workspace address in the email connection.');}
   if(base.protocol!=='https:'||base.username||base.password)throw new HttpError(503,'The notification workspace address must use HTTPS.');
   return base.origin+url(section,values).replaceAll('&amp;','&');
 }
-export function notificationHtml({title,message,link}){
-  return '<!doctype html><html lang="en-GB"><body style="margin:0;background:#ffffff;color:#092A3E;font-family:Arial,sans-serif"><table role="presentation" style="max-width:600px;width:100%;margin:auto;padding:32px"><tr><td><p style="font-size:24px;font-weight:bold">nutrition.fitness</p><h1 style="font-size:24px">'+esc(title)+'</h1><p style="white-space:pre-line">'+esc(message)+'</p><p style="margin:28px 0"><a href="'+esc(link)+'" style="background:#06475E;color:#ffffff;text-decoration:none;padding:14px 20px;border-radius:6px;display:inline-block">Open in Team Workspace</a></p><p style="font-size:13px;color:#536572">Sign in to view this work. Real food. Real progress. A fitter, happier you.</p></td></tr></table></body></html>';
+export function notificationHtml({title,message,link,actionLabel='Open in Team Workspace'}){
+  return '<!doctype html><html lang="en-GB"><body style="margin:0;background:#ffffff;color:#092A3E;font-family:Arial,sans-serif"><table role="presentation" style="max-width:600px;width:100%;margin:auto;padding:32px"><tr><td><p style="font-size:24px;font-weight:bold">nutrition.fitness</p><h1 style="font-size:24px">'+esc(title)+'</h1><p style="white-space:pre-line">'+esc(message)+'</p><p style="margin:28px 0"><a href="'+esc(link)+'" style="background:#06475E;color:#ffffff;text-decoration:none;padding:14px 20px;border-radius:6px;display:inline-block">'+esc(actionLabel)+'</a></p><p style="font-size:13px;color:#536572">Sign in to view this work. Real food. Real progress. A fitter, happier you.</p></td></tr></table></body></html>';
 }
 // A failed token request cannot send mail. A timed-out send can, so its result is unknown.
 export async function sendExchange(env,notification,fetcher=fetch){
   if(!exchangeConfigured(env))return {state:'failed',detail:'Microsoft 365 is not connected.'};
   if(!/^[a-zA-Z0-9.-]+$/.test(env.EXCHANGE_TENANT_ID))return {state:'failed',detail:'Check the Microsoft tenant ID.'};
   let message=notification;
-  if(notification.type==='welcome'){
-    try{message={...notification,message:openWelcomeMessage(env,notification)};}
+  if(['welcome','team-access'].includes(notification.type)){
+    try{const privateMessage=openWelcomeMessage(env,notification);message=notification.type==='team-access'?{...notification,...JSON.parse(privateMessage)}:{...notification,message:privateMessage};}
     catch{return {state:'cancelled',detail:'This welcome message is unavailable. Prepare a new welcome email.'};}
+    if(notification.type==='team-access')message.message=message.message.replaceAll(message.link,'Use the button below to continue.');
   }
   let token;
   try{
@@ -77,24 +87,24 @@ export async function deliverNotification({api,actor,env,event,fetcher=fetch,ret
   let record=await findRecord(api,id);
   if(!record){
     const fields={...event,recipient:email(event.recipient),state:'queued',createdAt:new Date().toISOString()};
-    try{const saved=await saveRecord(api,actor,{id,kind:'notification',title:event.title,status:'Draft',fields},0);record=recordFrom(saved);}
+    try{const saved=await saveNotification(api,actor,{id,kind:'notification',title:event.title,status:'Draft',fields},0);record=recordFrom(saved);}
     catch(error){if(error.status!==409)throw error;record=await findRecord(api,id);}
   }
   if(!record)throw new HttpError(503,'The notification could not be recorded.');
   if(record.fields.state!=='queued'&&!(retry&&record.fields.state==='failed'))return answer(record.fields);
   // Claim before sending. Concurrent requests and repeated POSTs cannot send the same event twice.
-  const sending={...record,title:event.type==='welcome'&&record.fields.state==='failed'?event.title:record.title,fields:{...record.fields,...(retry&&record.fields.state==='failed'&&event.type==='welcome'?event:{}),state:'sending',attemptedAt:new Date().toISOString()}};delete sending.revision;
+  const sending={...record,title:['welcome','team-access'].includes(event.type)&&record.fields.state==='failed'?event.title:record.title,fields:{...record.fields,...(retry&&record.fields.state==='failed'&&['welcome','team-access'].includes(event.type)?event:{}),state:'sending',attemptedAt:new Date().toISOString()}};delete sending.revision;
   let claimed;
-  try{claimed=await saveRecord(api,actor,sending,record.revision);}catch(error){if(error.status===409)return answer({state:'sending'});throw error;}
+  try{claimed=await saveNotification(api,actor,sending,record.revision);}catch(error){if(error.status===409)return answer({state:'sending'});throw error;}
   let result;
-  if(sending.fields.type==='welcome'){
+  if(['welcome','team-access'].includes(sending.fields.type)){
     try{await welcomeRecipient(api,env,sending.fields);}
     catch(error){if(error.status!==409)throw error;result={state:'cancelled',detail:error.message};}
   }
   result ||= await sendExchange(env,{...sending.fields,id},fetcher);
   const fields={...sending.fields,...result};
-  if(fields.type==='welcome'&&result.state!=='failed')delete fields.encryptedMessage;
-  await saveRecord(api,actor,{...sending,fields},claimed.revision);
+  if(['welcome','team-access'].includes(fields.type)&&result.state!=='failed')delete fields.encryptedMessage;
+  await saveNotification(api,actor,{...sending,fields},claimed.revision);
   return answer(fields);
 }
 export function workflowNotifications(params,f,data,env){

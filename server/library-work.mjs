@@ -7,8 +7,9 @@ import { signInProvisioned, consumePasswordAttempt } from './provisioned-login.m
 import { esc, link } from './library-shelves.mjs';
 import { projectScreen, changeProject } from './library-projects.mjs';
 
-import { welcomePanel, sendWelcome } from './library-welcome.mjs';
+import { welcomePanel, sendWelcome, requestTeamReset } from './library-welcome.mjs';
 import { libraryLogin } from './library-login.mjs';
+import {verifyTeamPassword,readTeamPasswordLink,completeTeamPassword,teamPasswordPage} from './team-passwords.mjs';
 import { requireLibraryNda, ndaAdminScreen } from './library-nda.mjs';
 import { studioFrame } from './studio-ui.mjs';
 import { handleStudio } from './studio.mjs';
@@ -94,7 +95,7 @@ async function login(fields,res,api,env,key) {
   if(staff.length||fields.action==='staff-login'){
     const supplied=fields.password??fields.code;
     const code=typeof supplied==='string'?supplied.trim():'';
-    if(code.length>=20&&code.length<=128&&staff[0]?.code_hash&&same(hash(code),staff[0].code_hash)){
+    if(await verifyTeamPassword(code,staff[0])){
       issue(res,key,{role:'staff',id:staff[0].id,generation:sign(key,staff[0].code_hash)},fields.remember==='1');return;
     }
     if(fields.action==='staff-login')throw new HttpError(401,'The email or password was not recognised, or this account is not enabled.');
@@ -119,14 +120,14 @@ async function teamScreen(api,actor,origin,env,params=new URLSearchParams(),fetc
   const [staff,data]=await Promise.all([api(staffTable+'?select=id,name,email,code_hash,access,access_revision&order=name.asc',service),teamWorkSnapshot(api)]);
   const target=link({work:'1',studio:'team'});
   const createMarkup=form('create-user','<label>Full name<input name="name" maxlength="100" required autocomplete="off"></label><label>Email<input name="email" type="email" maxlength="254" required autocomplete="off"></label>'+accessFields(null)+'<button class="primary">Create user</button>',target);
-  const accessMarkup=s=>'<p>'+(s.code_hash?'Access enabled':'Access disabled or password not set')+'</p><div class="studio-actions">'+form('issue-code',field('staff',s.id)+'<button>'+(s.code_hash?'Reset password':'Set password & enable')+'</button>',target)+(s.code_hash?form('disable-user',field('staff',s.id)+'<button>Disable access</button>',target):'')+'</div>'+form('save-access',field('staff',s.id)+field('accessRevision',s.access_revision||1)+accessFields(s.access)+'<div class="studio-actions"><button class="primary">Save access</button><button type="submit" name="previewAccount" value="yes" data-account-preview formaction="/content-library/?work=1&amp;studio=account-preview" formtarget="_blank" formnovalidate>Preview account ↗</button></div>',target)+(s.code_hash?'<details class="team-welcome-details"><summary>Send welcome details to '+esc(s.name)+'</summary>'+welcomePanel(s,{origin,env})+'</details>':'<p class="meta">Set a password to enable this account and prepare its welcome email.</p>');
+  const accessMarkup=s=>'<p>'+(s.code_hash?'Access enabled':'Access disabled or password not set')+'</p><div class="studio-actions">'+(s.code_hash?'<details class="team-welcome-details"><summary>Reset password</summary>'+welcomePanel(s,{origin,env,purpose:'reset'})+'</details>':form('issue-code',field('staff',s.id)+'<button>Enable account</button>',target))+(s.code_hash?form('disable-user',field('staff',s.id)+'<button>Disable access</button>',target):'')+'</div>'+form('save-access',field('staff',s.id)+field('accessRevision',s.access_revision||1)+accessFields(s.access)+'<div class="studio-actions"><button class="primary">Save access</button><button type="submit" name="previewAccount" value="yes" data-account-preview formaction="/content-library/?work=1&amp;studio=account-preview" formtarget="_blank" formnovalidate>Preview account ↗</button></div>',target)+(s.code_hash?'<details class="team-welcome-details"><summary>Send welcome details to '+esc(s.name)+'</summary>'+welcomePanel(s,{origin,env})+'</details>':'<p class="meta">Enable this account to prepare its welcome email and password setup link.</p>');
   let hqChat,hqError;
   if(params.get('worker'))try{hqChat=await hqRequest(env,{action:'chat',worker:params.get('worker')},fetcher);}catch(e){hqError=e.message;}
   return renderTeamPage({params,actor,staff,data,accessMarkup,createMarkup,hqChat,hqError});
 }
 
-function passwordResult(person,password,origin,env){
-  return '<h1>Login details ready</h1><p>The account is enabled. Send these details privately to '+esc(person.name)+'. The new password is shown only now.</p><section class="panel"><p>Email: <strong>'+esc(person.email)+'</strong></p><p>Password: <code class="staff-code">'+esc(password)+'</code></p>'+welcomePanel(person,{origin,password,env})+'</section><a class="btn" href="'+link({work:'1',studio:'team'})+'">Back to Team & permissions</a>';
+function passwordResult(person,origin,env){
+  return '<h1>Account ready</h1><p>Send the welcome email so '+esc(person.name)+' can choose their own password. No password is included in the email.</p><section class="panel"><p>Email: <strong>'+esc(person.email)+'</strong></p>'+welcomePanel(person,{origin,env})+'</section><a class="btn" href="'+link({work:'1',studio:'team'})+'">Back to Team & permissions</a>';
 }
 function tasksMarkup(tasks,staff,actor) {
   if(!tasks.length)return '<p>No assignments match this view.</p>';
@@ -177,7 +178,7 @@ async function change(actor,f,api,load,origin,env) {
     const password=randomBytes(24).toString('base64url');
     const person={id:randomUUID(),name:readText(f.name,'the name',100),email:email(f.email),code_hash:hash(password),access:accessFromForm(f)};
     try{await api(staffTable,post(person));}catch(e){if(e.status===409)throw new HttpError(409,'A team member with this email already exists. Use Reset password for that person.');throw e;}
-    return passwordResult(person,password,origin,env);
+    return passwordResult(person,origin,env);
   }
   if(f.action==='save-access'){
     const access=accessFromForm(f),revision=Number(f.accessRevision);
@@ -195,9 +196,9 @@ async function change(actor,f,api,load,origin,env) {
   }
   if(f.action==='issue-code'){
     const code=randomBytes(24).toString('base64url');
-    const rows=await api(staffTable+'?id=eq.'+uuid(f.staff),{service:true,method:'PATCH',headers:{Prefer:'return=representation'},payload:{code_hash:hash(code)}});
-    if(!rows.length)throw new HttpError(404,'Colleague not found.');
-    return passwordResult(rows[0],code,origin,env);
+    const rows=await api(staffTable+'?id=eq.'+uuid(f.staff)+'&code_hash=is.null',{service:true,method:'PATCH',headers:{Prefer:'return=representation'},payload:{code_hash:hash(code)}});
+    if(!rows.length)throw new HttpError(409,'This account is already enabled or has changed. Use its password reset email instead.');
+    return passwordResult(rows[0],origin,env);
   }
   if(f.action!=='create')throw new HttpError(400,'Unknown work action.');
   const item=(await load()).records.find(r=>r.id===f.item);
@@ -214,7 +215,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
   const destination=params.get('reader')==='1'?Object.fromEntries([...params].filter(([k])=>['reader','file','image','preview'].includes(k))):studio?Object.fromEntries([...params].filter(([k])=>['studio','id','project','week','source','template','kind','tab','category','schedule','view','contentKind','shelf','folder','item','from','progress','q','page','reader','file','image','preview','collection','bucket','bookType','build','worker','person'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
   let actor;
   const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
-  const welcomeJson=req.method==='POST'&&f.action==='send-welcome'&&req.headers.accept?.includes('application/json');
+  const welcomeJson=req.method==='POST'&&['send-welcome','send-password-reset'].includes(f.action)&&req.headers.accept?.includes('application/json');
   const json=(status,value)=>{res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify(value));};
   try {
     if(!['GET','POST'].includes(req.method))throw new HttpError(405,'Use the work screen to continue.');
@@ -223,6 +224,29 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
     if(req.method==='POST' && req.headers.origin!=='https://'+req.headers.host)throw new HttpError(403,'Open the work screen to continue.');
     if(req.method==='POST'&&f.action==='work-logout'&&!params.has('accountPreview')&&!copyActor){clearLibraryCookies(res);res.statusCode=303;res.setHeader('Location','/content-library/');return res.end();}
     const api=apiFactory(env);
+    if(params.has('teamPassword')){
+      if(params.has('accountPreview')||copyActor)throw new HttpError(403,'Account changes are unavailable in a working copy.');
+      // Keep token paths out of referrers without stripping Origin from native form POSTs.
+      res.setHeader('Cache-Control','private, no-store');res.setHeader('Referrer-Policy','strict-origin');
+      res.setHeader('Content-Security-Policy',"default-src 'none'; style-src 'self'; font-src 'self'; img-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+      const page=(status,options)=>{res.statusCode=status;res.setHeader('Content-Type','text/html; charset=utf-8');return res.end(teamPasswordPage(options));};
+      if(params.get('teamPassword')==='forgot'){
+        if(req.method==='GET')return page(200,{forgot:true});
+        if(f.action!=='request-team-reset')return page(400,{forgot:true,error:'Request a password reset email to continue.'});
+        try{await requestTeamReset(f.email,{api,env,res,fetcher});}
+        catch(e){if(e.status===400||e.status===429)return page(e.status,{forgot:true,error:e.message});/* Do not disclose account existence or delivery state. */}
+        return page(200,{forgot:true,requested:true});
+      }
+      const token=req.method==='POST'?f.token:params.get('token');let purpose;
+      try{
+        ({purpose}=await readTeamPasswordLink(token,api,env));
+        if(req.method==='GET')return page(200,{token,purpose});
+        if(f.action!=='complete-team-password')throw new HttpError(400,'Use the password form to continue.');
+        await consumePasswordAttempt('team-password-complete:'+token.split('.')[1],api,env,res);
+        await completeTeamPassword(f,api,env);clearLibraryCookies(res);
+        return page(200,{done:true});
+      }catch(e){return page(e instanceof HttpError?e.status:503,{...(purpose&&e.status===400?{token,purpose}:{}),error:e instanceof HttpError?e.message:'Your password could not be saved. Please request a new email.'});}
+    }
     if(req.method==='POST'&&['sign-in','admin-login','staff-login'].includes(f.action)&&!params.has('accountPreview')&&!copyActor){
       await login(f,res,api,env,key);
       if(params.get('reader')==='1'){
@@ -270,10 +294,11 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
     if(studio==='team'){
       if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
       if(req.method==='POST'){
-        if(f.action==='send-welcome'){
-          const result=await sendWelcome(f,{api,actor,env,origin,fetcher});
+        if(['send-welcome','send-password-reset'].includes(f.action)){
+          const purpose=f.action==='send-password-reset'?'reset':'setup';
+          const result=await sendWelcome(f,{api,actor,env,origin,fetcher},purpose);
           if(welcomeJson)return json(200,{state:result.state,detail:result.detail});
-          return writePage(res,200,'<h1>Welcome email</h1>'+welcomePanel(result.person,{origin,env,draft:f,result})+'<a href="'+link({work:'1',studio:'team'})+'">Back to Team & permissions</a>',actor,'team');
+          return writePage(res,200,'<h1>'+(purpose==='reset'?'Password reset email':'Welcome email')+'</h1>'+welcomePanel(result.person,{origin,env,draft:f,result,purpose})+'<a href="'+link({work:'1',studio:'team'})+'">Back to Team & permissions</a>',actor,'team');
         }
         if(f.action==='team-profile-save'){const staff=await api(staffTable+'?select=id,name,email&order=name.asc',service);await saveTeamProfile(f,actor,staff,await teamWorkSnapshot(api),api);res.statusCode=303;res.setHeader('Location',route+'&studio=team&person='+encodeURIComponent(f.staff));return res.end();}
         if(!['create-user','issue-code','disable-user','save-access'].includes(f.action))throw new HttpError(400,'Choose a team action.');

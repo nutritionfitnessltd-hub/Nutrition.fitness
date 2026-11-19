@@ -1,10 +1,8 @@
-import {createHash,timingSafeEqual} from 'node:crypto';
+import {hashTeamPassword,verifyTeamPassword} from './team-passwords.mjs';
 import {HttpError,email,password,text,uuid,verifiedUser} from './platform.mjs';
 import {signInProvisioned,consumePasswordAttempt} from './provisioned-login.mjs';
 import {esc,url,heading,form,input,button} from './studio-ui.mjs';
 const service={service:true},staffTable='/rest/v1/nufi_library_staff';
-const digest=value=>createHash('sha256').update(value).digest('hex');
-const same=(a,b)=>typeof a==='string'&&typeof b==='string'&&a.length===b.length&&timingSafeEqual(Buffer.from(a),Buffer.from(b));
 async function ownProfile(actor,api){
  if(actor.role==='staff'){
   const [person]=await api(staffTable+'?id=eq.'+uuid(actor.id)+'&select=id,name,email,code_hash',service);
@@ -16,14 +14,14 @@ async function ownProfile(actor,api){
 }
 export async function myAccountScreen(actor,api,params,env,{copy=false}={}){
  const person=await ownProfile(actor,api),saved=params.get('saved');
- const security='<label>Current password<input type="password" name="currentPassword" autocomplete="current-password" maxlength="128" required></label><label>New password<input type="password" name="newPassword" autocomplete="new-password" minlength="'+(actor.role==='staff'?20:12)+'" maxlength="128" required></label><label>Confirm new password<input type="password" name="confirmPassword" autocomplete="new-password" minlength="'+(actor.role==='staff'?20:12)+'" maxlength="128" required></label>';
+ const security='<label>Current password<input type="password" name="currentPassword" autocomplete="current-password" maxlength="128" required></label><label>New password<input type="password" name="newPassword" autocomplete="new-password" minlength="12" maxlength="128" required></label><label>Confirm new password<input type="password" name="confirmPassword" autocomplete="new-password" minlength="12" maxlength="128" required></label>';
  const captcha=actor.role==='admin'&&env.TURNSTILE_SITE_KEY?'<div class="cf-turnstile" data-sitekey="'+esc(env.TURNSTILE_SITE_KEY)+'" data-response-field-name="botToken"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>':'';
  return heading('My account','Your profile, sign-in security and signed agreement.')+
   (saved==='profile'||saved==='password'?'<p class="panel" role="status">'+(saved==='profile'?'Your display name has been saved.':'Your password has been changed.')+'</p>':'')+
   '<div class="studio-columns"><section class="panel"><h2>Profile</h2><p><strong>Email</strong><br>'+esc(person.email)+'</p><p><strong>Account type</strong><br>'+esc(actor.role==='admin'?'Administrator':'Team member')+'</p>'+
   (copy?'<p><strong>Display name</strong><br>'+esc(person.name)+'</p>':form('account-profile',input('name','Display name',person.name,'text','maxlength="100" autocomplete="name" required'),{section:'account'},'Save profile'))+
   '<p class="meta">Contact your administrator if your sign-in email needs to change.</p></section>'+
-  '<section class="panel"><h2>Security</h2>'+(copy?'<p>Open your own My account page to change your password.</p>':form('account-password',security+'<p class="meta">Use '+(actor.role==='staff'?'20':'12')+' to 128 characters. A long, unique passphrase works well.</p>'+captcha,{section:'account'},'Change password'))+'</section></div>'+
+  '<section class="panel"><h2>Security</h2>'+(copy?'<p>Open your own My account page to change your password.</p>':form('account-password',security+'<p class="meta">Use 12 to 128 characters. A long, unique passphrase works well.</p>'+captcha,{section:'account'},'Change password'))+'</section></div>'+
   '<section class="panel"><h2>My confidentiality agreement</h2><p>Read or download the agreement signed by your account.</p><div class="studio-actions">'+button('Read signed agreement',url('account',{nda:'record'}))+button('Download signed agreement',url('account',{nda:'copy'}))+'</div></section>'+
   '<section class="panel"><h2>Sign out</h2>'+form('work-logout','',{},'Sign out of this workspace')+'</section>';
 }
@@ -42,10 +40,10 @@ export async function changeMyAccount(fields,{actor,api,env,res}){
  if(next!==fields.confirmPassword)throw new HttpError(400,'The new passwords do not match.');
  if(next===current)throw new HttpError(400,'Choose a different new password.');
  if(actor.role==='staff'){
-  if(next.length<20||next.trim()!==next)throw new HttpError(400,'Use 20 to 128 characters without spaces at either end.');
+  if(next.trim()!==next)throw new HttpError(400,'Use 12 to 128 characters without spaces at either end.');
   await consumePasswordAttempt(profile.email,api,env,res);
-  if(!profile.code_hash||!same(digest(current.trim()),profile.code_hash))throw new HttpError(400,'Your current password was not recognised.');
-  const codeHash=digest(next);
+  if(!await verifyTeamPassword(current.trim(),profile))throw new HttpError(400,'Your current password was not recognised.');
+  const codeHash=await hashTeamPassword(next,profile.id);
   const rows=await api(staffTable+'?id=eq.'+uuid(actor.id)+'&code_hash=eq.'+profile.code_hash,{...service,method:'PATCH',headers:{Prefer:'return=representation'},payload:{code_hash:codeHash}});
   if(!rows.length)throw new HttpError(409,'Your password changed. Sign in again before continuing.');
   return {saved:'password',codeHash};

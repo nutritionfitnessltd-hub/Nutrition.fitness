@@ -74,7 +74,7 @@ test('admin opens a navigable working copy with selected permissions without cha
  assert.equal(result.statusCode,303);
  const params=new URL(result.headers.Location,'https://fixture.test').searchParams;
  const page=await f.request(params,admin);
- assert.equal(page.statusCode,200);assert.match(page.body,/Welcome back, Test creator/);assert.match(page.body,/>Projects</);
+ assert.equal(page.statusCode,200);assert.match(page.body,/Test creator · My account/);assert.match(page.body,/>Projects</);
  assert.doesNotMatch(page.body,/Preview: Test creator|Read-only landing-page preview|account-preview-notice|>Team<|>Settings</);
  assert.match(page.body,/href="[^"]*accountPreview=/);assert.equal(page.headers['Set-Cookie'],undefined);
  params.set('studio','projects');assert.equal((await f.request(params,admin)).statusCode,200);
@@ -96,7 +96,7 @@ test('disabled account can be previewed without enabling it and permission depen
  const result=await f.request({studio:'account-preview'},admin,{staff:f.person.id,accessVersion:'1',access_studio:'1',access_ai:'1'});
  assert.equal(result.statusCode,303);
  const page=await f.request(new URL(result.headers.Location,'https://fixture.test').searchParams,admin);
- assert.equal(page.statusCode,200);assert.match(page.body,/Welcome back, Test creator/);assert.doesNotMatch(page.body,/>Content Studio<|>Content Library</);assert.equal(f.person.code_hash,null);
+ assert.equal(page.statusCode,200);assert.match(page.body,/Test creator · My account/);assert.doesNotMatch(page.body,/>Content Studio<|>Content Library</);assert.equal(f.person.code_hash,null);
 });
 
 test('access is explicit, dependency-aware, and never grants administrator functions',()=>{
