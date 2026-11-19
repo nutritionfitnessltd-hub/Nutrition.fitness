@@ -30,6 +30,11 @@ test('article review window has one article and persistent controls without mana
  assert.doesNotMatch(html,/<iframe|Studio navigation|review-popup-header/);
  assert.equal((html.match(/<h1>/g)||[]).length,1);
 });
+test('staff article window offers Edit only for assigned content with editing access',()=>{
+ const f=fixture();f.data.actor={role:'staff',id:'creator',access:{library:true,work:true,edit:true}};f.data.assigned=new Set(['worker:sample']);
+ const html=reviewWindowDocument(params,f.data);assert.match(html,/>Edit</);assert.doesNotMatch(html,/>Approve<|>Schedule<|>Request changes</);
+ f.data.actor.access.edit=false;assert.doesNotMatch(reviewWindowDocument(params,f.data),/>Edit</);
+});
 test('draft preview provides Submit for review without approving the article',async()=>{
  const f=fixture();f.data.byId.get('worker:sample').status='Draft';
  assert.match(reviewWindowDocument(params,f.data),/>Submit for review</);

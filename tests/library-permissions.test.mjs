@@ -20,9 +20,13 @@ function cookie(actor,hash){
 }
 function fixture(access=null){
   const person={...staff(access),email:'creator@example.test',code_hash:createHash('sha256').update('fixture-password').digest('hex'),access_revision:1};
-  const calls=[];
+  const calls=[],copies=new Map();
   const api=async(path,options={})=>{
     calls.push([path,options]);
+    if(path.includes('/rpc/nufi_studio_save')){
+      const p=options.payload,current=copies.get(p.item);if((current?.revision||0)!==p.expected)return [];
+      const row={id:p.item,payload:structuredClone(p.document),revision:p.expected+1};copies.set(p.item,row);return [structuredClone(row)];
+    }
     if(path.includes('nufi_members'))return [{user_id:admin.id}];
     if(path.includes('nufi_library_nda_agreements'))return [ndaDocument];
     if(path.includes('nufi_library_nda_acceptances'))return [{id:'fixture-acceptance'}];
@@ -34,7 +38,8 @@ function fixture(access=null){
       return [person];
     }
     if(path.includes('nufi_library_tasks'))return options.method==='PATCH'?[{id:'task'}]:[];
-    if(path.includes('nufi_studio_items')||path.includes('nufi_library_projects'))return [];
+    if(path.includes('nufi_studio_items')){const id=new URL(path,'https://fixture.test').searchParams.get('id');return id?.startsWith('eq.')?[copies.get(id.slice(3))].filter(Boolean):[...copies.values()];}
+    if(path.includes('nufi_library_projects'))return [];
     throw new Error('Unexpected API call '+path);
   };
   async function request(params,actor=person,body=null,existingCookie){
@@ -46,15 +51,24 @@ function fixture(access=null){
 }
 const forbidden=error=>error.status===403;
 
-test('admin previews selected staff permissions in a read-only window without saving or signing in as staff',async()=>{
+test('admin opens a navigable working copy with selected permissions without changing the account',async()=>{
  const f=fixture({library:true,work:false}),body={action:'save-access',previewAccount:'yes',staff:f.person.id,accessRevision:'1',accessVersion:'1',access_work:'1',access_edit:'1'};
  const team=await f.request({studio:'team'},admin);
  assert.match(team.body,/data-account-preview/);assert.match(team.body,/formtarget="_blank"/);assert.match(team.body,/studio=account-preview/);
  const result=await f.request({studio:'account-preview'},admin,body);
- assert.equal(result.statusCode,200);assert.match(result.body,/Preview: Test creator/);assert.match(result.body,/Read-only landing-page preview/);
- assert.match(result.body,/Welcome back, Test creator/);assert.match(result.body,/>Projects</);assert.doesNotMatch(result.body,/>Content library<|>Team<|>Settings<|<script|<form|<a\b[^>]*href=/);
- assert.match(result.headers['Content-Security-Policy'],/form-action 'none'/);assert.equal(result.headers['Set-Cookie'],undefined);
- assert.equal(f.person.access.library,true);assert.equal(f.person.access.work,false);assert.ok(f.calls.every(([,o])=>!o.method||o.method==='GET'));
+ assert.equal(result.statusCode,303);
+ const params=new URL(result.headers.Location,'https://fixture.test').searchParams;
+ const page=await f.request(params,admin);
+ assert.equal(page.statusCode,200);assert.match(page.body,/Welcome back, Test creator/);assert.match(page.body,/>Projects</);
+ assert.doesNotMatch(page.body,/Preview: Test creator|Read-only landing-page preview|account-preview-notice|>Team<|>Settings</);
+ assert.match(page.body,/href="[^"]*accountPreview=/);assert.equal(page.headers['Set-Cookie'],undefined);
+ params.set('studio','projects');assert.equal((await f.request(params,admin)).statusCode,200);
+ params.set('studio','library');assert.equal((await f.request(params,admin)).statusCode,403);
+ params.set('studio','team');assert.equal((await f.request(params,admin)).statusCode,403);
+ assert.equal((await f.request(params,f.person)).statusCode,403);
+ const closed=await f.request(params,admin,{action:'work-logout'});assert.equal(closed.headers['Set-Cookie'],undefined);
+ assert.equal(f.person.access.library,true);assert.equal(f.person.access.work,false);
+ assert.ok(f.calls.filter(([,o])=>o.method&&o.method!=='GET').every(([p,o])=>p.includes('nufi_studio_save')&&o.payload.item.startsWith('studio:account-preview:')));
 });
 test('account preview rejects staff access, invalid permission fields and GET requests',async()=>{
  const f=fixture(),body={staff:f.person.id,accessVersion:'1',access_work:'1'};
@@ -65,7 +79,9 @@ test('account preview rejects staff access, invalid permission fields and GET re
 test('disabled account can be previewed without enabling it and permission dependencies still apply',async()=>{
  const f=fixture();f.person.code_hash=null;
  const result=await f.request({studio:'account-preview'},admin,{staff:f.person.id,accessVersion:'1',access_studio:'1',access_ai:'1'});
- assert.equal(result.statusCode,200);assert.match(result.body,/disabled or has no password/);assert.match(result.body,/Dashboard only/);assert.doesNotMatch(result.body,/>Content Studio<|>Content Library</);assert.equal(f.person.code_hash,null);
+ assert.equal(result.statusCode,303);
+ const page=await f.request(new URL(result.headers.Location,'https://fixture.test').searchParams,admin);
+ assert.equal(page.statusCode,200);assert.match(page.body,/Welcome back, Test creator/);assert.doesNotMatch(page.body,/>Content Studio<|>Content Library</);assert.equal(f.person.code_hash,null);
 });
 
 test('access is explicit, dependency-aware, and never grants administrator functions',()=>{

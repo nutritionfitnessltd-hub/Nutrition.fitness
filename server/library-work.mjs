@@ -10,7 +10,7 @@ import { libraryLogin } from './library-login.mjs';
 import { requireLibraryNda, ndaAdminScreen } from './library-nda.mjs';
 import { studioFrame } from './studio-ui.mjs';
 import { handleStudio } from './studio.mjs';
-import { accountPreview } from './account-preview.mjs';
+import { accountPreview, workingCopy, copyResponse } from './account-preview.mjs';
 import { assetButton, assetScreen } from './library-assets.mjs';
 import { displayEntry } from './library-display.mjs';
 
@@ -197,7 +197,7 @@ async function change(actor,f,api,load,origin,env) {
   const data={id:uuid(f.id),created_by:actor.id,staff_id:uuid(f.staff),record_id:item.id,record_title:item.title,title:readText(f.title,'the task title',160),instructions:readText(f.instructions||'','the instructions',3000,false),due_date:dueDate(f.due)};
   await api(tasksTable+'?on_conflict=id',post(data,'resolution=ignore-duplicates,return=minimal'));
 }
-export async function handleLibraryWork(req,res,{env,load,params,apiFactory=platform,fetcher=fetch}) {
+export async function handleLibraryWork(req,res,{env,load,params,apiFactory=platform,fetcher=fetch,copyActor}) {
   const origin='https://'+req.headers.host;
   const item=params.get('item')||'';
   const projects=params.get('projects')==='1';
@@ -213,9 +213,9 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
     const key=env.NUFI_LIBRARY_CATALOGUE_KEY;
     if(!key)throw new HttpError(503,'The work screen is being connected.');
     if(req.method==='POST' && req.headers.origin!=='https://'+req.headers.host)throw new HttpError(403,'Open the work screen to continue.');
-    if(req.method==='POST'&&f.action==='work-logout'){clearLibraryCookies(res);res.statusCode=303;res.setHeader('Location','/content-library/');return res.end();}
+    if(req.method==='POST'&&f.action==='work-logout'&&!params.has('accountPreview')&&!copyActor){clearLibraryCookies(res);res.statusCode=303;res.setHeader('Location','/content-library/');return res.end();}
     const api=apiFactory(env);
-    if(req.method==='POST'&&['sign-in','admin-login','staff-login'].includes(f.action)){
+    if(req.method==='POST'&&['sign-in','admin-login','staff-login'].includes(f.action)&&!params.has('accountPreview')&&!copyActor){
       await login(f,res,api,env,key);
       if(params.get('reader')==='1'){
         const next=Object.fromEntries([...params].filter(([k])=>['file','image','preview'].includes(k)));
@@ -225,10 +225,19 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
       if(projects||asset||studio){res.statusCode=303;res.setHeader('Location',route+'&'+new URLSearchParams(destination));return res.end();}
       return redirect(res,item);
     }
-    actor=await readActor(req,res,api,env,key);
+    actor=copyActor||await readActor(req,res,api,env,key);
     if(!actor&&welcomeJson)return json(401,{error:'Sign in again before sending. Your welcome message is still here.'});
     if(!actor)return signInPage(res,401,item,destination);
-    if(await requireLibraryNda(req,res,{actor,api,params}))return;
+    if(!copyActor&&await requireLibraryNda(req,res,{actor,api,params}))return;
+    if(params.has('accountPreview')){
+      const id=params.get('accountPreview'),copy=await workingCopy(api,actor,id);
+      if(req.method==='POST'&&f.action==='work-logout'){res.statusCode=200;res.setHeader('Content-Type','text/html; charset=utf-8');return res.end('<!doctype html><title>Working copy closed</title><h1>Working copy closed</h1><p>You can close this window. Your administrator account is still signed in.</p>');}
+      // No external writes, account changes or paid generation from a copy.
+      if(req.method==='POST'&&!['content-save','content-comment','content-review','workout-inline-save','workout-days-save','project-save','task-save','task-add','task-attach','update','content-create','import-preview','import-save'].includes(f.action))return writePage(copyResponse(res,id),403,'<p role="alert">This action is unavailable in the working copy.</p>',copy.actor,'home');
+      const safeEnv=Object.fromEntries(['NUFI_LIBRARY_CATALOGUE_KEY','SUPABASE_URL','SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY','SITE_URL'].filter(k=>env[k]).map(k=>[k,env[k]]));
+      const next=new URLSearchParams(params);next.delete('accountPreview');
+      return handleLibraryWork(req,copyResponse(res,id),{env:safeEnv,load,params:next,apiFactory:()=>copy.api,copyActor:copy.actor,fetcher:async()=>{throw new HttpError(403,'External actions are unavailable in the working copy.');}});
+    }
     if(studio==='nda'){
       const page=await ndaAdminScreen(req,res,{actor,api,params});
       if(page!==null)return writePage(res,200,page,actor,'nda');
@@ -236,10 +245,8 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
     }
     if(studio==='account-preview'){
       if(req.method!=='POST')throw new HttpError(405,'Open account preview from the Team access form.');
-      const html=await accountPreview(f,{actor,api,load,env});
-      res.statusCode=200;res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','private, no-store');
-      res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'none'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; frame-ancestors 'self'");
-      return res.end(html);
+      const destination=await accountPreview(f,{actor,api});
+      res.statusCode=303;res.setHeader('Location',destination);res.setHeader('Cache-Control','private, no-store');return res.end();
     }
     if(studio==='team'){
       if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
@@ -256,7 +263,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
       }
       return writePage(res,200,(params.get('saved')==='access'?'<p role="status" class="panel">Access saved. The new settings apply on this person’s next request.</p>':'')+await teamScreen(api,actor,origin,env)+'<script type="module" src="/team-account-preview.js"></script>',actor,'team');
     }
-    if(studio)return handleStudio(req,res,{params,actor,api,load,env});
+    if(studio)return handleStudio(req,res,{params,actor,api,load,env,fetcher});
     if(asset){
       requireAccess(actor,'originals','sources');
       if(req.method!=='GET')throw new HttpError(405,'Open the asset page to continue.');

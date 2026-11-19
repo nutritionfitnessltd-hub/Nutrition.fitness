@@ -29,7 +29,7 @@ export async function studioData(api,actor,load){
     actor.role==='admin'?allRows(api,'/rest/v1/nufi_studio_releases?select=item_id,environment,source_revision,published_at&order=item_id'):Promise.resolve([])
   ]);
   const records=new Map(index.records.filter(r=>r.id.startsWith('training:')||r.fields?.recipeText).map(r=>[r.id,canonical(r)]));
-  for(const row of overlays.filter(row=>actor.role==='admin'||row.payload.kind!=='worker-request'))records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
+  for(const row of overlays.filter(row=>row.payload.kind!=='account-preview'&&(actor.role==='admin'||row.payload.kind!=='worker-request')))records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
   const items=[...records.values()].filter(r=>r.kind!=='worker-request');
   const assigned=actor.role==='admin'?new Set(items.map(r=>r.id)):descendants([
     ...tasks.map(t=>t.record_id),
