@@ -1,3 +1,4 @@
+import {assignmentProjectId} from './team-assignments.mjs';
 import { requireAccess, canReadContent, canReviewContent, reviewsKind } from './library-permissions.mjs';
 import { HttpError } from './platform.mjs';
 import { canonical, descendants, references } from './studio-model.mjs';
@@ -28,6 +29,14 @@ export async function studioData(api,actor,load){
     actor.role==='admin'?api('/rest/v1/nufi_library_staff?select=id,name,email&order=name',service):Promise.resolve([{id:actor.id,name:actor.name}]),
     actor.role==='admin'?allRows(api,'/rest/v1/nufi_studio_releases?select=item_id,environment,source_revision,published_at&order=item_id'):Promise.resolve([])
   ]);
+  if(actor.role!=='admin'){
+    const linked=new Set(tasks.map(assignmentProjectId).filter(Boolean));
+    const missing=[...linked].filter(id=>!projects.some(p=>p.id===id));
+    if(missing.length){
+      const shared=await allRows(api,projectTable+'?select=*&order=id&id=in.('+missing.join(',')+')');
+      projects.push(...shared.filter(p=>linked.has(p.id)&&!projects.some(old=>old.id===p.id)).map(p=>({...p,assignmentOnly:true})));
+    }
+  }
   const records=new Map(index.records.filter(r=>r.id.startsWith('training:')||r.fields?.recipeText).map(r=>[r.id,canonical(r)]));
   for(const row of overlays.filter(row=>row.payload.kind!=='account-preview'&&(actor.role==='admin'||row.payload.kind!=='worker-request')))records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
   const items=[...records.values()].filter(r=>r.kind!=='worker-request');
@@ -35,7 +44,7 @@ export async function studioData(api,actor,load){
     ...tasks.map(t=>t.record_id),
   ],index.records);
   if(actor.role!=='admin'){
-    for(const p of projects){
+    for(const p of projects.filter(p=>!p.assignmentOnly)){
       for(const id of p.studio?.allowedIds||[])assigned.add(id);
       for(const e of p.entries.filter(e=>e.assignedAsset)){
         for(const id of e.scopeIds||[e.record])if(id)assigned.add(id);
@@ -88,6 +97,7 @@ export async function saveRecord(api,actor,record,expected){
   return rows[0];
 }
 export async function saveProject(api,actor,p,update){
+  if(p.assignmentOnly)throw new HttpError(403,'Only the project owner or administrator can change this project.');
   requireAccess(actor,'work','edit');
   const rows=await api(projectTable+'?id=eq.'+p.id+'&revision=eq.'+p.revision+(actor.role==='admin'?'':'&creator_id=eq.'+actor.id),{
     service:true,method:'PATCH',headers:{Prefer:'return=representation'},payload:{...update,revision:p.revision+1}
