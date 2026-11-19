@@ -64,7 +64,7 @@ test('one login protects all entry points and admin-created team users share it'
     const deepLogin=await request('?work=1&studio=builder&build=newsletter&source=archive%3Aone',{action:'sign-in',email:'admin@example.test',password:'fixture-admin-password'});
     assert.match(deepLogin.headers.get('location'),/build=newsletter/);assert.match(deepLogin.headers.get('location'),/source=archive%3Aone/);
     const team=await request('?work=1&studio=team',null,adminCookie);
-    assert.equal(team.status,200);assert.match(await team.text(),/Create user/);
+    assert.equal(team.status,200);assert.match(await team.text(),/Add a person/);
     const created=await request('?work=1&studio=team',{action:'create-user',accessVersion:'1',access_library:'1',access_originals:'1',access_sources:'1',name:'Team member',email:'team@example.test',role:'admin'},adminCookie);
     assert.equal(created.status,200);const html=await created.text(),password=html.match(/class="staff-code">([^<]+)/)[1];
     assert.match(created.headers.get('cache-control'),/no-store/);
@@ -78,7 +78,7 @@ test('one login protects all entry points and admin-created team users share it'
     assert.equal(saved[0].role,undefined);assert.ok(!JSON.stringify(saved).includes(password));
     const person=[...staff.values()][0];
     const originalHash=person.code_hash;
-    const welcomePage=await request('?work=1&studio=team',null,adminCookie),welcomeHtml=await welcomePage.text();
+    const welcomePage=await request('?work=1&studio=team&person='+person.id,null,adminCookie),welcomeHtml=await welcomePage.text();
     assert.match(welcomeHtml,/Send welcome details to Team member/);
     assert.match(welcomeHtml,/Use your existing team password/);
     assert.ok(!welcomeHtml.includes(password));assert.ok(!welcomeHtml.includes(originalHash));
@@ -113,7 +113,7 @@ test('one login protects all entry points and admin-created team users share it'
     const next=await request('',{action:'sign-in',email:person.email,password:nextPassword});
     assert.equal(next.status,303);
     await request('?work=1&studio=team',{action:'disable-user',staff:person.id},adminCookie);
-    const disabledHtml=await (await request('?work=1&studio=team',null,adminCookie)).text();
+    const disabledHtml=await (await request('?work=1&studio=team&person='+person.id,null,adminCookie)).text();
     assert.doesNotMatch(disabledHtml,/Send welcome details to Team member/);
     assert.match(disabledHtml,/Set a password to enable this account and prepare its welcome email/);
     assert.equal((await request('?file='+fileId,null,cookieOf(next))).status,401);
