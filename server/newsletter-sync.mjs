@@ -39,7 +39,10 @@ export async function syncNewsletter({record,revision,api,client,now=Date.now()}
   if(!rows.length)throw new HttpError(409,'Another sync has taken over this newsletter.');
  };
  try{
-  if(state.hold)return {status:'held',id:state.campaignId};
+  if(state.hold){
+   if(state.campaignId){const r=await client.get(state.campaignId);state.diagnostic={status:r.status,name:r.name,editorType:r.editorType,contentType:typeof r.editorContent,contentLength:r.editorContent?.length,keys:Object.keys(r),initialHash:digest([r.name,r.editorType,r.editorContent])};}
+   return {status:'held',id:state.campaignId};
+  }
   let remote;
   if(state.campaignId){
    remote=await client.get(state.campaignId);
@@ -87,7 +90,7 @@ export async function runNewsletterSync({api,env,fetcher=fetch,limit=2,now=Date.
  const client=ghlClient(openGhlToken(config.sealedToken,env),fetcher),rows=[];
  for(let offset=0;;offset+=100){const batch=await api('/rest/v1/nufi_studio_items?select=id,payload,revision&payload->>workerId=eq.nina&payload->>kind=eq.communication&order=updated_at.desc,id&limit=100&offset='+offset,privateRead);rows.push(...batch);if(batch.length<100)break;}
  const states=await api(stateTable+'?select=item_id,state&order=updated_at.asc',privateRead),byId=new Map(states.map(r=>[r.item_id,r.state]));
- const candidates=rows.filter(row=>newsletterEligible(row.payload)&&!byId.get(row.id)?.hold).sort((a,b)=>(Date.parse(byId.get(a.id)?.checkedAt||'')||0)-(Date.parse(byId.get(b.id)?.checkedAt||'')||0));
+ const candidates=rows.filter(row=>newsletterEligible(row.payload)).sort((a,b)=>(Date.parse(byId.get(a.id)?.checkedAt||'')||0)-(Date.parse(byId.get(b.id)?.checkedAt||'')||0));
  const results=[];
  for(const row of candidates.slice(0,limit))results.push(await syncNewsletter({record:{...row.payload,id:row.id},revision:row.revision,api,client,now}));
  return {status:'checked',processed:results.length,results};
