@@ -60,7 +60,7 @@ test('one login protects all entry points and admin-created team users share it'
     assert.match(login.headers.get('location'),/studio=home/);
     const landing=await request('',null,adminCookie);assert.equal(landing.status,303);assert.match(landing.headers.get('location'),/studio=home/);
     for(const path of ['?work=1','?work=1&studio=home']){
-      const dashboard=await request(path,null,adminCookie);assert.equal(dashboard.status,200);assert.match(await dashboard.text(),/<h1>Dashboard/);
+      const dashboard=await request(path,null,adminCookie);assert.equal(dashboard.status,200);assert.match(await dashboard.text(),/<h1>Your team space/);
     }
     const deepLogin=await request('?work=1&studio=builder&build=newsletter&source=archive%3Aone',{action:'sign-in',email:'admin@example.test',password:'fixture-admin-password'});
     assert.match(deepLogin.headers.get('location'),/build=newsletter/);assert.match(deepLogin.headers.get('location'),/source=archive%3Aone/);
