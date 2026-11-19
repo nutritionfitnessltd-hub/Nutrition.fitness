@@ -32,6 +32,16 @@ test('review responsibilities are opt-in, strict booleans, and retained by Team 
  assert.equal(accessFromForm({accessVersion:'1',access_library:'1',access_work:'1',access_review_articles:'1'}).review_articles,true);
  assert.throws(()=>accessFromForm({accessVersion:'1',access_review_everything:'1'}));
 });
+test('catalogue imports do not become team work just because they have a saved timestamp',async()=>{
+ const f=fixture();
+ for(const status of ['Draft','Approved'])f.stored.set('import-'+status,{id:'import-'+status,title:'Imported catalogue '+status,kind:'article',status,revision:1,fields:{body:'Reference content'}});
+ const d=await f.data({role:'admin',id:'admin'}),rows=teamWorkRows(d);
+ assert.ok(!rows.some(r=>r.title.startsWith('Imported catalogue')));
+ assert.ok(rows.some(r=>r.recordId==='nina-draft'),'Attributed worker drafts remain visible');
+ assert.ok(rows.some(r=>r.recordId==='human-submitted'),'Unassigned submissions still reach the administrator');
+ d.tasks=[{id:'assigned-import',record_id:'import-Draft',staff_id:'creator',title:'Revise imported content',status:'To do'}];
+ assert.ok(teamWorkRows(d).some(r=>r.title==='Revise imported content'),'An explicit assignment makes imported content work');
+});
 test('reviewer sees submitted articles and assigned work, never other drafts or categories',async()=>{
  const f=fixture(),d=await f.data();assert.deepEqual(d.items.map(r=>r.id).sort(),['human-submitted','my-draft','nina-submitted']);
  const html=teamWorkPage(new URLSearchParams(),d);assert.match(html,/nina-submitted|human-submitted|My assignment/);assert.doesNotMatch(html,/nina-draft|recipe-submitted/);
