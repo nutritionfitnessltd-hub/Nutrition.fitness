@@ -6,6 +6,7 @@ import {contentWorker,workerNames} from './studio-worker-content.mjs';
 import {itemPage} from './studio-pages.mjs';
 import {readerDocument} from './article-reader.mjs';
 import {articleImage} from './studio-articles.mjs';
+import {canEditContent} from './library-permissions.mjs';
 import {esc,url,hidden,form,button} from './studio-ui.mjs';
 
 export function reviewPreview(params,data,retained={}){
@@ -27,7 +28,7 @@ export function reviewPreview(params,data,retained={}){
 const withoutVersion=r=>{const next=structuredClone(r);delete next.revision;delete next.updatedAt;return next;};
 export function reviewWindowDocument(params,data,retained={}){
  const r=editable(data,params.get('id')),preview=reviewPreview(params,data,retained);
- const footer=preview.includes('<footer class="review-popup-footer">')?preview.slice(preview.indexOf('<footer class="review-popup-footer">'),preview.lastIndexOf('</footer>')+9):'';
+ const footer=preview.includes('<footer class="review-popup-footer">')?preview.slice(preview.indexOf('<footer class="review-popup-footer">'),preview.lastIndexOf('</footer>')+9):canEditContent(data,r.id)?'<footer class="review-popup-footer">'+button('Edit',url('item',{id:r.id,tab:'edit'}))+'</footer>':'';
  const notice=params.get('reviewed')==='schedule'&&!retained.message?'Schedule saved to the content calendar.':'';
  const controls='<div class="review-window-controls">'+(notice?'<p role="status">'+esc(notice)+'</p>':'')+footer+'</div>';
  const page=r.kind==='article'?readerDocument(r,articleImage(r)):'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(r.title)+'</title><link rel="stylesheet" href="/studio.css"></head><body>'+itemPage(new URLSearchParams({id:r.id,tab:'preview'}),data)+'</body></html>';
