@@ -1,0 +1,15 @@
+import {readNewsletterConnection} from './newsletter-sync.mjs';
+import {ghlLocation,ghlCampaignUrl} from './ghl-newsletter-client.mjs';
+import {esc,url,form,input,button} from './studio-ui.mjs';
+export async function newsletterSyncPanel(data,env,api){
+ if(data.actor.role!=='admin')return '';
+ let connection,rows;
+ try{[connection,rows]=await Promise.all([readNewsletterConnection(api),api('/rest/v1/nufi_newsletter_sync?select=item_id,state,updated_at&order=updated_at.desc&limit=20',{service:true})]);}
+ catch{return '<section class="panel"><h2>Nina’s newsletters in GHL</h2><p>The automatic newsletter connection is being prepared.</p></section>';}
+ const ready=Boolean(env.NUFI_GHL_SEAL_KEY&&env.CRON_SECRET),connected=Boolean(connection.sealedToken),active=connected&&connection.enabled;
+ return '<section class="panel"><h2>Nina’s newsletters in GHL</h2><p><strong>'+(active?'Automatic draft sync enabled':connected?'Sync paused':'Not connected')+'</strong> · nutrition.fitness</p><p>Checks Nina’s saved newsletters every five minutes. Images and email formatting are copied into campaign drafts. You review and schedule them in GHL.</p><p>Emails are never sent or scheduled by this connection. Updates stop if you change, schedule or send the GHL copy.</p>'+
+  (active?form('ghl-sync-run','',{section:'connections'},'Check newsletters now')+form('ghl-sync-pause','',{section:'connections'},'Pause syncing'):connected?form('ghl-sync-resume','',{section:'connections'},'Resume syncing'):'')+
+  (ready?'<details'+(!connected?' open':'')+'><summary>'+(connected?'Reconnect':'Connect GHL')+'</summary><p>Create a private integration in the nutrition.fitness GHL sub-account with <code>emails/campaigns.readonly</code>, <code>emails/campaigns.write</code> and <code>medias.write</code>. GHL combines draft editing and scheduling within its campaign write permission; this connection only implements draft creation and editing.</p>'+form('ghl-sync-connect',input('token','Private integration token','','password','required autocomplete="off" maxlength="2000"')+'<p>The token is encrypted privately and is never shown again.</p>',{section:'connections'},connected?'Reconnect and enable':'Connect and enable')+'</details>':'<p>The server connection keys still need configuring.</p>')+
+  '<p>'+button('Open GHL campaigns','https://app.gohighlevel.com/v2/location/'+ghlLocation+'/marketing/emails/campaigns')+'</p>'+
+  (rows.length?'<h3>Newsletter sync activity</h3><ul class="studio-list">'+rows.map(({item_id,state:s})=>'<li><div><strong>'+esc(s.title||data.byId.get(item_id)?.title||'Newsletter')+'</strong><small>'+esc(s.status==='synced'?'Saved in GHL':s.status==='held'?'Updates paused':'Needs attention')+(s.syncedAt?' · Last saved '+esc(s.syncedAt.replace('T',' ').slice(0,16))+' UTC':'')+'</small><p>'+esc(s.detail||'Waiting for the next check.')+'</p><div class="studio-actions">'+button('Open source',url('item',{id:item_id}))+(s.campaignId?button('Open GHL draft',ghlCampaignUrl(s.campaignId)):'')+'</div></div></li>').join('')+'</ul>':'<p>No newsletters synced yet.</p>')+'</section>';
+}
