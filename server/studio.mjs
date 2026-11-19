@@ -235,7 +235,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       case 'project':{
         const project=data.projects.find(p=>p.id===params.get('project'));
         await loadProjectProductionDates(api,project,data);
-        body=project?.studio?.ideaId?ideaProjectPage(params,data,meta||{}):projectPage(params,data);break;
+        body=project?.studio?.ideaId&&!project.assignmentOnly?ideaProjectPage(params,data,meta||{}):projectPage(params,data);break;
       }
       case 'item':body=itemPage(params,data);if(data.byId.has(params.get('id')))body+=publicationPanel(data.byId.get(params.get('id')),data);break;
       case 'new':body=newItem(params,data);break;

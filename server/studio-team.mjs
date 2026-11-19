@@ -1,3 +1,4 @@
+import {assignmentForm,assignmentProjectId} from './team-assignments.mjs';
 import {workers} from './studio-workers.mjs';
 import {workerContent} from './studio-worker-content.mjs';
 import {allRows,saveRecord} from './studio-store.mjs';
@@ -19,8 +20,10 @@ export async function teamWorkSnapshot(api){
   return {projects,tasks,items,byId:new Map(items.map(r=>[r.id,r])),activityAvailable:results.every(r=>r.status==='fulfilled')};
 }
 function personWork(person,data){
-  const projects=data.projects.filter(p=>p.creator_id===person.id);
-  const tasks=[...data.tasks.filter(t=>t.staff_id===person.id).map(t=>({...t,href:'/content-library/?work=1&assignments=1&staff='+encodeURIComponent(person.id)})),...projects.flatMap(p=>(p.entries||[]).map(e=>({...e,context:p.name,href:url('project',{project:p.id,week:e.week||0})})))];
+  const ownProjects=data.projects.filter(p=>p.creator_id===person.id);
+  const projectIds=new Set(data.tasks.filter(t=>t.staff_id===person.id).map(assignmentProjectId));
+  const projects=data.projects.filter(p=>p.creator_id===person.id||projectIds.has(p.id));
+  const tasks=[...data.tasks.filter(t=>t.staff_id===person.id).map(t=>({...t,href:'/content-library/?work=1&assignments=1&staff='+encodeURIComponent(person.id)})),...ownProjects.flatMap(p=>(p.entries||[]).map(e=>({...e,context:p.name,href:url('project',{project:p.id,week:e.week||0})})))];
   return {projects,tasks,open:tasks.filter(t=>!finished(t.status)),recent:tasks.filter(t=>finished(t.status)).slice(0,5)};
 }
 function workerWork(key,data){
@@ -61,9 +64,10 @@ export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarku
   if(personKey){
     if(personKey==='owner')return '<div class="team-profile" data-team-profile>'+profileHeader(personAvatar('Workspace owner'),'Workspace owner','Administrator','Approvals & team decisions')+'<section class="team-profile-section"><h2>Responsibilities</h2><p>Sets priorities, approves work and releases, and manages team access.</p></section><div class="studio-actions">'+button('Open projects',url('projects'))+button('Review work',url('review'))+'</div></div>';
     const person=staff.find(p=>p.id===personKey);if(!person)throw new HttpError(404,'This person is unavailable.');
+    if(params.get('assign')==='1')return assignmentForm(person,data.projects);
     const profile=data.byId.get(profileId(person.id)),fields=profile?.fields||{},work=personWork(person,data);
     return '<div class="team-profile" data-team-profile>'+profileHeader(personAvatar(person.name),person.name,fields.role||'Team member',person.code_hash?(work.open.length?taskCount(work.open.length):'No open tasks recorded'):'Access disabled')+
-      '<p class="team-profile-email">'+esc(person.email)+'</p><div class="studio-actions">'+button('Email '+person.name,'mailto:'+encodeURIComponent(person.email))+button('View work','/content-library/?work=1&assignments=1&staff='+encodeURIComponent(person.id))+linkButton('Assign work','/content-library/?work=1&staff='+encodeURIComponent(person.id))+'</div>'+
+      '<p class="team-profile-email">'+esc(person.email)+'</p><div class="studio-actions">'+button('Email '+person.name,'mailto:'+encodeURIComponent(person.email))+button('View work','/content-library/?work=1&assignments=1&staff='+encodeURIComponent(person.id))+linkButton('Assign work',teamUrl({person:person.id,assign:'1'}))+'</div>'+
       '<section class="team-profile-section"><h2>Role & responsibilities</h2>'+form('team-profile-save',hidden('staff',person.id)+hidden('revision',profile?.revision||0)+input('role','Role',fields.role||'','text','maxlength="160"')+textarea('responsibilities','Responsibilities',fields.responsibilities||'',4)+input('reportsTo','Reports to',fields.reportsTo||'Workspace owner','text','maxlength="160"'),{section:'team',person:person.id},'Save profile')+'</section>'+
       '<section class="team-profile-section"><h2>Current work</h2>'+list(work.projects.filter(p=>!finished(p.status)),p=>'<a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a>'+badge(p.status),'No active projects assigned.')+list(work.open.slice(0,15),row,'No open tasks recorded.')+'</section>'+
       '<section class="team-profile-section"><h2>Recent completed work</h2>'+list(work.recent,row,'No completed work recorded.')+'</section>'+

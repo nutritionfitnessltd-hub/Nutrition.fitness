@@ -142,6 +142,8 @@ export function projectList(params,data){
 }
 export function projectPage(params,data){
   const p=projectFor(data,params.get('project')),week=Math.max(0,Math.min(p.weeks,Number(params.get('week'))||0)),admin=data.actor.role==='admin';
+  if(p.assignmentOnly)return heading(p.name,'Linked to your assignment',button('My assignments','/content-library/?work=1&assignments=1'))+'<p>'+badge(p.status)+'</p><section class="panel"><h2>Project brief</h2><p class="prose">'+esc(p.brief||'No project brief recorded.')+'</p><h2>Project plan</h2>'+list(p.entries||[],e=>'<div><strong>'+esc(e.title)+'</strong><small>'+esc(e.week?'Week '+e.week:'Preparation')+'</small></div>'+badge(e.status),'No project tasks recorded yet.')+'</section>';
+
   if(!canAccess(data.actor,'edit'))return heading(p.name,p.brief)+badge(p.status)+'<section class="panel">'+list(p.entries,e=>'<div><small>'+(e.week?'Week '+e.week:'Preparation')+'</small><h3>'+esc(e.title)+'</h3><p>'+esc(e.notes||'')+'</p>'+(e.record&&canAccess(data.actor,'library')?button('Open content',url('item',{id:e.record})):'' )+'</div>'+badge(e.status))+'</section>';
   const state={section:'project',project:p.id,week},base=hidden('projectRevision',p.revision);
   const root=data.byId.get(p.studio.rootId);
