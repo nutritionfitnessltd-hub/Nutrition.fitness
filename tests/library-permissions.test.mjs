@@ -46,6 +46,28 @@ function fixture(access=null){
 }
 const forbidden=error=>error.status===403;
 
+test('admin previews selected staff permissions in a read-only window without saving or signing in as staff',async()=>{
+ const f=fixture({library:true,work:false}),body={action:'save-access',previewAccount:'yes',staff:f.person.id,accessRevision:'1',accessVersion:'1',access_work:'1',access_edit:'1'};
+ const team=await f.request({studio:'team'},admin);
+ assert.match(team.body,/data-account-preview/);assert.match(team.body,/formtarget="_blank"/);assert.match(team.body,/studio=account-preview/);
+ const result=await f.request({studio:'account-preview'},admin,body);
+ assert.equal(result.statusCode,200);assert.match(result.body,/Preview: Test creator/);assert.match(result.body,/Read-only landing-page preview/);
+ assert.match(result.body,/Welcome back, Test creator/);assert.match(result.body,/>Projects</);assert.doesNotMatch(result.body,/>Content library<|>Team<|>Settings<|<script|<form|<a\b[^>]*href=/);
+ assert.match(result.headers['Content-Security-Policy'],/form-action 'none'/);assert.equal(result.headers['Set-Cookie'],undefined);
+ assert.equal(f.person.access.library,true);assert.equal(f.person.access.work,false);assert.ok(f.calls.every(([,o])=>!o.method||o.method==='GET'));
+});
+test('account preview rejects staff access, invalid permission fields and GET requests',async()=>{
+ const f=fixture(),body={staff:f.person.id,accessVersion:'1',access_work:'1'};
+ assert.equal((await f.request({studio:'account-preview'},f.person,body)).statusCode,403);
+ assert.equal((await f.request({studio:'account-preview'},admin,{...body,access_admin:'1'})).statusCode,400);
+ assert.equal((await f.request({studio:'account-preview'},admin)).statusCode,405);
+});
+test('disabled account can be previewed without enabling it and permission dependencies still apply',async()=>{
+ const f=fixture();f.person.code_hash=null;
+ const result=await f.request({studio:'account-preview'},admin,{staff:f.person.id,accessVersion:'1',access_studio:'1',access_ai:'1'});
+ assert.equal(result.statusCode,200);assert.match(result.body,/disabled or has no password/);assert.match(result.body,/Dashboard only/);assert.doesNotMatch(result.body,/>Content Studio<|>Content Library</);assert.equal(f.person.code_hash,null);
+});
+
 test('access is explicit, dependency-aware, and never grants administrator functions',()=>{
   assert.deepEqual(accessFor(staff()),defaultAccess);
   assert.deepEqual(accessFor(staff(null)),defaultAccess);
