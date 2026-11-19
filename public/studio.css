@@ -423,6 +423,9 @@
 .worker-ideas>.studio-list>li,.worker-conversation>.studio-list>li{display:block}.worker-ideas>.studio-list>li>.panel{width:100%;box-sizing:border-box}
 
 .worker-ellis{--worker-tint:#e0edef;--worker-accent:#4d8790}.release-manager-summary .btn{margin-top:8px}.release-scope-items{border:1px solid #d6dedb;border-radius:10px;padding:20px}.release-scope-items .check{margin:12px 0}.release-scope-items small{display:block;color:#526e7b}.source-text{white-space:pre-wrap;overflow-wrap:anywhere}
+.account-preview-form{border:0;padding:0;margin:0;min-width:0}
+.account-preview-notice{background:#f5e6d8;border-left:4px solid #d39a6a;margin-bottom:24px}
+.account-preview-notice h1{font-size:24px;margin-top:0}
 /* Shiny Things: a notice board for ideas, with handwritten paper notes. */
 .shiny-notice-workspace{max-width:1480px}.shiny-notice-workspace .studio-heading{margin-bottom:22px}
 .shiny-board-tools{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;margin:0 0 18px}.shiny-board-tabs{display:flex;gap:6px;background:#e9efee;padding:5px;border-radius:10px}.shiny-board-tabs a{display:flex;gap:10px;align-items:center;padding:10px 14px;border-radius:7px;font-size:14px;text-decoration:none;color:#244956}.shiny-board-tabs a[aria-current=page]{background:white;box-shadow:0 1px 4px #092a3e12;font-weight:600}.shiny-board-tabs a span{font-size:12px;min-width:20px;text-align:center;border-radius:20px;background:#e3edf0;padding:1px 5px}.shiny-legend{display:flex;gap:16px;flex-wrap:wrap}.shiny-legend>span{display:flex;gap:7px;align-items:center;font-size:13px;color:#43585c}.shiny-swatch{display:inline-block;width:16px;height:16px;border-radius:3px;box-shadow:inset 0 0 0 1px #092a3e15;transform:rotate(-6deg)}
