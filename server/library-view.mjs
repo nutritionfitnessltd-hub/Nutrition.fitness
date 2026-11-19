@@ -1,5 +1,6 @@
 import { frame, activeShelf, shelfView, link } from './library-shelves.mjs';
 import { assetButton } from './library-assets.mjs';
+import {courseLessons,lessonAssetLink,lessonSummary} from './course-lessons.mjs';
 const path = '/content-library/';
 const escape = value => String(value ?? '').replace(/[<>&"']/g, c => ({ '<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;', "'":'&#39;' })[c]);
 const href = values => path + '?' + escape(new URLSearchParams(values).toString());
@@ -50,10 +51,10 @@ export function contents(index, params, meta, access={sources:true,assign:true})
     if(course){
       const tab=params.get('tab')||(course.sections.length?'lessons':'support');
       const row=(id,title)=>byId.has(id)?'<a href="'+href({item:id,from:current.id})+'">'+escape(byId.get(id).title)+'</a> '+sourceButton(id):'<span>'+escape(title||'File unavailable')+'</span>';
-      const modules=course.sections.map(s=>'<section><h2>'+escape(s.title)+'</h2><ol>'+s.entries.map(e=>'<li>'+row(e.id,e.title)+'</li>').join('')+'</ol></section>').join('');
+      const modules=course.sections.map(s=>'<section><h2>'+escape(s.title)+'</h2><ol class="course-lesson-list">'+s.entries.map(e=>'<li>'+(e.key?'<strong>'+escape(e.title)+'</strong>'+lessonSummary(e)+(access.sources?lessonAssetLink(current.id,e):''):row(e.id,e.title))+'</li>').join('')+'</ol></section>').join('');
       const roles=[...new Set(course.support.map(s=>s.role))];
       const resources=roles.map(role=>'<section><h2>'+escape(role)+'</h2><ul>'+course.support.filter(s=>s.role===role).map(s=>'<li>'+row(s.id)+'</li>').join('')+'</ul></section>').join('');
-      return '<a class="back" href="'+href({shelf:'Courses'})+'">← Courses</a><article>'+assignButton(current.id)+'<h1>'+escape(current.title)+'</h1>'+sourceButton(current.id,'Course asset links')+'<p>'+escape(({confirmed:'Course order confirmed',partial:'Course order partly confirmed',unconfirmed:'Lesson order needs checking'})[course.order]||'Lesson order needs checking')+'</p><nav class="tabs">'+[['lessons','Lessons'],['support','Supporting files']].map(([t,name])=>'<a href="'+href({item:current.id,tab:t})+'"'+(t===tab?' aria-current="page"':'')+'>'+name+'</a>').join('')+'</nav>'+(tab==='support'?resources||'<p>No supporting files recorded.</p>':modules||'<p>No lesson order has been confirmed.</p>')+'</article>';
+      return '<a class="back" href="'+href({shelf:'Courses'})+'">← Courses</a><article>'+assignButton(current.id)+'<h1>'+escape(current.title)+'</h1>'+sourceButton(current.id,'Course asset links')+'<p>'+escape(({confirmed:'Course order confirmed',partial:'Course order partly confirmed',unconfirmed:'Lesson order needs checking'})[course.order]||'Lesson order needs checking')+'</p>'+(course.note?'<p class="course-order-note">'+escape(course.note)+'</p>':'')+'<nav class="tabs">'+[['lessons','Lessons ('+courseLessons(course).length+')'],['support','Supporting files']].map(([t,name])=>'<a href="'+href({item:current.id,tab:t})+'"'+(t===tab?' aria-current="page"':'')+'>'+name+'</a>').join('')+'</nav>'+(tab==='support'?resources||'<p>No supporting files recorded.</p>':modules||'<p>No lesson order has been confirmed.</p>')+'</article>';
     }
     const files = current.files.map(id => [id,index.files[id]]).filter(([,f]) => f);
     const related = index.records.filter(r => r.parent === current.id);

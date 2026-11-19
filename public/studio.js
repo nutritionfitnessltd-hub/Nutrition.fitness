@@ -1,3 +1,4 @@
+import './studio-team-modal.js';
 import './studio-shiny-modal.js';
 import {startWorkerUpdates} from './studio-worker-updates.mjs';
 import './studio-review.js';

@@ -87,8 +87,8 @@ export function shelfView(index,params,meta={}) {
       const course=meta.courses?.[card.title];
       if(!course)continue;
       card.to={item:'course:'+card.title};
-      const lessons=course.sections.reduce((total,s)=>total+s.entries.filter(e=>e.id).length,0);
-      card.summary=lessons?lessons+' lesson files':'Lesson order needs checking';
+      const lessons=course.sections.reduce((total,s)=>total+s.entries.length,0);
+      card.summary=lessons?lessons+' lessons':'Lesson order needs checking';
       card.preview=meta.collections?.[card.title]||card.preview;
     }
   }

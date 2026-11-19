@@ -24,3 +24,4 @@ article li .asset-link { margin-inline-start: .75rem; font-size: .875rem; }
   .side { position: static; height: auto; }
   .side-scroll { overflow: visible; }
 }
+.course-lesson-list{padding-left:28px}.course-lesson-list>li{padding:14px 8px;border-bottom:1px solid #d6dedb}.course-lesson-meta{display:block;margin:5px 0;color:#526778}.course-order-note{max-width:850px;padding:16px;background:#edf4f4;border-left:3px solid #064e63}

@@ -1,3 +1,5 @@
+import {teamWorkSnapshot,renderTeamPage,saveTeamProfile} from './studio-team.mjs';
+import {hqRequest} from './studio-hq.mjs';
 import { reviewOptions, accessOptions, accessFor, accessFromForm, canAccess, requireAccess } from './library-permissions.mjs';
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { platform, membership, verifiedUser, cookies, email, uuid, HttpError } from './platform.mjs';
@@ -112,12 +114,17 @@ function accessFields(access){
   const current=accessFor({role:'staff',access});
   return field('accessVersion','1')+'<fieldset class="team-access"><legend>Access</legend><p class="meta">Tick what this person can use. Dashboard and their own signed agreement are always available. Review responsibilities are set separately below. Publishing and Settings remain administrator-only.</p><div class="team-access-grid">'+accessOptions.map(([key,title,description])=>'<label class="team-access-option"><input type="checkbox" name="access_'+key+'" value="1"'+(current[key]?' checked':'')+'><span><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span></label>').join('')+'</div></fieldset><fieldset class="team-access"><legend>Review responsibilities</legend><p class="meta">Allow this person to approve or request changes when these content types are submitted. Requires Content library and Work access. Other people’s drafts stay private.</p><div class="team-access-grid">'+reviewOptions.map(([key,title])=>'<label class="team-access-option"><input type="checkbox" name="access_'+key+'" value="1"'+(current[key]?' checked':'')+'><span><strong>'+esc(title)+'</strong><small>Review submitted work and retain your review history.</small></span></label>').join('')+'</div></fieldset>';
 }
-async function teamScreen(api,actor,origin,env){
+async function teamScreen(api,actor,origin,env,params=new URLSearchParams(),fetcher=fetch){
   if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
-  const staff=await api(staffTable+'?select=id,name,email,code_hash,access,access_revision&order=name.asc',service),target=link({work:'1',studio:'team'});
-  return '<h1>Team</h1><div class="studio-actions"><a class="btn" href="/content-library/?work=1&amp;studio=nda">Confidentiality agreements</a><a class="btn" href="/content-library/?work=1&amp;studio=connections">Connections</a></div><p>Choose what each team member can see and do. Changes apply on their next request, including when they are already signed in.</p><section class="panel"><h2>Create user</h2>'+form('create-user','<label>Full name<input name="name" maxlength="100" required autocomplete="off"></label><label>Email<input name="email" type="email" maxlength="254" required autocomplete="off"></label>'+accessFields(null)+'<button class="primary">Create user</button>',target)+'</section><section class="panel"><h2>Team members</h2>'+
-    (staff.length?staff.map(s=>'<section class="team-member"><div class="team-row"><div><strong>'+esc(s.name)+'</strong><br>'+esc(s.email)+'<br><small>'+(s.code_hash?'Access enabled':'Access disabled or password not set')+'</small></div><div class="studio-actions">'+form('issue-code',field('staff',s.id)+'<button>'+(s.code_hash?'Reset password':'Set password & enable')+'</button>',target)+(s.code_hash?form('disable-user',field('staff',s.id)+'<button>Disable access</button>',target):'')+'</div></div><details><summary>Set access for '+esc(s.name)+'</summary>'+form('save-access',field('staff',s.id)+field('accessRevision',s.access_revision||1)+accessFields(s.access)+'<div class="studio-actions"><button class="primary">Save access</button><button type="submit" name="previewAccount" value="yes" data-account-preview formaction="/content-library/?work=1&amp;studio=account-preview" formtarget="_blank" formnovalidate>Preview account ↗</button></div>',target)+'</details>'+(s.code_hash?'<details class="team-welcome-details"><summary>Send welcome details to '+esc(s.name)+'</summary>'+welcomePanel(s,{origin,env})+'</details>':'<p class="meta">Set a password to enable this account and prepare its welcome email.</p>')+'</section>').join(''):'<p>No team members yet.</p>')+'</section>';
+  const [staff,data]=await Promise.all([api(staffTable+'?select=id,name,email,code_hash,access,access_revision&order=name.asc',service),teamWorkSnapshot(api)]);
+  const target=link({work:'1',studio:'team'});
+  const createMarkup=form('create-user','<label>Full name<input name="name" maxlength="100" required autocomplete="off"></label><label>Email<input name="email" type="email" maxlength="254" required autocomplete="off"></label>'+accessFields(null)+'<button class="primary">Create user</button>',target);
+  const accessMarkup=s=>'<p>'+(s.code_hash?'Access enabled':'Access disabled or password not set')+'</p><div class="studio-actions">'+form('issue-code',field('staff',s.id)+'<button>'+(s.code_hash?'Reset password':'Set password & enable')+'</button>',target)+(s.code_hash?form('disable-user',field('staff',s.id)+'<button>Disable access</button>',target):'')+'</div>'+form('save-access',field('staff',s.id)+field('accessRevision',s.access_revision||1)+accessFields(s.access)+'<div class="studio-actions"><button class="primary">Save access</button><button type="submit" name="previewAccount" value="yes" data-account-preview formaction="/content-library/?work=1&amp;studio=account-preview" formtarget="_blank" formnovalidate>Preview account ↗</button></div>',target)+(s.code_hash?'<details class="team-welcome-details"><summary>Send welcome details to '+esc(s.name)+'</summary>'+welcomePanel(s,{origin,env})+'</details>':'<p class="meta">Set a password to enable this account and prepare its welcome email.</p>');
+  let hqChat,hqError;
+  if(params.get('worker'))try{hqChat=await hqRequest(env,{action:'chat',worker:params.get('worker')},fetcher);}catch(e){hqError=e.message;}
+  return renderTeamPage({params,actor,staff,data,accessMarkup,createMarkup,hqChat,hqError});
 }
+
 function passwordResult(person,password,origin,env){
   return '<h1>Login details ready</h1><p>The account is enabled. Send these details privately to '+esc(person.name)+'. The new password is shown only now.</p><section class="panel"><p>Email: <strong>'+esc(person.email)+'</strong></p><p>Password: <code class="staff-code">'+esc(password)+'</code></p>'+welcomePanel(person,{origin,password,env})+'</section><a class="btn" href="'+link({work:'1',studio:'team'})+'">Back to Team & permissions</a>';
 }
@@ -204,7 +211,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
   const projects=params.get('projects')==='1';
   const asset=params.get('assets');
   const studio=params.get('studio');
-  const destination=params.get('reader')==='1'?Object.fromEntries([...params].filter(([k])=>['reader','file','image','preview'].includes(k))):studio?Object.fromEntries([...params].filter(([k])=>['studio','id','project','week','source','template','kind','tab','category','schedule','view','contentKind','shelf','folder','item','from','progress','q','page','reader','file','image','preview','collection','bucket','bookType','build','worker'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
+  const destination=params.get('reader')==='1'?Object.fromEntries([...params].filter(([k])=>['reader','file','image','preview'].includes(k))):studio?Object.fromEntries([...params].filter(([k])=>['studio','id','project','week','source','template','kind','tab','category','schedule','view','contentKind','shelf','folder','item','from','progress','q','page','reader','file','image','preview','collection','bucket','bookType','build','worker','person'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
   let actor;
   const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
   const welcomeJson=req.method==='POST'&&f.action==='send-welcome'&&req.headers.accept?.includes('application/json');
@@ -268,12 +275,13 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
           if(welcomeJson)return json(200,{state:result.state,detail:result.detail});
           return writePage(res,200,'<h1>Welcome email</h1>'+welcomePanel(result.person,{origin,env,draft:f,result})+'<a href="'+link({work:'1',studio:'team'})+'">Back to Team & permissions</a>',actor,'team');
         }
+        if(f.action==='team-profile-save'){const staff=await api(staffTable+'?select=id,name,email&order=name.asc',service);await saveTeamProfile(f,actor,staff,await teamWorkSnapshot(api),api);res.statusCode=303;res.setHeader('Location',route+'&studio=team&person='+encodeURIComponent(f.staff));return res.end();}
         if(!['create-user','issue-code','disable-user','save-access'].includes(f.action))throw new HttpError(400,'Choose a team action.');
         const message=await change(actor,f,api,load,origin,env);
         if(message)return writePage(res,200,message,actor,'team');
-        res.statusCode=303;res.setHeader('Location',route+'&studio=team'+(f.action==='save-access'?'&saved=access':''));return res.end();
+        res.statusCode=303;res.setHeader('Location',route+'&studio=team'+(f.action==='save-access'?'&saved=access&person='+encodeURIComponent(f.staff):f.action==='disable-user'?'&person='+encodeURIComponent(f.staff):''));return res.end();
       }
-      return writePage(res,200,(params.get('saved')==='access'?'<p role="status" class="panel">Access saved. The new settings apply on this person’s next request.</p>':'')+await teamScreen(api,actor,origin,env)+'<script type="module" src="/team-account-preview.js"></script>',actor,'team');
+      return writePage(res,200,(params.get('saved')==='access'?'<p role="status" class="panel">Access saved. The new settings apply on this person’s next request.</p>':'')+await teamScreen(api,actor,origin,env,params,fetcher)+'<script type="module" src="/team-account-preview.js"></script>',actor,'team');
     }
     if(studio)return handleStudio(req,res,{params,actor,api,load,env,fetcher});
     if(asset){
