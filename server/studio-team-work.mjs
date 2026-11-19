@@ -19,6 +19,7 @@ export function teamWorkRows(data){
   const recordRows=new Map();
   for(const r of data.items){
     if(['Archived'].includes(r.status)||['settings','worker-request','account-preview'].includes(r.kind)||!canReadContent(data,r)||!canAccess(data.actor,'library'))continue;
+    if(!admin&&!data.assigned.has(r.id)&&!canReviewContent(data,r))continue;
     const w=contentWorker(r,data.byId),task=tasks.find(t=>t.record_id===r.id),project=projectOf(r.id);
     // Imported reference content is not active work until attributed, assigned or submitted.
     if(!w&&!task&&!project&&!['In review','Changes requested'].includes(r.status)&&!r.updatedAt)continue;

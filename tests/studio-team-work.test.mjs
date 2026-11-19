@@ -68,6 +68,17 @@ test('review history reads the decided version, not a later private draft, and c
   out=await f.request('review-history',r.id,null,actor,{review:id});assert.equal(out.statusCode,403);assert.doesNotMatch(out.body,/Private body|SECRET/);
  }
 });
+test('reviewers can read approved submission dependencies without gaining edit access or unrelated content',async()=>{
+ const f=fixture(),actor={...reviewer,access:{library:true,work:true,review_training:true}};
+ const exercise={id:'exercise-linked',title:'Linked squat',kind:'exercise',status:'Approved',revision:1,fields:{movement:'Squat',equipment:['Body weight'],instructions:['Sit down'],cues:['Stand tall'],media:{videoUrl:'https://example.test/squat.mp4'}}};
+ f.stored.set(exercise.id,exercise);f.stored.set('exercise-private',{...exercise,id:'exercise-private',title:'Private exercise draft',status:'Draft'});f.stored.set('exercise-other',{...exercise,id:'exercise-other',title:'Unrelated approved exercise'});
+ f.stored.set('workout',{id:'workout',title:'Submitted workout',kind:'session',status:'In review',revision:1,fields:{warmup:['Walk'],cooldown:['Walk'],blocks:[{type:'exercise',referenceId:exercise.id,sets:2,repMin:8}],privateId:'exercise-private'}});
+ let data=await f.data(actor);assert.equal(data.byId.has(exercise.id),true);assert.equal(data.byId.has('exercise-private'),false);assert.equal(data.byId.has('exercise-other'),false);assert.equal(data.assigned.has(exercise.id),false);
+ assert.ok(!teamWorkRows(data).some(r=>r.recordId===exercise.id));
+ const denied=await f.request('item',exercise.id,{action:'content-save',revision:'1',fields:'{}'},actor);assert.equal(denied.statusCode,403);
+ const approved=await f.request('review-preview','workout',{action:'review-decision',decision:'approve',revision:'1',reviewId:randomUUID()},actor);assert.equal(approved.statusCode,200);assert.equal(f.stored.get('workout').status,'Approved');
+ data=await f.data(actor);assert.equal(data.byId.has(exercise.id),false,'Dependency access ends when the submission leaves review');
+});
 test('admin sees people, AI, saved requests and complete history while staff see only relevant work',async()=>{
  const f=fixture(),d=await f.data({role:'admin',id:'admin'});d.people=[{id:'other',name:'Other person'}];d.projects=[{id:'project',name:'Editorial',creator_id:'other',entries:[{id:'todo',title:'Requested human work',status:'To do'},{id:'done',title:'Completed human work',status:'Done',updatedAt:'2020-01-01'}]}];
  d.byId.set('request',{id:'request',kind:'worker-request',title:'Brief',fields:{outputs:[{title:'Planned work',worker:'imogen'}]}});

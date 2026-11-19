@@ -41,7 +41,7 @@ export const reviewsKind = (actor, kind) => actor?.role === 'admin' ||
   (canAccess(actor,'library') && canAccess(actor,'work') && reviewOptions.some(([key,,kinds])=>kinds.includes(kind)&&canAccess(actor,key)));
 export const canReviewContent = (data, record) => Boolean(record) && (data.actor.role === 'admin' ||
   (record.status === 'In review' && reviewsKind(data.actor,record.kind)));
-export const canReadContent = (data, record) => Boolean(record) && (data.actor.role === 'admin' || data.assigned.has(record.id) || canReviewContent(data,record) || data.reviewedNow === record.id);
+export const canReadContent = (data, record) => Boolean(record) && (data.actor.role === 'admin' || data.assigned.has(record.id) || canReviewContent(data,record) || data.reviewSupport?.has(record.id) || data.reviewedNow === record.id);
 
 export function accessFromForm(fields) {
   if (fields.accessVersion !== '1') throw new HttpError(400, 'Reopen the team settings before saving access.');

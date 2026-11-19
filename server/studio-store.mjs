@@ -1,6 +1,6 @@
-import { requireAccess, canReadContent, reviewsKind } from './library-permissions.mjs';
+import { requireAccess, canReadContent, canReviewContent, reviewsKind } from './library-permissions.mjs';
 import { HttpError } from './platform.mjs';
-import { canonical, descendants } from './studio-model.mjs';
+import { canonical, descendants, references } from './studio-model.mjs';
 
 const service={service:true};
 export const itemTable='/rest/v1/nufi_studio_items';
@@ -48,6 +48,18 @@ export async function studioData(api,actor,load){
       ...f,recordId:r.id,title:f.reviewedTitle||r.title,kind:r.kind
     })));
   if(actor.role!=='admin'){
+    // A submission may cite already approved exercises, recipes or lessons.
+    // These are reading dependencies, never additional editing/review grants.
+    data.reviewSupport=new Set();
+    const queue=items.filter(r=>canReviewContent(data,r));
+    while(queue.length){
+      for(const id of references(queue.pop(),records)){
+        const linked=records.get(id);
+        if(linked?.status==='Approved'&&!data.reviewSupport.has(id)){
+          data.reviewSupport.add(id);queue.push(linked);
+        }
+      }
+    }
     data.items=items.filter(r=>canReadContent(data,r));
     data.byId=new Map(data.items.map(r=>[r.id,r]));
   }
