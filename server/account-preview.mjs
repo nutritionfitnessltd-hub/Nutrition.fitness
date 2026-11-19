@@ -1,6 +1,6 @@
 import {randomUUID} from 'node:crypto';
 import {HttpError} from './platform.mjs';
-import {accessFromForm} from './library-permissions.mjs';
+import {accessFromForm,accessFor} from './library-permissions.mjs';
 const table='/rest/v1/nufi_studio_items',prefix='studio:account-preview:',service={service:true};
 const clone=value=>structuredClone(value);
 function adminOnly(actor){if(actor.role!=='admin')throw new HttpError(403,'Only the administrator can open a working copy.');}
@@ -8,11 +8,17 @@ export async function accountPreview(fields,{actor,api}){
  adminOnly(actor);
  const id=String(fields.staff||'');if(!/^[a-f0-9-]{36}$/i.test(id))throw new HttpError(400,'Choose a team member to preview.');
  const access=accessFromForm(fields);
- const [person]=await api('/rest/v1/nufi_library_staff?select=id,name,email&id=eq.'+encodeURIComponent(id),service);
+ const [person]=await api('/rest/v1/nufi_library_staff?select=id,name,email,access_revision&id=eq.'+encodeURIComponent(id),service);
  if(!person)throw new HttpError(404,'This team member is unavailable.');
- const session={id:prefix+randomUUID(),kind:'account-preview',ownerId:actor.id,expiresAt:Date.now()+7200000,
-  actor:{role:'staff',id:person.id,name:person.name,email:person.email,access},changes:{}};
- const saved=await api('/rest/v1/rpc/nufi_studio_save',{...service,method:'POST',payload:{item:session.id,expected:0,document:session,editor_name:'admin:'+actor.id}});
+ let existing;
+ if(fields.accountPreviewId){
+  await workingCopy(api,actor,String(fields.accountPreviewId));
+  [existing]=await api(table+'?select=id,payload,revision&id=eq.'+encodeURIComponent(fields.accountPreviewId),service);
+  if(existing.payload.actor.id!==id)throw new HttpError(400,'Open a preview for this team member.');
+ }
+ const session={...(existing?.payload||{}),id:existing?.id||prefix+randomUUID(),kind:'account-preview',ownerId:actor.id,expiresAt:Date.now()+7200000,
+  actor:{role:'staff',id:person.id,name:person.name,email:person.email,access},staffAccessRevision:person.access_revision||0,changes:existing?.payload.changes||{}};
+ const saved=await api('/rest/v1/rpc/nufi_studio_save',{...service,method:'POST',payload:{item:session.id,expected:existing?.revision||0,document:session,editor_name:'admin:'+actor.id}});
  if(!saved.length)throw new HttpError(503,'The working copy could not be created. Please try again.');
  return '/content-library/?work=1&studio=home&accountPreview='+encodeURIComponent(session.id);
 }
@@ -28,6 +34,12 @@ export async function workingCopy(api,actor,id){
   const [saved]=await api('/rest/v1/rpc/nufi_studio_save',{...service,method:'POST',payload:{item:id,expected:row.revision,document:session,editor_name:'admin:'+actor.id}});
   if(!saved)throw new HttpError(409,'This working copy changed in another window. Reload before saving.');
   row=saved;
+ }
+ const [current]=await api('/rest/v1/nufi_library_staff?select=id,name,email,access,access_revision&id=eq.'+encodeURIComponent(session.actor.id),service);
+ if(!current)throw new HttpError(404,'This team member is unavailable.');
+ if((current.access_revision||0)!==(session.staffAccessRevision||0)){
+  session.actor={...session.actor,name:current.name,email:current.email,access:accessFor({role:'staff',access:current.access})};
+  session.staffAccessRevision=current.access_revision||0;await persist();
  }
  function matches(record,query){
   for(const [key,value] of query){
@@ -86,7 +98,7 @@ export function copyUrl(value,id){
  const raw=value.replaceAll('&amp;','&');if(!raw.startsWith('/content-library/'))return value;
  const url=new URL(raw,'https://copy.invalid');url.searchParams.set('work','1');url.searchParams.set('accountPreview',id);return url.pathname+'?'+url.searchParams;
 }
-export function copyResponse(res,id){
+export function copyResponse(res,id,access={}){
  let html=false,json=false;
  return {
   get statusCode(){return res.statusCode;},set statusCode(value){res.statusCode=value;},
@@ -99,7 +111,7 @@ export function copyResponse(res,id){
    res.setHeader('Cache-Control','private, no-store');
    if(html&&typeof body==='string'){
     body=body.replace(/\b(href|action|formaction|src)="([^"]*)"/g,(_,attr,value)=>attr+'="'+copyUrl(value,id).replaceAll('&','&amp;')+'"');
-    body=body.replace('<title>','<title>Working copy · ').replace('</head>','<script src="/account-working-copy.js"></script></head>');
+    body=body.replace('<title>','<title>Working copy · ').replace('</head>','<meta name="account-copy-access" content="'+encodeURIComponent(JSON.stringify(access))+'"><script src="/account-working-copy.js"></script></head>');
     res.setHeader('Content-Security-Policy',"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'self'");
    }else if(json&&typeof body==='string'){
     const data=JSON.parse(body);if(data.previewUrl)data.previewUrl=copyUrl(data.previewUrl,id);body=JSON.stringify(data);

@@ -25,7 +25,9 @@ test('working copy saves and reloads edits without modifying the live record',as
  const save={method:'POST',payload:{item:'article:one',expected:1,document:{id:'article:one',kind:'article',title:'Copy edit'}}};
  assert.equal((await copy.api('/rest/v1/rpc/nufi_studio_save',save))[0].revision,2);
  assert.equal(f.rows.get('article:one').payload.title,'Original');
+ await accountPreview({staff,accessVersion:'1',access_work:'1',accountPreviewId:id},{actor:owner,api:f.api});
  copy=await workingCopy(f.api,owner,id);
+ assert.equal(copy.actor.access.library,false);assert.equal(copy.actor.access.work,true);
  const [saved]=await copy.api('/rest/v1/nufi_studio_items?select=*&id=eq.article:one');assert.equal(saved.payload.title,'Copy edit');
  assert.deepEqual(await copy.api('/rest/v1/rpc/nufi_studio_save',save),[]);
  assert.ok(f.writes.every(([,p])=>p.item.startsWith('studio:account-preview:')));

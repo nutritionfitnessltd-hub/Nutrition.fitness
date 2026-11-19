@@ -231,12 +231,13 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
     if(!copyActor&&await requireLibraryNda(req,res,{actor,api,params}))return;
     if(params.has('accountPreview')){
       const id=params.get('accountPreview'),copy=await workingCopy(api,actor,id);
+      if(req.method==='GET'&&params.get('copyStatus')==='1')return json(200,{access:copy.actor.access});
       if(req.method==='POST'&&f.action==='work-logout'){res.statusCode=200;res.setHeader('Content-Type','text/html; charset=utf-8');return res.end('<!doctype html><title>Working copy closed</title><h1>Working copy closed</h1><p>You can close this window. Your administrator account is still signed in.</p>');}
       // No external writes, account changes or paid generation from a copy.
       if(req.method==='POST'&&!['content-save','content-comment','content-review','workout-inline-save','workout-days-save','project-save','task-save','task-add','task-attach','update','content-create','import-preview','import-save'].includes(f.action))return writePage(copyResponse(res,id),403,'<p role="alert">This action is unavailable in the working copy.</p>',copy.actor,'home');
       const safeEnv=Object.fromEntries(['NUFI_LIBRARY_CATALOGUE_KEY','SUPABASE_URL','SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY','SITE_URL'].filter(k=>env[k]).map(k=>[k,env[k]]));
       const next=new URLSearchParams(params);next.delete('accountPreview');
-      return handleLibraryWork(req,copyResponse(res,id),{env:safeEnv,load,params:next,apiFactory:()=>copy.api,copyActor:copy.actor,fetcher:async()=>{throw new HttpError(403,'External actions are unavailable in the working copy.');}});
+      return handleLibraryWork(req,copyResponse(res,id,copy.actor.access),{env:safeEnv,load,params:next,apiFactory:()=>copy.api,copyActor:copy.actor,fetcher:async()=>{throw new HttpError(403,'External actions are unavailable in the working copy.');}});
     }
     if(studio==='nda'){
       const page=await ndaAdminScreen(req,res,{actor,api,params});

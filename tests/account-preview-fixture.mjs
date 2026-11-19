@@ -13,6 +13,7 @@ const payload=Buffer.from(JSON.stringify({role:'admin',id:admin,expires:Math.flo
 const cookie='__Host-nufi-library-work='+payload+'.'+createHmac('sha256',key).update('library-work:v1:'+payload).digest('base64url');
 const api=async(endpoint,options={})=>{
  if(options.method&&options.method!=='GET'){
+  if(endpoint.includes('nufi_library_staff')&&options.method==='PATCH'&&options.payload.access){Object.assign(person,options.payload);return [structuredClone(person)];}
   if(!endpoint.includes('rpc/nufi_studio_save')||!options.payload.item.startsWith('studio:account-preview:'))throw Error('Fixture refuses live writes');
   const p=options.payload,current=items.get(p.item);if((current?.revision||0)!==p.expected)return [];
   const row={id:p.item,payload:structuredClone(p.document),revision:p.expected+1};items.set(p.item,row);return [structuredClone(row)];
@@ -37,4 +38,4 @@ http.createServer(async(req,res)=>{
   const file=path.resolve(root,'.'+decodeURIComponent(u.pathname));if(!file.startsWith(root+path.sep))throw Error('Invalid path');
   res.setHeader('Content-Type',file.endsWith('.css')?'text/css':file.endsWith('.js')||file.endsWith('.mjs')?'text/javascript':'application/octet-stream');res.end(await fs.readFile(file));
  }catch{res.statusCode=404;res.end('Fixture file unavailable');}
-}).listen(4305,'127.0.0.1',()=>console.log('Account working copy fixture ready'));
+}).listen(Number(process.env.NUFI_PREVIEW_FIXTURE_PORT||4305),'127.0.0.1',()=>console.log('Account working copy fixture ready'));
