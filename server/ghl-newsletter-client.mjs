@@ -28,7 +28,7 @@ export function ghlClient(token,fetcher=fetch){
  return {
   check:()=>request(root+'?limit=1&offset=0'),
   get:id=>request(root+'/'+identifier(id)+'?includeContent=true'),
-  create:(body,key)=>{draftBody(body);return request(root,'POST',{name:body.name,editorType:body.editorType,editorContent:body.editorContent},key);},
+  create:(body,key)=>{draftBody(body);return request(root,'POST',{name:body.name,editorType:body.editorType,editorContent:body.editorContent,timeZone:'Europe/London',userId:'VtrBsN7SziGONhU1eYTB',userName:'James Calam'},key);},
   update:(id,body)=>request(root+'/'+identifier(id),'PATCH',draftBody(body)),
   upload:async(source,name)=>{
    const body=new FormData();body.set('name',name);
