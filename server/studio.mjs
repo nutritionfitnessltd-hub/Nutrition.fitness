@@ -2,6 +2,7 @@ import {changeSoftwareRelease,softwareReleaseErrorForm} from './software-release
 import {generateIdeaSummary} from './studio-idea-ai.mjs';
 import {hqRequest} from './studio-hq.mjs';
 import { shinyThingsPage, changeShinyThing, ideaProjectPage } from './studio-shiny-things.mjs';
+import {loadProjectProductionDates} from './studio-project-progress.mjs';
 import {workerIdeaSummaries} from './studio-ideas.mjs';
 import {workerChatPage,changeHq} from './studio-hq.mjs';
 import { assetsPage, brandMediaPage, workspaceArchive, softwareReleases, saveSoftwareRelease } from './team-workspace.mjs';
@@ -223,7 +224,11 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       case 'worker-chat':body=await workerChatPage(params,data,env,fetcher);break;
       case 'worker-requests':body=workerRequestsPage(params,data);break;
       case 'projects':body=projectList(params,data);break;
-      case 'project':body=data.projects.find(p=>p.id===params.get('project'))?.studio?.ideaId?ideaProjectPage(params,data):projectPage(params,data);break;
+      case 'project':{
+        const project=data.projects.find(p=>p.id===params.get('project'));
+        await loadProjectProductionDates(api,project,data);
+        body=project?.studio?.ideaId?ideaProjectPage(params,data,meta||{}):projectPage(params,data);break;
+      }
       case 'item':body=itemPage(params,data);if(data.byId.has(params.get('id')))body+=publicationPanel(data.byId.get(params.get('id')),data);break;
       case 'new':body=newItem(params,data);break;
       case 'team-work':body=teamWorkPage(params,data);break;

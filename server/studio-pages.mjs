@@ -1,4 +1,5 @@
 import { imageCaption } from './knowledge-article.mjs';
+import {projectProductionSummary} from './studio-project-progress.mjs';
 import { workerNames, workerContent } from './studio-worker-content.mjs';
 import { canReadContent, canReviewContent, canAccess, canEditContent } from './library-permissions.mjs';
 import { canEditDays, workoutDaysEditor } from './studio-workout-days.mjs';
@@ -136,7 +137,7 @@ export function projectList(params,data){
   const projectKind=p=>data.byId.get(p.studio?.rootId)?.kind||templates[p.studio?.type]?.kind||'other';
   const selected=data.projects.filter(p=>!kind||projectKind(p)===kind);
   return heading(kind?(categories[kind]?.[0]||'All')+' projects':'Projects','',data.actor.role==='admin'?button('Create a project',url('create',{project:'1'}),true):'')+
-    pages(params,selected,rows=>list(rows,p=>'<div><a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a><small>'+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+' · '+p.weeks+' weeks'+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</small></div>'+badge(p.status),'No projects of this type yet.'));
+    pages(params,selected,rows=>list(rows,p=>'<div><a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a><small>'+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+(p.studio.productionTracking?'':' · '+p.weeks+' weeks')+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</small>'+projectProductionSummary(p,data)+'</div>'+badge(p.status),'No projects of this type yet.'));
 }
 export function projectPage(params,data){
   const p=projectFor(data,params.get('project')),week=Math.max(0,Math.min(p.weeks,Number(params.get('week'))||0)),admin=data.actor.role==='admin';

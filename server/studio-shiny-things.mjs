@@ -4,6 +4,7 @@ import {cleanText} from './studio-model.mjs';
 import {canAccess} from './library-permissions.mjs';
 import {saveRecord} from './studio-store.mjs';
 import {hqRequest} from './studio-hq.mjs';
+import {projectProductionPanel} from './studio-project-progress.mjs';
 import {esc,url,heading,button,form,hidden,input,textarea,select,list,badge} from './studio-ui.mjs';
 
 const prefix='studio:idea:';
@@ -123,18 +124,19 @@ export async function changeShinyThing(params,f,data,api,env,fetcher=fetch){
   await saveRecord(api,data.actor,next,revision);return f.action==='idea-save'?{section:'shiny-things'}:done;
 }
 
-export function ideaProjectPage(params,data){
+export function ideaProjectPage(params,data,meta={}){
   const p=data.projects.find(p=>p.id===params.get('project'));
   if(!p)throw new HttpError(404,'This project is unavailable.');
   const owner=data.people.find(person=>person.id===p.creator_id)?.name||'Assigned owner',isAdmin=data.actor.role==='admin';
-  if(!canAccess(data.actor,'edit'))return heading(p.name,p.brief,button('All projects',url('projects')))+'<p>'+esc(owner)+' · '+esc(p.status)+'</p>'+list(p.entries,e=>'<div><h3>'+esc(e.title)+'</h3><p class="prose">'+esc(e.notes||'')+'</p></div>'+badge(e.status));
+  const canEdit=canAccess(data.actor,'edit');
   const base=hidden('projectRevision',p.revision),state={section:'project',project:p.id};
-  return heading(p.name,p.brief,button('All projects',url('projects'))+(isAdmin?button('Original idea',url('shiny-things',{id:p.studio.ideaId}))+button('Message Morgan',url('worker-chat',{worker:'morgan'})):''))+
-    '<p>'+esc(owner)+' · '+esc(p.status)+' · Project Manager: Morgan</p>'+
+  return '<div class="project-dashboard">'+heading(p.name,'',button('All projects',url('projects'))+(isAdmin?button('Message Morgan',url('worker-chat',{worker:'morgan'})):''))+
+    '<div class="project-meta">'+badge(p.status)+'<span>Owner: '+esc(owner)+'</span><span>Project manager: Morgan</span><details><summary>Project brief</summary><p class="prose">'+esc(p.brief)+'</p>'+(isAdmin?'<a href="'+url('shiny-things',{id:p.studio.ideaId})+'">Original idea</a>':'')+'</details></div>'+
+    projectProductionPanel(p,data,meta)+
     (p.studio.overlap?'<section class="panel"><h2>Related work</h2><p class="prose">'+esc(p.studio.overlap)+'</p></section>':'')+
     (p.studio.questions?'<section class="panel"><h2>Open questions & assumptions</h2><p class="prose">'+esc(p.studio.questions)+'</p></section>':'')+
-    '<section class="panel"><h2>Tasks & milestones</h2>'+list(p.entries,e=>'<div><h3>'+esc(e.title)+'</h3><small>'+esc([e.milestone||e.kind==='Milestone'?'Milestone':'Task','Week '+e.week,e.due,e.worker?'Suggested: '+e.worker:''].filter(Boolean).join(' · '))+'</small><p class="prose">'+esc(e.notes||'')+'</p>'+
-      form('task-save',base+hidden('entry',e.id)+input('title','Task',e.title)+textarea('notes','Brief and progress notes',e.notes||'')+input('week','Week',e.week,'number','min="0" max="'+p.weeks+'"')+input('due','Due date',e.due||'','date')+select('status','Progress',Object.fromEntries((isAdmin?['To do','In progress','Ready for review','Changes requested','Done']:['To do','In progress','Ready for review','Changes requested']).map(s=>[s,s])),e.status),state,'Update task')+'</div>'+badge(e.status),'No tasks yet.')+'</section>'+
-    '<details class="panel"><summary>Add task or milestone</summary>'+form('task-add',base+input('title','What needs doing?','','text','required maxlength="160"')+select('kind','Type',{'Project task':'Task',Milestone:'Milestone'})+textarea('notes','Brief and acceptance criteria'),state,'Add work')+'</details>'+
-    '<details class="panel"><summary>Project details</summary>'+form('project-save',base+(isAdmin?input('name','Project name',p.name)+select('creator','Owner',Object.fromEntries(data.people.map(person=>[person.id,person.name])),p.creator_id):'')+textarea('brief','Outcome and scope',p.brief)+input('launch','Target date',p.studio.launchDate||'','date')+select('status','Status',Object.fromEntries((isAdmin?['Planning','In progress','Ready for review','Complete']:['Planning','In progress','Ready for review']).map(s=>[s,s])),p.status),state,'Save project')+'</details>';
+    '<section class="project-task-panel"><div class="project-section-heading"><h2>Tasks & milestones</h2><small>'+p.entries.filter(e=>e.status==='Done').length+' / '+p.entries.length+' tasks done</small></div>'+p.entries.map(e=>'<details class="project-task-row"><summary><span><strong>'+esc(e.title)+'</strong><small>'+esc([e.milestone||e.kind==='Milestone'?'Milestone':'',e.week?'Week '+e.week:'',e.due].filter(Boolean).join(' · '))+'</small></span>'+badge(e.status)+'</summary><p class="prose">'+esc(e.notes||'')+'</p>'+
+      (canEdit?form('task-save',base+hidden('entry',e.id)+input('title','Task',e.title)+textarea('notes','Brief and progress notes',e.notes||'',3)+'<div class="project-task-fields">'+input('week','Week',e.week,'number','min="0" max="'+p.weeks+'"')+input('due','Due date',e.due||'','date')+select('status','Progress',Object.fromEntries((isAdmin?['To do','In progress','Ready for review','Changes requested','Done']:['To do','In progress','Ready for review','Changes requested']).map(s=>[s,s])),e.status)+'</div>',state,'Update task'):'')+'</details>').join('')+'</section>'+
+    (canEdit?'<div class="project-settings"><details class="panel"><summary>Add task or milestone</summary>'+form('task-add',base+input('title','What needs doing?','','text','required maxlength="160"')+select('kind','Type',{'Project task':'Task',Milestone:'Milestone'})+textarea('notes','Brief and acceptance criteria'),state,'Add work')+'</details>'+
+    '<details class="panel"><summary>Project settings</summary>'+form('project-save',base+(isAdmin?input('name','Project name',p.name)+select('creator','Owner',Object.fromEntries(data.people.map(person=>[person.id,person.name])),p.creator_id):'')+textarea('brief','Outcome and scope',p.brief)+input('launch','Target date',p.studio.launchDate||'','date')+select('status','Status',Object.fromEntries((isAdmin?['Planning','In progress','Ready for review','Complete']:['Planning','In progress','Ready for review']).map(s=>[s,s])),p.status),state,'Save project')+'</details></div>':'')+'</div>';
 }
