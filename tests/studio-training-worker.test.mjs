@@ -9,7 +9,7 @@ const fixture=()=>({actor:{role:'admin',id:randomUUID()},index:{records:[source]
 
 test('programme and workout requests use the training worker and open the programme archive',()=>{
  const d=fixture();assert.deepEqual(suggestedOutputs({group:'Programs'}),['programme','workout']);
- const home=workspaceDashboard(d);assert.match(home,/<h3>Marcus<\/h3>/);assert.match(home,/build=programme[^>]*>Plan work for Marcus/);
+ assert.doesNotMatch(workspaceDashboard(d),/<h3>Marcus<\/h3>/);
  for(const build of ['programme','workout']){
   const selection=builderPage(new URLSearchParams({build}),d);assert.match(selection,/value="Programs" selected/);assert.match(selection,/Starter strength programme/);
   const brief=builderPage(new URLSearchParams({build,source:source.id}),d);assert.match(brief,/Suggested worker: Marcus/);assert.match(brief,/goal, experience level, equipment, days per week and session length/);
@@ -24,7 +24,7 @@ test('training plan save retains source evidence, Marcus identity and draft-only
  assert.equal(saved.fields.state,'prepared');assert.equal(saved.status,'Draft');assert.equal(saved.fields.production,null);
  assert.deepEqual(saved.fields.outputs.map(o=>o.worker),['marcus','marcus']);assert.ok(saved.fields.outputs.every(o=>o.employeeId===workers.marcus.employeeId));
  assert.equal(saved.fields.sources[0].text,source.fields.body);assert.match(saved.fields.constraints,/drafts for James/);assert.match(saved.fields.constraints,/Do not publish/);
- d.byId.set(saved.id,saved);const home=workspaceDashboard(d);assert.match(home,/2 planned · not started/);assert.match(home,/What Marcus will do/);
+ d.byId.set(saved.id,saved);const home=workspaceDashboard(d);assert.match(home,/2 planned · not started/);assert.match(home,/What Marcus will do/);assert.match(home,/<h3>Marcus<\/h3>/);assert.match(home,/build=programme[^>]*>Plan work for Marcus/);
 });
 
 test('training worker is available as an override without reassigning course or content roles',()=>{

@@ -25,9 +25,30 @@ test('dashboard is the first navigation item and shows only the signed-in person
 test('worker cards derive plans from saved assignments and never invent activity; staff cannot see private plans',()=>{
  const d=fixture();d.byId.set('request',{id:'request',kind:'worker-request',title:'Source <script>',fields:{state:'prepared',outputs:[{type:'newsletter',title:'Member newsletter',worker:'imogen',workerName:'Imogen',brief:'Read the source, then draft it.'}]}});
  const html=workspaceDashboard(d);
- assert.match(html,/1 planned · not started/);assert.match(html,/What Imogen will do/);assert.match(html,/Source &lt;script&gt;/);assert.match(html,/No work planned/);assert.doesNotMatch(html,/In progress|Completed today|<script>/);
+ assert.match(html,/1 planned · not started/);assert.match(html,/What Imogen will do/);assert.match(html,/Source &lt;script&gt;/);assert.doesNotMatch(html,/No work planned|In progress|Completed today|<script>/);
+ assert.equal((html.match(/class="dashboard-worker worker-/g)||[]).length,1);assert.match(html,/href="#workers-title"><strong>1<\/strong><span>AI workers with updates/);
  const nina=workerRequestsPage(new URLSearchParams({worker:'nina'}),d);assert.doesNotMatch(nina,/Source &lt;script&gt;/);
  d.actor.role='staff';assert.doesNotMatch(workspaceDashboard(d),/AI workers|Source &lt;script&gt;|Member newsletter/);
+});
+
+test('an empty dashboard hides the workers section and overview link while keeping its live refresh target',()=>{
+ const d=fixture();d.items=[{id:'archived',title:'Old content',kind:'article',workerId:'imogen',status:'Archived'}];
+ d.byId.set('archived-request',{id:'archived-request',kind:'worker-request',status:'Archived',fields:{outputs:[{worker:'marcus',title:'Old plan'}]}});
+ const html=workspaceDashboard(d);
+ assert.doesNotMatch(html,/AI workers|workers-title|dashboard-worker worker-|No work planned|first proposal|Old plan|Old content/);
+ assert.match(html,/<div data-worker-updates="cards" hidden><\/div>/);
+ assert.match(html,/My open tasks|For my review/);
+});
+
+test('a saved idea makes its worker visible without draft content, while declined and superseded ideas stay out',()=>{
+ const d=fixture();d.hqIdeas={alex:{title:'An offer <proposal>',state:'pending'},andy:{title:'Declined campaign',state:'rejected'},martina:{title:'Replaced theme',state:'superseded'}};
+ let html=workspaceDashboard(d);
+ assert.match(html,/dashboard-worker worker-alex/);assert.match(html,/An offer &lt;proposal&gt;/);assert.match(html,/Awaiting your approval/);
+ assert.doesNotMatch(html,/dashboard-worker worker-(andy|martina|ellis)|Declined campaign|Replaced theme|first proposal|No work planned/);
+ for(const state of ['scoping','scoped','active','done']){
+  d.hqIdeas.alex.state=state;assert.match(workspaceDashboard(d),/dashboard-worker worker-alex/);
+ }
+ d.hqIdeas.alex.state='rejected';html=workspaceDashboard(d);assert.doesNotMatch(html,/AI workers|workers-title/);
 });
 test('dashboard reviews and worker approvals open the reading window, with draft editing kept separate',()=>{
  const d=fixture(),review={id:'worker:review',title:'Review this article',kind:'article',status:'In review',workerId:'nina',fields:{}},draft={...review,id:'worker:draft',title:'Edit this draft',status:'Draft'};

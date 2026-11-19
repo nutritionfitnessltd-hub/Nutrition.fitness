@@ -29,11 +29,10 @@ test('worker library keeps scope across status tabs, search and pagination',()=>
 });
 test('approved Nina content leaves her dashboard card but stays in her checked library',()=>{
  const d=fixture(),nina=d.byId.get('nina');nina.status='Approved';
- let html=workspaceDashboard(d),card=html.split('dashboard-worker worker-nina"')[1].split('</article>')[0];
- assert.doesNotMatch(card,/>nina content<|1 content items/);assert.match(card,/No unfinished content/);
+ let html=workspaceDashboard(d);assert.doesNotMatch(html,/dashboard-worker worker-nina|No unfinished content/);
  assert.match(library(new URLSearchParams({worker:'nina',bucket:'checked'}),d),/nina content/);
  assert.equal(workerContent(d,'nina').length,1,'Approval must not remove the saved content');
- nina.status='Changes requested';html=workspaceDashboard(d);card=html.split('dashboard-worker worker-nina"')[1].split('</article>')[0];
+ nina.status='Changes requested';html=workspaceDashboard(d);const card=html.split('dashboard-worker worker-nina"')[1].split('</article>')[0];
  assert.match(card,/>nina content</);assert.match(card,/1 drafts/);
 });
 test('attribution respects explicit choices, inherited work and legacy Nina articles without claiming manual content',()=>{
