@@ -68,7 +68,7 @@ test('open copies update selected permissions and follow subsequently saved acce
 
 test('admin opens a navigable working copy with selected permissions without changing the account',async()=>{
  const f=fixture({library:true,work:false}),body={action:'save-access',previewAccount:'yes',staff:f.person.id,accessRevision:'1',accessVersion:'1',access_work:'1',access_edit:'1'};
- const team=await f.request({studio:'team'},admin);
+ const team=await f.request({studio:'team',person:f.person.id},admin);
  assert.match(team.body,/data-account-preview/);assert.match(team.body,/formtarget="_blank"/);assert.match(team.body,/studio=account-preview/);
  const result=await f.request({studio:'account-preview'},admin,body);
  assert.equal(result.statusCode,303);
@@ -140,8 +140,8 @@ test('administrator saves access with conflict protection and revocation affects
   assert.equal((await f.request({assignments:'1'},f.person,{action:'update',id:randomUUID(),revision:'1',status:'In progress'},existing)).statusCode,403);
   assert.equal((await f.request({studio:'team'},admin,form)).statusCode,409);
   assert.equal(f.person.access_revision,2);
-  const page=(await f.request({studio:'team'},admin)).body;
-  for(const label of ['Set access for Test creator','Content library','AI drafting','Save access'])assert.ok(page.includes(label));
+  const page=(await f.request({studio:'team',person:f.person.id},admin)).body;
+  for(const label of ['Manage access & login','Content library','AI drafting','Save access'])assert.ok(page.includes(label));
   f.person.code_hash=null;
   assert.equal((await f.request({studio:'home'},f.person,null,existing)).statusCode,401);
 });
@@ -160,4 +160,13 @@ test('restricted menus and dashboard omit disabled features; reading does not ex
   assert.doesNotMatch(edit,/id="studio-editor"|Draft with AI/);
   data.projects=[{id:'project',name:'Read-only project',brief:'Read this',status:'In progress',weeks:4,entries:[{week:1,title:'Write something',notes:'Test',status:'To do'}]}];
   assert.doesNotMatch(projectPage(new URLSearchParams({project:'project'}),data),/Update task|Add work|project-save/);
+});
+
+test('team role details save through the authenticated profile route without changing access',async()=>{
+ const f=fixture({library:true}),original=structuredClone(f.person.access);
+ const fields={action:'team-profile-save',staff:f.person.id,revision:'0',role:'Content reviewer',responsibilities:'Review assigned work',reportsTo:'Workspace owner'};
+ assert.equal((await f.request({studio:'team'},f.person,fields)).statusCode,403);
+ const saved=await f.request({studio:'team'},admin,fields);assert.equal(saved.statusCode,303);assert.match(saved.headers.Location,/person=/);
+ const profile=await f.request({studio:'team',person:f.person.id},admin);assert.match(profile.body,/Content reviewer/);assert.match(profile.body,/Review assigned work/);
+ assert.deepEqual(f.person.access,original);assert.equal((await f.request({studio:'team'},admin,fields)).statusCode,409);
 });
