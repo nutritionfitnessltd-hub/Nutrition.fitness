@@ -11,7 +11,7 @@ const stamp=value=>value?new Date(value).toLocaleDateString('en-GB',{day:'numeri
 
 export function teamWorkRows(data){
   const admin=data.actor.role==='admin',rows=[],linked=new Set();
-  const person=id=>({owner:'person:'+id,ownerName:data.people.find(p=>p.id===id)?.name||(id===data.actor.id?data.actor.name:'Assigned team member'),type:'people'});
+  const person=id=>({owner:'person:'+id,ownerName:data.people.find(p=>p.id===id)?.name||(id===data.actor.id?data.actor.name||(admin?'Administrator':'You'):'Assigned team member'),type:'people'});
   const worker=id=>({owner:'worker:'+id,ownerName:workerNames[id],type:'ai'});
   const projects=data.projects.filter(p=>admin||canAccess(data.actor,'work')&&p.creator_id===data.actor.id);
   const projectOf=id=>projects.find(p=>p.studio?.allowedIds?.includes(id)||p.entries?.some(e=>e.record===id));
@@ -22,7 +22,7 @@ export function teamWorkRows(data){
     const w=contentWorker(r,data.byId),task=tasks.find(t=>t.record_id===r.id),project=projectOf(r.id);
     // Imported reference content is not active work until attributed, assigned or submitted.
     if(!w&&!task&&!project&&!['In review','Changes requested'].includes(r.status)&&!r.updatedAt)continue;
-    const owner=task?person(task.staff_id):w?worker(w):project?person(project.creator_id):{owner:'unassigned',ownerName:'Unassigned',type:'people'};
+    const owner=task?person(task.staff_id):w?worker(w):project?person(project.creator_id):{owner:'unassigned',ownerName:admin?'Unassigned':'Team submission',type:'people'};
     const review=canReviewContent(data,r)&&r.status==='In review';
     recordRows.set(r.id,{id:'content:'+r.id,recordId:r.id,title:r.title,...owner,project:project?.id||'',projectName:project?.name||'',
       state:stateFor(r.status),status:r.status,updated:date(r.updatedAt||r.workerSource?.receivedAt),due:task?.due_date||'',
@@ -47,7 +47,7 @@ export function teamWorkRows(data){
     }
     for(const [id,idea] of Object.entries(data.hqIdeas||{}))if(idea?.title?.trim()&&!['rejected','superseded'].includes(idea.state))rows.push({id:'idea:'+id,title:idea.title,...worker(id),project:'',projectName:'Daily ideas',state:stateFor(idea.state),status:({pending:'Awaiting your approval',scoped:'Scope ready',scoping:'Preparing scope',active:'Plan in progress',done:'Completed'})[idea.state]||'Requested',updated:date(idea.updatedAt||idea.createdAt),note:'Idea & plan update',href:url('worker-chat',{worker:id}),action:'Open idea'});
   }
-  for(const f of data.reviewHistory||[])rows.push({id:'review:'+f.id,title:f.title,...person(f.authorId||data.actor.id),project:'',projectName:'Review history',state:'completed',status:f.decision==='approve'?'Approved':'Changes requested',updated:date(f.at),note:'Reviewed version '+f.reviewedRevision,href:url('review-history',{id:f.recordId,review:f.id}),action:'Read review'});
+  for(const f of data.reviewHistory||[])rows.push({id:'review:'+f.id,title:f.title,...person(f.authorId||data.actor.id),ownerName:f.author||person(f.authorId||data.actor.id).ownerName,project:'',projectName:'Review history',state:'completed',status:f.decision==='approve'?'Approved':'Changes requested',updated:date(f.at),note:'Reviewed version '+f.reviewedRevision,href:url('review-history',{id:f.recordId,review:f.id}),action:'Read review'});
   return rows.sort((a,b)=>b.updated.localeCompare(a.updated)||a.title.localeCompare(b.title));
 }
 function workList(rows){
