@@ -1,6 +1,6 @@
-import { requireAccess } from './library-permissions.mjs';
+import { requireAccess, canReadContent, canReviewContent, reviewsKind } from './library-permissions.mjs';
 import { HttpError } from './platform.mjs';
-import { canonical, descendants } from './studio-model.mjs';
+import { canonical, descendants, references } from './studio-model.mjs';
 
 const service={service:true};
 export const itemTable='/rest/v1/nufi_studio_items';
@@ -42,7 +42,33 @@ export async function studioData(api,actor,load){
       }
     }
   }
-  return {index,items,byId:records,projects,tasks,people,releases,assigned,actor};
+  const data={index,items,byId:records,projects,tasks,people,releases,assigned,actor};
+  data.reviewHistory=items.flatMap(r=>(r.reviewFeedback||[]).filter(f=>['approve','changes'].includes(f.decision)&&
+    (actor.role==='admin'||f.authorId===actor.id&&reviewsKind(actor,r.kind))).map(f=>({
+      ...f,recordId:r.id,title:f.reviewedTitle||r.title,kind:r.kind
+    })));
+  if(actor.role!=='admin'){
+    // A submission may cite already approved exercises, recipes or lessons.
+    // These are reading dependencies, never additional editing/review grants.
+    data.reviewSupport=new Set();
+    const queue=items.filter(r=>canReviewContent(data,r));
+    while(queue.length){
+      for(const id of references(queue.pop(),records)){
+        const linked=records.get(id);
+        if(linked?.status==='Approved'&&!data.reviewSupport.has(id)){
+          data.reviewSupport.add(id);queue.push(linked);
+        }
+      }
+    }
+    data.items=items.filter(r=>canReadContent(data,r));
+    data.byId=new Map(data.items.map(r=>[r.id,r]));
+  }
+  return data;
+}
+export function readable(data,id){
+  const r=data.byId.get(id);
+  if(!canReadContent(data,r))throw new HttpError(403,'This item is outside your assigned work or review responsibilities.');
+  return r;
 }
 export function editable(data,id){
   if(data.actor.role!=='admin'&&!data.assigned.has(id))throw new HttpError(403,'This item is outside your assigned work.');

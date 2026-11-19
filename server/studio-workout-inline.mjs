@@ -1,4 +1,5 @@
 import { HttpError } from './platform.mjs';
+import { editable } from './studio-store.mjs';
 import { changeStudio } from './studio-actions.mjs';
 import { editorFields, referenceData } from './studio-editor.mjs';
 import { esc, url, hidden } from './studio-ui.mjs';
@@ -14,7 +15,7 @@ export function inlineWorkoutForm(session, data, dayName) {
 }
 
 export async function saveInlineWorkout(params, f, data, api) {
-  const record = data.byId.get(params.get('id'));
+  const record = editable(data,params.get('id'));
   if (record?.kind !== 'session' || record.status === 'Archived') throw new HttpError(400,'Choose an active workout.');
   // Use the same validation, permissions and revision-checked save as the full editor.
   const result = await changeStudio(params,{...f,action:'content-save',intent:'draft'},data,api,{returnRecord:true});

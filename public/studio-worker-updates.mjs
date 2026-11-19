@@ -1,6 +1,6 @@
 export function startWorkerUpdates({doc=document,win=window,fetcher=fetch,Parser=DOMParser}={}){
  const url=new URL(win.location.href),section=url.searchParams.get('studio')||'home';
- if(!['home','library','worker-chat'].includes(section)||!doc.querySelector('[data-worker-updates]'))return;
+ if(!['home','library','worker-chat','team-work'].includes(section)||!doc.querySelector('[data-worker-updates]'))return;
  let busy=false;
  const update=async()=>{
   if(section==='worker-chat'&&[...doc.querySelectorAll('.worker-ideas textarea')].some(x=>x.value))return;

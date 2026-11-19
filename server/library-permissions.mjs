@@ -9,11 +9,20 @@ export const accessOptions = [
   ['ai', 'AI drafting', 'Generate drafts and images using the connected AI account. Requires Content library and editing.'],
   ['sources', 'Open original files & links', 'Open archive downloads and assigned Canva, Drive and other source links. Requires Originals.']
 ];
-export const defaultAccess = Object.freeze(Object.fromEntries(accessOptions.map(([key]) => [key, true])));
-const keys = new Set(accessOptions.map(([key]) => key));
+export const reviewOptions = [
+  ['review_articles', 'Articles', ['article']],
+  ['review_food', 'Recipes & meal plans', ['recipe', 'mealplan']],
+  ['review_training', 'Training programmes & workouts', ['programme','stage','structure','session','exercise','activity','rule','review']],
+  ['review_courses', 'Courses & lessons', ['course','lesson','learning']],
+  ['review_books', 'Books & guides', ['ebook','leadmagnet']],
+  ['review_challenges', 'Challenges', ['challenge']],
+  ['review_marketing', 'Messages, marketing & creative assets', ['communication','campaign','workflow','asset']]
+];
+export const defaultAccess = Object.freeze(Object.fromEntries([...accessOptions.map(([key]) => [key, true]), ...reviewOptions.map(([key]) => [key, false])]));
+const keys = new Set(Object.keys(defaultAccess));
 export function accessFor(actor) {
   // NULL is the migration-compatible legacy setting. Invalid saved values fail closed.
-  if (actor?.role === 'admin') return { ...defaultAccess };
+  if (actor?.role === 'admin') return Object.fromEntries([...keys].map(key=>[key,true]));
   if (actor?.role !== 'staff') return {};
   const raw = actor.access == null ? defaultAccess : actor.access;
   const access = Object.fromEntries([...keys].map(key => [key, raw?.[key] === true]));
@@ -28,6 +37,11 @@ export function requireAccess(actor, ...keys) {
 }
 export const canEditContent = (data, id) => data.actor.role === 'admin' ||
   (canAccess(data.actor, 'library') && canAccess(data.actor, 'edit') && data.assigned.has(id));
+export const reviewsKind = (actor, kind) => actor?.role === 'admin' ||
+  (canAccess(actor,'library') && canAccess(actor,'work') && reviewOptions.some(([key,,kinds])=>kinds.includes(kind)&&canAccess(actor,key)));
+export const canReviewContent = (data, record) => Boolean(record) && (data.actor.role === 'admin' ||
+  (record.status === 'In review' && reviewsKind(data.actor,record.kind)));
+export const canReadContent = (data, record) => Boolean(record) && (data.actor.role === 'admin' || data.assigned.has(record.id) || canReviewContent(data,record) || data.reviewSupport?.has(record.id) || data.reviewedNow === record.id);
 
 export function accessFromForm(fields) {
   if (fields.accessVersion !== '1') throw new HttpError(400, 'Reopen the team settings before saving access.');
@@ -37,7 +51,7 @@ export function accessFromForm(fields) {
 }
 
 const routes = {
-  home: [], assets: [], 'brand-media': ['library'], 'workspace-archive': [], library: ['library'], exercises: ['library'], item: ['library'], history: ['library'],
+  home: [], 'team-work': [], assets: [], 'brand-media': ['library'], 'workspace-archive': [], library: ['library'], exercises: ['library'], item: ['library'], history: ['library'], 'review-history': ['work','library'],
   'book-file': ['library'], 'article-image': ['library'], 'article-preview': ['library'], 'mealplan-image': ['library'],
   archive: ['originals'], create: ['studio'], new: ['studio'], import: ['studio', 'originals'],
   builder: ['studio'], 'worker-requests': ['studio'], projects: ['work'], project: ['work'],
@@ -45,6 +59,7 @@ const routes = {
   release: ['work', 'library'], export: ['work', 'library']
 };
 const actions = {
+  'review-decision': ['work', 'library'], 'review-retry': ['work', 'library'],
   'content-save': ['library', 'edit'], 'content-comment': ['library', 'edit'],
   'content-review': ['library', 'edit'], 'workout-inline-save': ['library', 'edit'],
   'workout-days-save': ['library', 'edit'], 'content-create': ['studio', 'edit'],

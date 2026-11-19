@@ -11,7 +11,7 @@ function response(){return {statusCode:0,headers:{},setHeader(k,v){this.headers[
 test('simple navigation retains seven sections and only three Asset links',()=>{
   const html=studioNavigation('library',admin).html;
   assert.equal((html.match(/studio-nav-section/g)||[]).length,7);
-  assert.equal((html.match(/studio-subnav/g)||[]).length,1);
+  assert.equal((html.match(/studio-subnav/g)||[]).length,2);assert.match(html,/studio=team-work/);
   for(const label of ['Home','Projects','Assets','Software Releases','Team','Archive','Content Studio','Content Library','Brand & Media'])assert.ok(html.includes('>'+label+'<'));
 });
 test('new workspace destinations render through the authenticated handler',async()=>{

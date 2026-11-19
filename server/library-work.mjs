@@ -1,6 +1,6 @@
 import {teamWorkSnapshot,renderTeamPage,saveTeamProfile} from './studio-team.mjs';
 import {hqRequest} from './studio-hq.mjs';
-import { accessOptions, accessFor, accessFromForm, canAccess, requireAccess } from './library-permissions.mjs';
+import { reviewOptions, accessOptions, accessFor, accessFromForm, canAccess, requireAccess } from './library-permissions.mjs';
 import { createHash, createHmac, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 import { platform, membership, verifiedUser, cookies, email, uuid, HttpError } from './platform.mjs';
 import { signInProvisioned, consumePasswordAttempt } from './provisioned-login.mjs';
@@ -112,7 +112,7 @@ async function login(fields,res,api,env,key) {
 }
 function accessFields(access){
   const current=accessFor({role:'staff',access});
-  return field('accessVersion','1')+'<fieldset class="team-access"><legend>Access</legend><p class="meta">Tick what this person can use. Dashboard and their own signed agreement are always available. Approvals, publishing and Settings remain administrator-only.</p><div class="team-access-grid">'+accessOptions.map(([key,title,description])=>'<label class="team-access-option"><input type="checkbox" name="access_'+key+'" value="1"'+(current[key]?' checked':'')+'><span><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span></label>').join('')+'</div></fieldset>';
+  return field('accessVersion','1')+'<fieldset class="team-access"><legend>Access</legend><p class="meta">Tick what this person can use. Dashboard and their own signed agreement are always available. Review responsibilities are set separately below. Publishing and Settings remain administrator-only.</p><div class="team-access-grid">'+accessOptions.map(([key,title,description])=>'<label class="team-access-option"><input type="checkbox" name="access_'+key+'" value="1"'+(current[key]?' checked':'')+'><span><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span></label>').join('')+'</div></fieldset><fieldset class="team-access"><legend>Review responsibilities</legend><p class="meta">Allow this person to approve or request changes when these content types are submitted. Requires Content library and Work access. Other people’s drafts stay private.</p><div class="team-access-grid">'+reviewOptions.map(([key,title])=>'<label class="team-access-option"><input type="checkbox" name="access_'+key+'" value="1"'+(current[key]?' checked':'')+'><span><strong>'+esc(title)+'</strong><small>Review submitted work and retain your review history.</small></span></label>').join('')+'</div></fieldset>';
 }
 async function teamScreen(api,actor,origin,env,params=new URLSearchParams(),fetcher=fetch){
   if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
