@@ -26,7 +26,7 @@ export async function saveNewsletterConnection(f,data,api,env,fetcher=fetch){
  return {connected:true};
 }
 const sourcePath=id=>'/rest/v1/nufi_studio_items?select=id,payload,revision&id=eq.'+encodeURIComponent(id);
-export function canonicalGhlHtml(html){return html.replace(/<!--\s*outlook-fixes-applied\s*-->/g,'').replace(/<!--\[if mso\]><font\b[^>]*><!\[endif\]-->/g,'').replace(/<!--\[if mso\]><\/font><!\[endif\]-->/g,'');}
+export function canonicalGhlHtml(html){return html.replace(/<!--\s*outlook-fixes-applied\s*-->/g,'').replace(/<!--\[if mso\]><font\b[^>]*><!\[endif\]-->/g,'').replace(/<!--\[if mso\]><\/font><!\[endif\]-->/g,'').replace(/; mso-style-textfill-fill-color: #[a-fA-F0-9]{6};/g,'').replace(/<!--\[if mso\]><p style="margin:0;line-height:8px;mso-line-height-rule:exactly;font-size:8px;background:transparent;">&nbsp;<\/p><!\[endif\]-->/g,'');}
 const initialFingerprint=r=>digest([r.name,r.editorType,typeof r.editorContent==='string'?canonicalGhlHtml(r.editorContent):r.editorContent]);
 export function remoteFingerprint(r){
  if(r.editorType!=='html'||typeof r.editorContent!=='string')throw new HttpError(409,'The GHL email is no longer an HTML draft. Automatic updates are paused.');
