@@ -22,7 +22,7 @@ export function teamWorkRows(data){
     if(!admin&&!data.assigned.has(r.id)&&!canReviewContent(data,r))continue;
     const w=contentWorker(r,data.byId),task=tasks.find(t=>t.record_id===r.id),project=projectOf(r.id);
     // Imported reference content is not active work until attributed, assigned or submitted.
-    if(!w&&!task&&!project&&!['In review','Changes requested'].includes(r.status)&&!r.updatedAt)continue;
+    if(!w&&!task&&!project&&!['In review','Changes requested'].includes(r.status))continue;
     const owner=task?person(task.staff_id):w?worker(w):project?person(project.creator_id):{owner:'unassigned',ownerName:admin?'Unassigned':'Team submission',type:'people'};
     const review=canReviewContent(data,r)&&r.status==='In review';
     recordRows.set(r.id,{id:'content:'+r.id,recordId:r.id,title:r.title,...owner,project:project?.id||'',projectName:project?.name||'',
