@@ -1,4 +1,5 @@
 import {changeSoftwareRelease,softwareReleaseErrorForm} from './software-releases.mjs';
+import {generateIdeaSummary} from './studio-idea-ai.mjs';
 import {hqRequest} from './studio-hq.mjs';
 import { shinyThingsPage, changeShinyThing, ideaProjectPage } from './studio-shiny-things.mjs';
 import {workerIdeaSummaries} from './studio-ideas.mjs';
@@ -71,6 +72,11 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
   try{
     authorizeStudioRequest(actor,section,req.method,f,params);
     if(Buffer.byteLength(JSON.stringify(f))>1200000)throw new HttpError(413,'Import a smaller section of this document.');
+    if(req.method==='POST'&&f.action==='idea-generate-summary'){
+      if(section!=='shiny-things')throw new HttpError(403,'Open Shiny Things to generate an idea explanation.');
+      const summary=await generateIdeaSummary({actor,title:f.title,summary:f.summary,env,fetcher});
+      res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify({summary}));
+    }
     if(section==='brand-file')return await sendBrandFile(req,res,params,actor);
     if(section==='media'){
       if(req.method!=='GET')throw new HttpError(405,'Use GET to open a preview.');
@@ -249,6 +255,9 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(params.get('notification')==='pending')body='<p role="status">Your changes were saved, but an email needs attention. '+(actor.role==='admin'?button('Check email activity',url('connections')):'Please ask your administrator to check Connections.')+'</p>'+body;
     return write(res,200,body,section,actor,meta);
   }catch(error){
+    if(req.method==='POST'&&f.action==='idea-generate-summary'){
+      res.statusCode=error instanceof HttpError?error.status:503;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify({error:error instanceof HttpError?error.message:'AI could not generate this explanation. Your notes have not changed.'}));
+    }
     if(req.method==='POST'&&f.action==='content-save'&&f.previewWindow==='yes'){
       res.statusCode=error instanceof HttpError?error.status:503;res.setHeader('Content-Type','application/json; charset=utf-8');return res.end(JSON.stringify({error:error instanceof HttpError?error.message:'Could not save the article. Your edits are still here.'}));
     }
