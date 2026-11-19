@@ -1,6 +1,20 @@
 // Keep workspace navigation and forms inside this window's working copy.
 (()=>{
  const id=new URL(location.href).searchParams.get('accountPreview');if(!id)return;
+ if(window.opener)window.opener.postMessage({type:'account-copy-ready',id},location.origin);
+ const initialAccess=document.querySelector('meta[name="account-copy-access"]')?.content;
+ const statusUrl=new URL(location.href);statusUrl.searchParams.set('copyStatus','1');
+ let checking=false;
+ async function refreshPermissions(){
+  if(checking||document.hidden||!initialAccess)return;checking=true;
+  try{
+   const response=await fetch(statusUrl,{credentials:'same-origin',headers:{Accept:'application/json'}});
+   if(response.ok){const data=await response.json();if(encodeURIComponent(JSON.stringify(data.access))!==initialAccess){
+    const home=new URL('/content-library/',location.href);home.search=new URLSearchParams({work:'1',studio:'home',accountPreview:id});location.replace(home.href);
+   }}
+  }catch{}finally{checking=false;}
+ }
+ setInterval(refreshPermissions,3000);window.addEventListener('focus',refreshPermissions);
  function target(value){
   const url=new URL(value,location.href);
   if(url.origin===location.origin&&url.pathname==='/content-library/'){url.searchParams.set('work','1');url.searchParams.set('accountPreview',id);}

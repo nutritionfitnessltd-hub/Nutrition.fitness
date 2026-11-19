@@ -51,6 +51,21 @@ function fixture(access=null){
 }
 const forbidden=error=>error.status===403;
 
+test('open copies update selected permissions and follow subsequently saved access changes',async()=>{
+ const f=fixture({library:false,work:true});
+ const fields={staff:f.person.id,accessVersion:'1',access_work:'1'};
+ const created=await f.request({studio:'account-preview'},admin,fields);
+ const params=new URL(created.headers.Location,'https://fixture.test').searchParams;
+ const updated=await f.request({studio:'account-preview'},admin,{...fields,accountPreviewId:params.get('accountPreview'),access_library:'1'});
+ assert.equal(updated.headers.Location,created.headers.Location);
+ params.set('studio','library');assert.equal((await f.request(params,admin)).statusCode,200);
+ assert.equal(f.person.access.library,false);
+ f.person.access={work:true,library:false};f.person.access_revision++;
+ params.set('copyStatus','1');
+ const status=await f.request(params,admin);assert.equal(status.statusCode,200);assert.equal(JSON.parse(status.body).access.library,false);
+ params.delete('copyStatus');assert.equal((await f.request(params,admin)).statusCode,403);
+});
+
 test('admin opens a navigable working copy with selected permissions without changing the account',async()=>{
  const f=fixture({library:true,work:false}),body={action:'save-access',previewAccount:'yes',staff:f.person.id,accessRevision:'1',accessVersion:'1',access_work:'1',access_edit:'1'};
  const team=await f.request({studio:'team'},admin);

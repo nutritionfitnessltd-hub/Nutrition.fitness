@@ -22,6 +22,13 @@ test('dashboard is the first navigation item and shows only the signed-in person
  const nav=studioNavigation('home',d.actor);assert.equal(nav.label,'Home');assert.match(nav.html,/studio=home" aria-current="page"/);assert.ok(nav.html.indexOf('Home')<nav.html.indexOf('Assets'));
 });
 
+test('staff retain the branded welcome and colour cards with only permitted destinations',()=>{
+ const d=fixture();d.actor={role:'staff',id:'creator',name:'Joyce',access:{work:true}};
+ let html=workspaceDashboard(d);assert.match(html,/class="dashboard-welcome"|Good ideas start here/);assert.match(html,/welcome-pictures/);assert.match(html,/team-area-work/);
+ assert.doesNotMatch(html,/studio=create|studio=library|AI workers/);
+ d.actor.access.library=true;html=workspaceDashboard(d);assert.match(html,/team-area-library/);assert.match(html,/Explore your library/);
+});
+
 test('worker cards derive plans from saved assignments and never invent activity; staff cannot see private plans',()=>{
  const d=fixture();d.byId.set('request',{id:'request',kind:'worker-request',title:'Source <script>',fields:{state:'prepared',outputs:[{type:'newsletter',title:'Member newsletter',worker:'imogen',workerName:'Imogen',brief:'Read the source, then draft it.'}]}});
  const html=workspaceDashboard(d);
