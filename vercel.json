@@ -5,8 +5,15 @@
   "outputDirectory": "dist",
   "trailingSlash": true,
   "functions": {
-    "api/content.js": { "includeFiles": "server/{guest-catalogue.enc,brand-assets/**}" },
-    "api/course-production.js": { "includeFiles": "server/guest-catalogue.enc" }
+    "api/content.js": {
+      "includeFiles": "server/{guest-catalogue.enc,brand-assets/**}"
+    },
+    "api/course-production.js": {
+      "includeFiles": "server/guest-catalogue.enc"
+    },
+    "api/newsletter-sync.js": {
+      "maxDuration": 120
+    }
   },
   "rewrites": [
     {
@@ -88,5 +95,11 @@
     "NUFI_PUBLIC_SIGNUP_READY": "true",
     "NUFI_PASSWORD_RECOVERY_READY": "false",
     "NUFI_AUTH_CAPTCHA_READY": "false"
-  }
+  },
+  "crons": [
+    {
+      "path": "/api/newsletter-sync",
+      "schedule": "*/5 * * * *"
+    }
+  ]
 }

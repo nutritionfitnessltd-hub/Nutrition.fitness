@@ -1,3 +1,4 @@
+import {saveNewsletterConnection} from './newsletter-sync.mjs';
 import {sendNewsletter} from './studio-newsletters.mjs';
 import {changeSoftwareRelease,softwareReleaseErrorForm} from './software-releases.mjs';
 import {projectCreatePage} from './studio-project-create.mjs';
@@ -127,6 +128,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='article-image'){const r=data.byId.get(params.get('id'));if(r?.workerImage&&!r.articleImage)return await sendWorkerImage(res,r,env,fetcher);return await sendArticleImage(req,res,params,data);}
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
+      if(f.action?.startsWith('ghl-sync-')){await saveNewsletterConnection(f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url('connections').replaceAll('&amp;','&'));return res.end();}
       if(f.action==='project-setup')return write(res,200,projectCreatePage(params,data,f),'project-create',actor,meta);
       if(f.action?.startsWith('idea-')){const next=await changeShinyThing(params,f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();}
       if(['hq-message','hq-idea','hq-approve-plan'].includes(f.action)){const result=await changeHq(params,f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url(result.section,result).replaceAll('&amp;','&'));return res.end();}

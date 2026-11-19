@@ -1,3 +1,4 @@
+import {newsletterSyncPanel} from './newsletter-sync-ui.mjs';
 import { createHash, randomUUID } from 'node:crypto';
 import { HttpError, email } from './platform.mjs';
 import { itemTable, saveRecord } from './studio-store.mjs';
@@ -147,7 +148,7 @@ export async function connectionsPage(data,env,api,params){
   const settings=notificationSettings(data),r=data.byId.get(settingsId),configured=exchangeConfigured(env);
   const rows=await api(itemTable+'?id=like.studio:notification:*&select=id,payload,revision,updated_at&order=updated_at.desc&limit=12',{service:true});
   const statuses={queued:'Waiting',sending:'Sending / check Sent Items',accepted:'Accepted by Microsoft',failed:'Not sent',unknown:'Check Sent Items',cancelled:'Prepare fresh welcome details'};
-  return heading('Connections','Manage the services used by your workspace.')+
+  return heading('Connections','Manage the services used by your workspace.')+await newsletterSyncPanel(data,env,api)+
     (params.get('saved')?'<p role="status">Notification settings saved.</p>':'')+
     (params.get('mail')?'<p role="status">'+esc(statuses[params.get('mail')]||'Check the recent email activity below.')+'</p>':'')+
     '<section class="panel"><h2>Email notifications</h2><p><strong>Microsoft 365 · '+(configured?'Ready to test':'Not connected')+'</strong></p><p>From '+sender+'</p>'+(!configured?'<p>Authorise your Microsoft 365 sender to turn on notifications.</p>':'')+
