@@ -1,3 +1,4 @@
+import './studio-newsletters.js';
 import './studio-team-modal.js';
 import './studio-shiny-modal.js';
 import './studio-idea-ai.js';
@@ -98,7 +99,7 @@ if(fieldsInput&&editor){
     const control=document.createElement(bool||number?'input':/Url$|^url$|^type$|^channel$|^audience$|^headline$|^callToAction$|^movement$|^unit$|^effortType$|^subject$/.test(key)?'input':'textarea');
     if(bool){control.type='checkbox';control.checked=value;label.className='check';}
     else if(number){control.type='number';control.step='any';control.value=value;}
-    else {control.value=value??'';if(control.tagName==='TEXTAREA')control.rows=['body','script','voiceoverScript'].includes(key)?12:value&&String(value).length>200?5:3;}
+    else {control.value=value??'';if(key==='emailHtml'){control.className='newsletter-html-source';control.spellcheck=false;}if(control.tagName==='TEXTAREA')control.rows=key==='emailHtml'?20:['body','script','voiceoverScript'].includes(key)?12:value&&String(value).length>200?5:3;}
     control.addEventListener('input',()=>set(bool?control.checked:number?(control.value===''?0:Number(control.value)):control.value));
     label.append(control);return label;
   }
@@ -106,7 +107,7 @@ if(fieldsInput&&editor){
   function renderFields(){
     editor.replaceChildren();
     const messageOptions=document.querySelector('#studio-message-options');
-    const main=primaryFields[editor.dataset.kind]||Object.keys(values),details=messageOptions||element('details',undefined,'editor-details');
+    const main=editor.dataset.kind==='communication'&&values.emailHtml?['subject','emailHtml',Object.hasOwn(values,'plainText')?'plainText':'body']:primaryFields[editor.dataset.kind]||Object.keys(values),details=messageOptions||element('details',undefined,'editor-details');
     if(!messageOptions)details.append(element('summary','More details'));
     const imageFields=upload?['imageUrl','imageAlt','imageCredit','imageCreditUrl']:[];
     for(const key of main)if(Object.hasOwn(values,key)&&!imageFields.includes(key))editor.append(draw(key,values[key],next=>values[key]=next));

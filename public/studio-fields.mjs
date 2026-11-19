@@ -18,7 +18,7 @@ export const primaryFields = {
   workflow:['trigger','steps'], rule:['instructions','repeatWhen','progressWhen'], review:['questions','nextStep']
 };
 export const fieldLabels = {
-  marginNote:'Image caption (Kalam)', body:'Content', headline:'Headline', callToAction:'Button or link text', assetIds:'Images and files', assetId:'File',
+  emailHtml:'HTML email', plainText:'Plain-text version', marginNote:'Image caption (Kalam)', body:'Content', headline:'Headline', callToAction:'Button or link text', assetIds:'Images and files', assetId:'File',
   lessonIds:'Lessons in order', lessonId:'Lesson', programmeIds:'Programmes', programmeId:'Programme',
   contentIds:'Included content', contentId:'Content', scheduleIds:'Weekly plans', scheduleId:'Weekly plan',
   recipeIds:'Recipes', recipeId:'Recipe', sessionIds:'Workouts', sessionId:'Workout', stageIds:'Stages', stageId:'Stage',
