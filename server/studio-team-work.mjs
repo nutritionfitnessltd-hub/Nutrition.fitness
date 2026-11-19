@@ -24,7 +24,7 @@ export function teamWorkRows(data){
     // Imported reference content is not active work until attributed, assigned or submitted.
     if(!w&&!task&&!project&&!['In review','Changes requested'].includes(r.status))continue;
     const owner=task?person(task.staff_id):w?worker(w):project?person(project.creator_id):{owner:'unassigned',ownerName:admin?'Unassigned':'Team submission',type:'people'};
-    const review=canReviewContent(data,r)&&r.status==='In review';
+    const review=r.kind==='article'||canReviewContent(data,r)&&r.status==='In review';
     recordRows.set(r.id,{id:'content:'+r.id,recordId:r.id,title:r.title,...owner,project:project?.id||'',projectName:project?.name||'',
       state:stateFor(r.status),status:r.status,updated:date(r.updatedAt||r.workerSource?.receivedAt),due:task?.due_date||'',
       note:r.reviewFeedback?.at(-1)?.changes||'Saved content',review,href:url(review?'review-preview':'item',{id:r.id}),action:review?'Review':'Open'});

@@ -58,13 +58,13 @@ test('a saved idea makes its worker visible without draft content, while decline
  }
  d.hqIdeas.alex.state='rejected';html=workspaceDashboard(d);assert.doesNotMatch(html,/AI workers|workers-title/);
 });
-test('dashboard reviews and worker approvals open the reading window, with draft editing kept separate',()=>{
+test('dashboard articles open the reading window for both drafts and submitted work',()=>{
  const d=fixture(),review={id:'worker:review',title:'Review this article',kind:'article',status:'In review',workerId:'nina',fields:{}},draft={...review,id:'worker:draft',title:'Edit this draft',status:'Draft'};
  d.items=[review,draft];d.byId=new Map(d.items.map(r=>[r.id,r]));
  const html=workspaceDashboard(d),work=dashboardWork(d);
  assert.match(work.reviews[0].href,/studio=review-preview/);
- assert.equal((html.match(/data-review-preview target="_blank" rel="noopener"/g)||[]).length,3);
- assert.match(html,/studio=item&amp;id=worker%3Adraft/);
+ assert.equal((html.match(/data-review-preview target="_blank" rel="noopener"/g)||[]).length,5);
+ assert.match(html,/studio=review-preview&amp;id=worker%3Adraft/);
  assert.doesNotMatch(html,/studio=item&amp;id=worker%3Areview/);
 });
 
