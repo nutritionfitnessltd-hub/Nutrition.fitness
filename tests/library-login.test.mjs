@@ -6,6 +6,7 @@ import {once} from 'node:events';
 import {createHash,randomUUID} from 'node:crypto';
 import {createLibraryReader} from '../server/library-reader.mjs';
 import {HttpError} from '../server/platform.mjs';
+import {createTeamPasswordLink,verifyTeamPassword} from '../server/team-passwords.mjs';
 
 test('one login protects all entry points and admin-created team users share it',async()=>{
   const adminId=randomUUID(),fileId='c'.repeat(64),staff=new Map(),saved=[];
@@ -29,7 +30,7 @@ test('one login protects all entry points and admin-created team users share it'
         if([...staff.values()].some(p=>p.email===opts.payload.email))throw new HttpError(409,'Duplicate');
         const person={id:randomUUID(),...opts.payload};staff.set(person.id,person);saved.push(opts.payload);return [person];
       }
-      const rows=[...staff.values()].filter(p=>(!query.has('email')||p.email===query.get('email').slice(3))&&(!query.has('id')||p.id===query.get('id').slice(3)));
+      const rows=[...staff.values()].filter(p=>(!query.has('email')||p.email===query.get('email').slice(3))&&(!query.has('id')||p.id===query.get('id').slice(3))&&(!query.has('code_hash')||(query.get('code_hash')==='is.null'?p.code_hash===null:query.get('code_hash')==='eq.'+p.code_hash)));
       if(opts.method==='PATCH')for(const p of rows)Object.assign(p,opts.payload);
       return rows;
     }
@@ -66,23 +67,26 @@ test('one login protects all entry points and admin-created team users share it'
     const team=await request('?work=1&studio=team',null,adminCookie);
     assert.equal(team.status,200);assert.match(await team.text(),/Add a person/);
     const created=await request('?work=1&studio=team',{action:'create-user',accessVersion:'1',access_library:'1',access_originals:'1',access_sources:'1',name:'Team member',email:'team@example.test',role:'admin'},adminCookie);
-    assert.equal(created.status,200);const html=await created.text(),password=html.match(/class="staff-code">([^<]+)/)[1];
+    assert.equal(created.status,200);const html=await created.text(),password='fixture chosen team password';
     assert.match(created.headers.get('cache-control'),/no-store/);
-    assert.match(html,/Send welcome email/);assert.match(html,/Copy welcome message/);
+    assert.match(html,/Send welcome email/);assert.match(html,/Copy email wording/);
     assert.match(html,/Sends directly from notifications@nutrition.fitness/);assert.doesNotMatch(html,/mailto:/);
-    assert.ok(html.includes('Password: '+password));
-    assert.ok(html.includes(origin+'/content-library/?work=1'));
+    assert.ok(html.includes('{{SET_PASSWORD_LINK}}'));assert.ok(!html.includes(password));
+    assert.ok(html.includes('https://team.nutrition.fitness/content-library/?work=1'));
     assert.match(html,/confidentiality agreement/);
     assert.match(html,/administrator handles approval and publishing/);
-    assert.equal(saved[0].code_hash,createHash('sha256').update(password).digest('hex'));
+    assert.notEqual(saved[0].code_hash,createHash('sha256').update(password).digest('hex'));
     assert.equal(saved[0].role,undefined);assert.ok(!JSON.stringify(saved).includes(password));
     const person=[...staff.values()][0];
     const originalHash=person.code_hash;
     const welcomePage=await request('?work=1&studio=team&person='+person.id,null,adminCookie),welcomeHtml=await welcomePage.text();
     assert.match(welcomeHtml,/Send welcome details to Team member/);
-    assert.match(welcomeHtml,/Use your existing team password/);
+    assert.match(welcomeHtml,/SET_PASSWORD_LINK/);
     assert.ok(!welcomeHtml.includes(password));assert.ok(!welcomeHtml.includes(originalHash));
     assert.equal(person.code_hash,originalHash);assert.equal(saved.length,1);
+    const setupToken=new URL(createTeamPasswordLink(person,env)).searchParams.get('token');
+    const setup=await request('?work=1&teamPassword=1',{action:'complete-team-password',token:setupToken,password,confirmPassword:password});
+    assert.equal(setup.status,200);assert.equal(await verifyTeamPassword(password,person),true);
     const memberLogin=await request('',{action:'sign-in',email:person.email,password});
     assert.equal(memberLogin.status,303);const memberCookie=cookieOf(memberLogin);
     const download=await request('?file='+fileId,null,memberCookie);
@@ -105,17 +109,21 @@ test('one login protects all entry points and admin-created team users share it'
     const overlapping=await request('',{action:'sign-in',email:'admin@example.test',password:'fixture-admin-password'});
     assert.equal(overlapping.status,303);
     assert.equal((await request('?work=1&studio=team',null,cookieOf(overlapping))).status,200);
-    await request('?work=1&studio=team',{action:'issue-code',staff:person.id},adminCookie);
+    const noRotation=await request('?work=1&studio=team',{action:'issue-code',staff:person.id},adminCookie);
+    assert.equal(noRotation.status,409);
+    assert.equal((await request('?file='+fileId,null,memberCookie)).status,200);
+    const resetToken=new URL(createTeamPasswordLink(person,env,'reset')).searchParams.get('token');
+    const nextPassword='another fixture team password';
+    const reset=await request('?work=1&teamPassword=1',{action:'complete-team-password',token:resetToken,password:nextPassword,confirmPassword:nextPassword});
+    assert.equal(reset.status,200);
     assert.equal((await request('?file='+fileId,null,memberCookie)).status,401);
     assert.equal((await request('',{action:'sign-in',email:person.email,password})).status,401);
-    const reset=await request('?work=1&studio=team',{action:'issue-code',staff:person.id},adminCookie);
-    const nextPassword=(await reset.text()).match(/class="staff-code">([^<]+)/)[1];
     const next=await request('',{action:'sign-in',email:person.email,password:nextPassword});
     assert.equal(next.status,303);
     await request('?work=1&studio=team',{action:'disable-user',staff:person.id},adminCookie);
     const disabledHtml=await (await request('?work=1&studio=team&person='+person.id,null,adminCookie)).text();
     assert.doesNotMatch(disabledHtml,/Send welcome details to Team member/);
-    assert.match(disabledHtml,/Set a password to enable this account and prepare its welcome email/);
+    assert.match(disabledHtml,/Enable this account to prepare its welcome email and password setup link/);
     assert.equal((await request('?file='+fileId,null,cookieOf(next))).status,401);
     assert.equal((await request('',{action:'sign-in',email:person.email,password:nextPassword})).status,401);
     blocked=true;

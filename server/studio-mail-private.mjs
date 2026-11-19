@@ -25,6 +25,7 @@ export function openWelcomeMessage(env,event){
   }catch{throw new HttpError(409,'This welcome message is unavailable. Prepare a new welcome email.');}
 }
 export async function welcomeRecipient(api,env,event){
+  if(event.type==='team-access'&&(!Number.isFinite(event.passwordLinkExpiresAt)||event.passwordLinkExpiresAt<=Date.now()))throw new HttpError(409,'This password link expired. Prepare a fresh email from Team.');
   const rows=await api('/rest/v1/nufi_library_staff?id=eq.'+uuid(event.staffId)+'&select=id,name,email,code_hash',{service:true});
   const person=rows[0];
   if(!person?.code_hash||person.email!==event.recipient||!same(welcomeGeneration(env,person),event.generation))throw new HttpError(409,'This account or its password has changed. Prepare fresh welcome details from Team & permissions.');

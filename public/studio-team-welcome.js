@@ -9,21 +9,21 @@ for (const form of document.querySelectorAll('[data-team-welcome]')) {
   form.addEventListener('submit',async event=>{
     event.preventDefault();if(busy||locked)return;
     const body=new URLSearchParams(new FormData(form));busy=true;send.disabled=true;
-    subject.readOnly=message.readOnly=true;status.textContent='Sending welcome email…';
+    subject.readOnly=message.readOnly=true;status.textContent='Sending email…';
     try{
       const response=await fetch(form.getAttribute('action'),{method:'POST',headers:{Accept:'application/json'},body});
       const result=await response.json().catch(()=>({error:'Your session may have ended. Sign in again before sending; your message is still here.'}));
       if(!response.ok||result.error)throw new Error(result.error||'The email could not be sent. Your message is still here.');
       locked=result.state!=='failed';status.textContent=result.detail;
-      send.textContent=result.state==='accepted'?'Accepted by Microsoft':locked?'Check email activity':'Retry welcome email';
-    }catch(error){status.textContent=error.message;send.textContent='Retry welcome email';}
+      send.textContent=result.state==='accepted'?'Accepted by Microsoft':locked?'Check email activity':'Retry email';
+    }catch(error){status.textContent=error.message;send.textContent='Retry email';}
     finally{busy=false;send.disabled=locked;subject.readOnly=message.readOnly=locked;}
   });
   copy.hidden = false;
   copy.addEventListener('click', async () => {
     try {
       await navigator.clipboard.writeText('To: ' + to.value + '\nSubject: ' + subject.value + '\n\n' + message.value);
-      status.textContent = 'Welcome message copied.';
+      status.textContent = 'Email wording copied. The secure password link is added only when you send from this page.';
     } catch {
       message.focus();
       message.select();

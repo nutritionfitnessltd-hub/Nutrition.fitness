@@ -54,7 +54,7 @@ test('a known failure retains encrypted content and an explicit retry sends the 
  const f=fixture();f.setOutcome(403);const failed=await f.request();
  assert.equal(failed.body.state,'failed');assert.match(failed.body.detail,/ErrorAccessDenied/);assert.doesNotMatch(failed.body.detail,/upstream/);
  const stored=[...f.rows.values()][0].payload.fields;
- assert.equal(openWelcomeMessage(env,stored),f.fields.message);assert.doesNotMatch(JSON.stringify(stored),/fixture-sensitive-password/);
+ assert.match(JSON.parse(openWelcomeMessage(env,stored)).message,/fixture-sensitive-password/);assert.doesNotMatch(JSON.stringify(stored),/fixture-sensitive-password/);
  assert.throws(()=>openWelcomeMessage(env,{...stored,recipient:'other@example.test'}),{status:409});
  f.setOutcome(202);assert.equal((await f.request({...f.fields,message:'Corrected welcome message'})).body.state,'accepted');
  assert.equal(f.sends.length,2);assert.match(f.sends[1].message.body.content,/Corrected welcome message/);

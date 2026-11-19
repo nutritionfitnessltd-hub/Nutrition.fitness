@@ -4,6 +4,7 @@ import {createHash,createHmac,randomUUID} from 'node:crypto';
 import {handleLibraryWork} from '../server/library-work.mjs';
 import {changeMyAccount,myAccountScreen} from '../server/my-account.mjs';
 import {ndaDocument} from './nda-fixture.mjs';
+import {verifyTeamPassword} from '../server/team-passwords.mjs';
 const env={NUFI_LIBRARY_CATALOGUE_KEY:'x'.repeat(64),SUPABASE_SERVICE_ROLE_KEY:'fixture-service',SUPABASE_URL:'https://fixture.supabase.co',SUPABASE_ANON_KEY:'fixture-anon',SITE_URL:'https://fixture.test'};
 const digest=s=>createHash('sha256').update(s).digest('hex');
 function fixture(){
@@ -47,7 +48,7 @@ test('staff password change checks current password, renews this cookie and revo
  const f=fixture(),old=f.cookie(),next='replacement-fixture-passphrase';
  let res=await f.request({action:'account-password',currentPassword:'incorrect',newPassword:next,confirmPassword:next});assert.equal(res.statusCode,400);assert.equal(f.person.code_hash,digest('original-fixture-passphrase'));
  res=await f.request({action:'account-password',currentPassword:'original-fixture-passphrase',newPassword:next,confirmPassword:next});
- assert.equal(res.statusCode,303);assert.equal(f.person.code_hash,digest(next));assert.ok(res.headers['Set-Cookie']);assert.equal((await f.request(null,f.actor,old)).statusCode,401);
+ assert.equal(res.statusCode,303);assert.notEqual(f.person.code_hash,digest(next));assert.equal(await verifyTeamPassword(next,f.person),true);assert.ok(res.headers['Set-Cookie']);assert.equal((await f.request(null,f.actor,old)).statusCode,401);
  const fresh=res.headers['Set-Cookie'].split(';')[0];assert.equal((await f.request(null,f.actor,fresh)).statusCode,200);
 });
 test('password validation never writes and admin changes require a matching freshly verified identity',async()=>{
