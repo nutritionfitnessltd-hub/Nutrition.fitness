@@ -1,6 +1,7 @@
 import { requireAccess } from './library-permissions.mjs';
 import { HttpError } from './platform.mjs';
 import { esc, link } from './library-shelves.mjs';
+import {courseLessons,lessonAssetLink,videoLength,scriptCopy} from './course-lessons.mjs';
 
 const assetPage = (id, extra = {}) => link({ work: '1', assets: id, ...extra });
 export const assetButton = (id, label = 'Asset links') =>
@@ -49,6 +50,15 @@ export async function assetScreen(params, actor, api, load, display) {
     });
     if (allowed !== true) throw new HttpError(403, 'This asset is outside your assigned work.');
   }
+  if(params.has('lesson')){
+    const entry=id.startsWith('course:')&&courseLessons(courses[record.title]||{}).find(e=>e.key===params.get('lesson'));
+    if(!entry)throw new HttpError(404,'This course lesson is unavailable.');
+    const lesson=await display('course-lesson:'+record.title+':'+entry.key);
+    if(!lesson)throw new HttpError(404,'The lesson resources are unavailable.');
+    return '<a class="back" href="'+link({work:'1',studio:'archive',item:id})+'">← '+esc(record.title)+'</a><h1>'+esc(entry.title)+'</h1><p>Lesson '+esc(entry.position)+' of '+courseLessons(courses[record.title]).length+' · Original video '+esc(videoLength(lesson.videoSeconds))+'</p>'+
+      (lesson.canvaAvailable===false?'<p>Separate Canva source link still needs checking. The original video and script are available below.</p>':'')+
+      '<section><h2>Original files</h2><ul class="source-list">'+(lesson.links||[]).map(sourceLink).join('')+'</ul></section>'+scriptCopy(lesson);
+  }
   const asset = await display('asset-links:'+id);
   const links = (asset?.links || []).map(sourceLink).join('');
   const locations = (asset?.locations || []).map(l => '<li>'+esc(l.label)+'<br><code>'+esc(l.path)+'</code></li>').join('');
@@ -58,6 +68,7 @@ export async function assetScreen(params, actor, api, load, display) {
   return back+'<h1>'+esc(record.title)+'</h1>'+
     (links?'<section><h2>Open original assets</h2><ul class="source-list">'+links+'</ul></section>':'')+
     (locations?'<section><h2>File locations</h2><ul class="source-list">'+locations+'</ul></section>':'')+
+    (id.startsWith('course:')&&courseLessons(courses[record.title]||{}).some(e=>e.key)?'<section><h2>Lesson scripts and videos</h2><ol>'+courseLessons(courses[record.title]).filter(e=>e.key).map(e=>'<li>'+lessonAssetLink(id,e,e.title)+'</li>').join('')+'</ol></section>':'')+
     (nested.length?'<section><h2>Included items</h2><ul>'+nested.map(r=>'<li>'+assetButton(r.id,r.title)+'</li>').join('')+'</ul></section>':'')+
     (!links&&!locations&&!nested.length?'<p>No original link or file location has been recorded for this item.</p>':'')+
     (admin?assetButton('all','Browse all original assets'):'');
