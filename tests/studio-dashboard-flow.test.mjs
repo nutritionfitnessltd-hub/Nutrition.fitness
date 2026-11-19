@@ -18,15 +18,15 @@ test('dashboard is the first navigation item and shows only the signed-in person
  d.tasks=[{staff_id:'owner',title:'My assignment',status:'Changes requested'},{staff_id:'other',title:'Other assignment',status:'To do'}];
  d.items=[{id:'review',title:'Ready for checking',status:'In review'}];
  assert.equal(dashboardWork(d).mine.length,2);
- const html=workspaceDashboard(d);assert.match(html,/<h1>Dashboard/);assert.match(html,/My open task|My assignment/);assert.match(html,/Their task|Other assignment/);assert.doesNotMatch(html,/My finished task/);assert.match(html,/Ready for checking/);
+ const html=workspaceDashboard(d);assert.match(html,/<h1>Your team space/);assert.match(html,/My open task|My assignment/);assert.match(html,/Their task|Other assignment/);assert.doesNotMatch(html,/My finished task/);assert.match(html,/Ready for checking/);
  const nav=studioNavigation('home',d.actor);assert.equal(nav.label,'Home');assert.match(nav.html,/studio=home" aria-current="page"/);assert.ok(nav.html.indexOf('Home')<nav.html.indexOf('Assets'));
 });
 
 test('staff retain the branded welcome and colour cards with only permitted destinations',()=>{
  const d=fixture();d.actor={role:'staff',id:'creator',name:'Joyce',access:{work:true}};
- let html=workspaceDashboard(d);assert.match(html,/class="dashboard-welcome"|Good ideas start here/);assert.match(html,/welcome-pictures/);assert.match(html,/team-area-work/);
+ let html=workspaceDashboard(d);assert.match(html,/Your team space/);assert.match(html,/team-pulse/);assert.match(html,/team-area-work/);
  assert.doesNotMatch(html,/studio=create|studio=library|AI workers/);
- d.actor.access.library=true;html=workspaceDashboard(d);assert.match(html,/team-area-library/);assert.match(html,/Explore your library/);
+ d.actor.access.library=true;html=workspaceDashboard(d);assert.match(html,/team-area-library/);assert.match(html,/Content library/);
 });
 
 test('worker cards derive plans from saved assignments and never invent activity; staff cannot see private plans',()=>{
@@ -96,7 +96,7 @@ test('source search and pagination keep the selected build and private brief in 
 test('step navigation cannot save or start a worker; default home returns the dashboard',async()=>{
  const d=fixture();let writes=0,modelCalls=0;
  const options={actor:d.actor,load:async()=>d.index,api:async(_,o)=>{if(o?.method==='POST')writes++;return [];},env:{},fetcher:()=>{modelCalls++;throw Error('Unexpected model call');}};
- let res=response();await handleStudio({method:'GET'},res,{...options,params:new URLSearchParams()});assert.equal(res.statusCode,200);assert.match(res.body,/<h1>Dashboard/);
+ let res=response();await handleStudio({method:'GET'},res,{...options,params:new URLSearchParams()});assert.equal(res.statusCode,200);assert.match(res.body,/<h1>Your team space/);
  res=response();await handleStudio({method:'POST',body:{...fields(),action:'worker-save',step:'brief'}},res,{...options,params:new URLSearchParams({studio:'builder',flowBack:'1'})});
  assert.equal(res.statusCode,200);assert.match(res.body,/Make it your own/);assert.equal(writes,0);assert.equal(modelCalls,0);
 });

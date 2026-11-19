@@ -380,6 +380,13 @@
 .welcome-copy .studio-eyebrow { color:#d5e5db; line-height:1.6; }
 .studio .welcome-copy h1 { color:white; font-size:36px; margin:10px 0 6px; }
 .welcome-copy .welcome-lead { font-size:23px; color:#f4cfb8; margin:0 0 12px; }
+.team-space-welcome{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(120deg,#084c5b,#14616a);grid-template-columns:1.15fr 1fr}
+.team-space-welcome:before{content:'';position:absolute;width:420px;height:420px;border:70px solid #ffffff06;border-radius:50%;left:-240px;top:-250px;z-index:-1;pointer-events:none}
+.team-pulse{min-width:0;padding:24px;border:1px solid #ffffff24;border-radius:16px;background:#ffffff0c;align-self:center}
+.team-pulse-heading{display:flex;gap:13px;align-items:center;margin-bottom:18px}.studio .team-pulse h2{color:white;font-size:21px;margin:3px 0}.team-pulse .studio-eyebrow{color:#d3e6df;font-size:11px;letter-spacing:.08em}.team-pulse-mark{display:grid;place-items:center;width:45px;height:45px;border-radius:14px;background:#f2c9ad;color:#173a42;font-size:30px;flex:none;transform:rotate(-8deg)}
+.team-pulse-counts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}.team-pulse-counts a{display:flex;flex-direction:column;gap:3px;padding:14px 12px;border-radius:10px;text-decoration:none;color:#163c43;background:#dce9df}.team-pulse-counts .pulse-attention{background:#f4d6bc}.team-pulse-counts .pulse-completed{background:#e5dced}.team-pulse-counts strong{font-size:29px;line-height:1.15}.team-pulse-counts span{font-size:12px;line-height:1.4}.team-pulse-counts a:hover{box-shadow:0 0 0 2px white}.team-pulse-counts a:focus-visible{outline:3px solid white;outline-offset:3px}
+.team-pulse-latest{margin-top:17px;padding-top:15px;border-top:1px solid #ffffff26}.team-pulse-latest p{color:white;font-size:16px;line-height:1.45;margin:6px 0;overflow-wrap:anywhere}.team-pulse-latest small{color:#d3e6df;font-size:12px}
+@media(max-width:600px){.team-pulse{padding:17px}.team-pulse-counts a{padding:12px 9px}.team-pulse-counts strong{font-size:25px}.team-pulse-counts span{font-size:11px}}
 .welcome-copy>p:not(.welcome-lead) { color:#e0ece9; font-size:15px; max-width:480px; line-height:1.7; margin:0 0 22px; }
 .studio .welcome-copy .btn { border-color:#b5ceca; color:white; background:transparent; }
 .studio .welcome-copy .primary { background:#f2c9ad; color:#173a42; border-color:#f2c9ad; }
