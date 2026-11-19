@@ -1,3 +1,5 @@
+import {allRows} from './studio-store.mjs';
+import {assignmentForm,saveAssignment,assignmentLink} from './team-assignments.mjs';
 import {teamWorkSnapshot,renderTeamPage,saveTeamProfile} from './studio-team.mjs';
 import {hqRequest} from './studio-hq.mjs';
 import { reviewOptions, accessOptions, accessFor, accessFromForm, canAccess, requireAccess } from './library-permissions.mjs';
@@ -132,9 +134,10 @@ function passwordResult(person,origin,env){
 function tasksMarkup(tasks,staff,actor) {
   if(!tasks.length)return '<p>No assignments match this view.</p>';
   return tasks.map(t=>{
+    const destination=assignmentLink(t),taskLink=destination===null?'<a href="'+link({item:t.record_id})+'">'+esc(t.record_title)+'</a>':destination?'<a href="'+destination+'">Project: '+esc(t.record_title)+'</a>':'<span>Standalone task</span>';
     const who=staff.find(s=>s.id===t.staff_id)?.name||actor.name||'';
     const stateForm=!canAccess(actor,'edit')?'':form('update',field('id',t.id)+field('revision',t.revision)+'<label>Status<select name="status">'+options(statuses,t.status)+'</select></label><button>Save status</button>');
-    return '<section class="task"><strong>'+esc(t.title)+'</strong><a href="'+link({item:t.record_id})+'">'+esc(t.record_title)+'</a>'+(canAccess(actor,'sources')?assetButton(t.record_id):'')+'<small>'+esc([who,t.due_date?'Due '+t.due_date:'',t.status].filter(Boolean).join(' · '))+'</small>'+(t.instructions?'<p>'+esc(t.instructions)+'</p>':'')+stateForm+'</section>';
+    return '<section class="task"><strong>'+esc(t.title)+'</strong>'+taskLink+(destination===null&&canAccess(actor,'sources')?assetButton(t.record_id):'')+'<small>'+esc([who,t.due_date?'Due '+t.due_date:'',t.status].filter(Boolean).join(' · '))+'</small>'+(t.instructions?'<p>'+esc(t.instructions)+'</p>':'')+stateForm+'</section>';
   }).join('');
 }
 async function dashboard(params,api,actor,load) {
@@ -212,7 +215,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
   const projects=params.get('projects')==='1';
   const asset=params.get('assets');
   const studio=params.get('studio');
-  const destination=params.get('reader')==='1'?Object.fromEntries([...params].filter(([k])=>['reader','file','image','preview'].includes(k))):studio?Object.fromEntries([...params].filter(([k])=>['studio','id','project','week','source','template','kind','tab','category','schedule','view','contentKind','shelf','folder','item','from','progress','q','page','reader','file','image','preview','collection','bucket','bookType','build','worker','person'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
+  const destination=params.get('reader')==='1'?Object.fromEntries([...params].filter(([k])=>['reader','file','image','preview'].includes(k))):studio?Object.fromEntries([...params].filter(([k])=>['studio','id','project','week','source','template','kind','tab','category','schedule','view','contentKind','shelf','folder','item','from','progress','q','page','reader','file','image','preview','collection','bucket','bookType','build','worker','person','assign'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
   let actor;
   const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
   const welcomeJson=req.method==='POST'&&['send-welcome','send-password-reset'].includes(f.action)&&req.headers.accept?.includes('application/json');
@@ -300,13 +303,20 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
           if(welcomeJson)return json(200,{state:result.state,detail:result.detail});
           return writePage(res,200,'<h1>'+(purpose==='reset'?'Password reset email':'Welcome email')+'</h1>'+welcomePanel(result.person,{origin,env,draft:f,result,purpose})+'<a href="'+link({work:'1',studio:'team'})+'">Back to Team & permissions</a>',actor,'team');
         }
+        if(f.action==='team-assign'){
+          const [staff,projects]=await Promise.all([api(staffTable+'?select=id,name,email&order=name.asc',service),allRows(api,'/rest/v1/nufi_library_projects?select=*&order=created_at.desc,id')]);
+          const person=staff.find(p=>p.id===f.staff);if(!person)throw new HttpError(404,'This person is unavailable.');
+          try{await saveAssignment(f,actor,staff,projects,api);}
+          catch(e){if(!(e instanceof HttpError))throw e;return writePage(res,e.status,assignmentForm(person,projects,f,e.message),actor,'team');}
+          res.statusCode=303;res.setHeader('Location',route+'&studio=team&person='+encodeURIComponent(f.staff)+'&saved=assignment');return res.end();
+        }
         if(f.action==='team-profile-save'){const staff=await api(staffTable+'?select=id,name,email&order=name.asc',service);await saveTeamProfile(f,actor,staff,await teamWorkSnapshot(api),api);res.statusCode=303;res.setHeader('Location',route+'&studio=team&person='+encodeURIComponent(f.staff));return res.end();}
         if(!['create-user','issue-code','disable-user','save-access'].includes(f.action))throw new HttpError(400,'Choose a team action.');
         const message=await change(actor,f,api,load,origin,env);
         if(message)return writePage(res,200,message,actor,'team');
         res.statusCode=303;res.setHeader('Location',route+'&studio=team'+(f.action==='save-access'?'&saved=access&person='+encodeURIComponent(f.staff):f.action==='disable-user'?'&person='+encodeURIComponent(f.staff):''));return res.end();
       }
-      return writePage(res,200,(params.get('saved')==='access'?'<p role="status" class="panel">Access saved. The new settings apply on this person’s next request.</p>':'')+await teamScreen(api,actor,origin,env,params,fetcher)+'<script type="module" src="/team-account-preview.js"></script>',actor,'team');
+      return writePage(res,200,(params.get('saved')==='assignment'?'<p role="status" class="panel">Work assigned.</p>':params.get('saved')==='access'?'<p role="status" class="panel">Access saved. The new settings apply on this person’s next request.</p>':'')+await teamScreen(api,actor,origin,env,params,fetcher)+'<script type="module" src="/team-account-preview.js"></script>',actor,'team');
     }
     if(studio)return handleStudio(req,res,{params,actor,api,load,env,fetcher});
     if(asset){

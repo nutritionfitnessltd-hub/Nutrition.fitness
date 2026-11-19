@@ -1,4 +1,5 @@
 import {participates,ownsTask} from './studio-project-tasks.mjs';
+import {assignmentProjectId} from './team-assignments.mjs';
 import { canAccess, canReviewContent, canReadContent } from './library-permissions.mjs';
 import { contentWorker, workerNames } from './studio-worker-content.mjs';
 import { esc, url, heading, button, badge, hidden, select, pages } from './studio-ui.mjs';
@@ -32,7 +33,7 @@ export function teamWorkRows(data){
   }
   for(const t of tasks){
     const r=recordRows.get(t.record_id);if(r){linked.add(r.recordId);const status=['In review','Changes requested'].includes(r.status)?r.status:t.status;rows.push({...r,id:'task:'+t.id,title:t.title||r.title,state:stateFor(status),status,updated:[date(t.updated_at),r.updated].sort().at(-1),note:t.instructions||r.note});continue;}
-    rows.push({id:'task:'+t.id,title:t.title,...person(t.staff_id),project:'',projectName:t.record_title||'',state:stateFor(t.status),status:t.status,updated:date(t.updated_at||t.created_at),due:t.due_date||'',note:t.instructions||'',href:'/content-library/?work=1&amp;assignments=1&amp;staff='+encodeURIComponent(t.staff_id),action:'Open'});
+    rows.push({id:'task:'+t.id,title:t.title,...person(t.staff_id),project:assignmentProjectId(t),projectName:t.record_title||'',state:stateFor(t.status),status:t.status,updated:date(t.updated_at||t.created_at),due:t.due_date||'',note:t.instructions||'',href:'/content-library/?work=1&amp;assignments=1&amp;staff='+encodeURIComponent(t.staff_id),action:'Open'});
   }
   for(const p of projects)for(const [i,e] of (p.entries||[]).entries()){
     if(e.status==='Archived'||!admin&&!ownsTask(p,e,data.actor.id))continue;
