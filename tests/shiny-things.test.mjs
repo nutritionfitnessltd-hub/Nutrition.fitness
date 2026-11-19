@@ -1,3 +1,4 @@
+import {handleStudio} from '../server/studio.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
@@ -79,4 +80,12 @@ test('staff cannot read or mutate the private ideas board',async()=>{
  await changeShinyThing(new URLSearchParams(),{id:saved.id,revision:1,action:'idea-save',title:saved.title,summary:saved.fields.summary,weeks:4,urgency:'urgent'},x.data(),x.api,{});
  assert.equal(x.rows.get(saved.id).fields.urgency,'urgent');assert.equal(x.rows.get(saved.id).fields.plan.title,'Reviewed plan');
  await assert.rejects(changeShinyThing(new URLSearchParams(),{id:saved.id,revision:2,action:'idea-save',title:saved.title,summary:saved.fields.summary,weeks:4,urgency:'invalid'},x.data(),x.api,{}),e=>e.status===400);
+ });
+
+ test('idea submissions pass through the main authenticated studio route',async()=>{
+ const x=fixture(),id='studio:idea:'+randomUUID();
+ const res={headers:{},setHeader(k,v){this.headers[k]=v;},end(body){this.body=body;}};
+ const api=async(path,args)=>path.includes('/rpc/')?x.api(path,args):[];
+ await handleStudio({method:'POST',body:{action:'idea-save',id,revision:'0',title:'New routed idea',summary:'Keep this thought',weeks:'4',urgency:'soon'}},res,{params:new URLSearchParams({studio:'shiny-things',new:'1'}),actor,api,load:async()=>({records:[],files:{}}),env:{}});
+ assert.equal(res.statusCode,303);assert.equal(x.rows.get(id).title,'New routed idea');assert.equal(x.rows.get(id).fields.urgency,'soon');
  });
