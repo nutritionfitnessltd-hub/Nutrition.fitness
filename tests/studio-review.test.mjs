@@ -80,6 +80,13 @@ test('fragment failures retain typed feedback and GET previews do not write',asy
  out=res();await handleStudio({method:'POST',body:{action:'review-decision',decision:'changes',revision:'0',reviewId:randomUUID(),feedback:'Keep my typed feedback'}},out,options);assert.equal(out.statusCode,409);assert.match(out.body,/Keep my typed feedback/);assert.equal(f.writes,0);
  out=res();await handleStudio({method:'GET'},out,{...options,actor:{role:'staff',id:'unassigned'}});assert.equal(out.statusCode,403);assert.doesNotMatch(out.body,/Read the evidence/);
 });
+test('legacy article links lead to the complete review window without saving or approving',async()=>{
+ const f=fixture(),res={headers:{},setHeader(k,v){this.headers[k]=v;},end(body){this.body=body;}};
+ await handleStudio({method:'GET'},res,{params:new URLSearchParams({studio:'item',id:'worker:sample'}),actor:f.data.actor,api:f.api,load:async()=>({records:[]}),env:{}});
+ assert.equal(res.statusCode,303);assert.match(res.headers.Location,/studio=review-preview/);
+ assert.equal(f.writes,0);assert.equal(f.stored.status,'In review');
+});
+
 test('article save-and-preview returns the saved revision and standalone URL, with stale failures as JSON',async()=>{
  const f=fixture(),out=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},end(body){this.body=body;}}),opts={params:new URLSearchParams({studio:'item',id:'worker:sample'}),actor:f.data.actor,api:f.api,load:async()=>({records:[]}),env:{}};
  const body={action:'content-save',intent:'preview',previewWindow:'yes',revision:'1',title:'Updated title',fields:JSON.stringify({body:'Saved edited content.'})};

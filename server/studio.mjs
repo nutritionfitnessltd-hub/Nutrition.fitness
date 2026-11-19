@@ -90,6 +90,12 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       res.setHeader('Content-Type',file.type);res.statusCode=200;return res.end(Buffer.from(file.data,'base64'));
     }
     [data,meta]=await Promise.all([studioData(api,actor,load),displayEntry(env,'shelves').catch(()=>({}))]);
+    // Old connector links used the embedded reader and missed the review controls.
+    if(req.method==='GET'&&section==='item'&&canAccess(actor,'work')&&(!params.has('tab')||params.get('tab')==='preview')&&data.byId.get(params.get('id'))?.kind==='article'){
+      const r=readable(data,params.get('id'));
+      res.statusCode=303;res.setHeader('Cache-Control','private, no-store');
+      res.setHeader('Location',url('review-preview',{id:r.id}).replaceAll('&amp;','&'));return res.end();
+    }
     meta=meta||{};
     if(['home','team-work'].includes(section)&&actor.role==='admin'&&env.NUFI_HQ_SITE_TOKEN)data.hqIdeas=await workerIdeaSummaries(env,fetcher);
     data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');

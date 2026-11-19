@@ -22,7 +22,7 @@ import { icons } from './library-icons.mjs';
 import { esc, url, heading, button, hidden, input, textarea, select, form, list, pages, badge } from './studio-ui.mjs';
 
 const card=(title,text,href)=>'<a class="studio-card" href="'+href+'"><h2>'+esc(title)+'</h2><p>'+esc(text)+'</p><span aria-hidden="true">↗</span></a>';
-const itemLink=r=>'<a href="'+url('item',{id:r.id})+'">'+esc(r.title)+'</a>';
+const itemLink=r=>'<a '+(r.kind==='article'?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+url(r.kind==='article'?'review-preview':'item',{id:r.id})+'">'+esc(r.title)+'</a>';
 const personOptions=d=>Object.fromEntries(d.people.map(p=>[p.id,p.name]));
 const projectChoices=d=>({'':'Library only',...Object.fromEntries(d.projects.filter(p=>p.status!=='Complete').map(p=>[p.id,p.name]))});
 const contentRow=r=>'<div>'+itemLink(r)+'<small>'+esc(kinds[r.kind]||r.kind)+'</small></div>'+badge(r.publication?.status==='published'?'Published':r.status);

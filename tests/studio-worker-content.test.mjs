@@ -15,7 +15,8 @@ test('team work links to each saved item with attribution and review actions',()
  for(const id of ['nina','imogen','marcus','rory']){
   const row=html.split('data-work-id="content:'+id+'"')[1].split('</li>')[0];
   assert.match(row,new RegExp('>'+id+' content</a>'));
-  assert.match(row,new RegExp('studio='+(id==='imogen'?'review-preview':'item')+'[^"\\s]*id='+id));
+  assert.match(row,new RegExp('studio=review-preview[^"\\s]*id='+id));
+  assert.match(row,/data-review-preview target="_blank" rel="noopener"/);
   for(const other of d.items.filter(r=>r.id!==id))assert.ok(!row.includes('>'+other.title+'</a>'));
  }
  assert.match(html,/Needs attention \(1\)/);
