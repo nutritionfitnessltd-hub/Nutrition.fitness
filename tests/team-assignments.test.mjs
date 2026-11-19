@@ -6,9 +6,10 @@ import {renderTeamPage} from '../server/studio-team.mjs';
 import {studioData,saveProject} from '../server/studio-store.mjs';
 import {projectPage} from '../server/studio-pages.mjs';
 import {handleLibraryWork} from '../server/library-work.mjs';
+import {handleStudio} from '../server/studio.mjs';
 
 const owner={role:'admin',id:randomUUID()},person={id:randomUUID(),name:'Joyce',email:'joyce@example.test'};
-const project={id:randomUUID(),name:'Launch campaign',creator_id:randomUUID(),status:'In progress',weeks:1,brief:'Launch brief',studio:{allowedIds:['secret']},entries:[{title:'Prepare campaign',status:'To do'}]};
+const project={id:randomUUID(),name:'Launch campaign',creator_id:randomUUID(),status:'In progress',weeks:1,brief:'Launch brief',studio:{ideaId:'private-idea',allowedIds:['secret']},entries:[{title:'Prepare campaign',status:'To do'}]};
 const values=()=>({id:randomUUID(),staff:person.id,title:'Create the launch newsletter',instructions:'Use the approved brief.',due:'2026-12-01',project:project.id});
 test('Assign work opens a direct person-specific form with active projects and standalone option',()=>{
  const html=renderTeamPage({params:new URLSearchParams({person:person.id,assign:'1'}),actor:owner,staff:[person],data:{projects:[project,{...project,id:'closed',name:'Old project',status:'Complete'}]}});
@@ -42,6 +43,9 @@ test('project-linked assignees see project context without management or content
  const html=projectPage(new URLSearchParams({project:project.id}),data);
  assert.match(html,/Launch brief/);assert.match(html,/Prepare campaign/);assert.doesNotMatch(html,/<form|Private draft|Secret text/);
  await assert.rejects(saveProject(api,actor,data.projects[0],{name:'Changed'}),e=>e.status===403);assert.equal(writes,0);
+ const res={setHeader(){},end(body){this.body=body;}};
+ await handleStudio({method:'GET'},res,{params:new URLSearchParams({studio:'project',project:project.id}),actor,api,load:async()=>({records:[]}),env:{}});
+ assert.equal(res.statusCode,200);assert.match(res.body,/Launch brief/);assert.doesNotMatch(res.body,/Project settings|Secret text/);
 });
 test('team assignment route saves and returns to the selected profile',async()=>{
  const tasks=[];const api=async(path,options={})=>{
