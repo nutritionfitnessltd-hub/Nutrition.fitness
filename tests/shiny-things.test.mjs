@@ -66,3 +66,17 @@ test('staff cannot read or mutate the private ideas board',async()=>{
  assert.throws(()=>authorizeStudioRequest(staff,'shiny-things','GET'),e=>e.status===403);
  await assert.rejects(changeShinyThing(new URLSearchParams(),{}, {...x.data(),actor:staff},x.api,{}),e=>e.status===403);
 });
+
+ test('urgency survives reload, orders the notes, and a colour change keeps a reviewed plan',async()=>{
+ const x=fixture();
+ for(const urgency of ['someday','urgent','soon','normal']){
+  const id='studio:idea:'+randomUUID();await changeShinyThing(new URLSearchParams(),{id,revision:0,action:'idea-save',title:'Idea '+urgency,summary:'A saved thought',weeks:4,urgency},x.data(),x.api,{});
+ }
+ const html=shinyThingsPage(new URLSearchParams(),x.data());
+ assert.ok(html.indexOf('Idea urgent')<html.indexOf('Idea soon'));assert.ok(html.indexOf('Idea soon')<html.indexOf('Idea normal'));assert.ok(html.indexOf('Idea normal')<html.indexOf('Idea someday'));
+ assert.match(html,/class="shiny-note shiny-urgent"/);assert.match(html,/shiny-note-urgency">Urgent/);
+ const saved=[...x.rows.values()][0];saved.fields.plan={title:'Reviewed plan'};saved.fields.requestRevision=1;saved.fields.state='Ready to review';
+ await changeShinyThing(new URLSearchParams(),{id:saved.id,revision:1,action:'idea-save',title:saved.title,summary:saved.fields.summary,weeks:4,urgency:'urgent'},x.data(),x.api,{});
+ assert.equal(x.rows.get(saved.id).fields.urgency,'urgent');assert.equal(x.rows.get(saved.id).fields.plan.title,'Reviewed plan');
+ await assert.rejects(changeShinyThing(new URLSearchParams(),{id:saved.id,revision:2,action:'idea-save',title:saved.title,summary:saved.fields.summary,weeks:4,urgency:'invalid'},x.data(),x.api,{}),e=>e.status===400);
+ });
