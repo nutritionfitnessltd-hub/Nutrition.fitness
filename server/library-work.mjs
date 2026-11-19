@@ -11,6 +11,7 @@ import { requireLibraryNda, ndaAdminScreen } from './library-nda.mjs';
 import { studioFrame } from './studio-ui.mjs';
 import { handleStudio } from './studio.mjs';
 import { accountPreview, workingCopy, copyResponse } from './account-preview.mjs';
+import {myAccountScreen,changeMyAccount} from './my-account.mjs';
 import { assetButton, assetScreen } from './library-assets.mjs';
 import { displayEntry } from './library-display.mjs';
 
@@ -228,7 +229,8 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
     actor=copyActor||await readActor(req,res,api,env,key);
     if(!actor&&welcomeJson)return json(401,{error:'Sign in again before sending. Your welcome message is still here.'});
     if(!actor)return signInPage(res,401,item,destination);
-    if(!copyActor&&await requireLibraryNda(req,res,{actor,api,params}))return;
+    const ndaParams=params.has('accountPreview')?new URLSearchParams([...params].filter(([key])=>!['nda','receipt','identity','download'].includes(key))):params;
+    if((!copyActor||req.method==='GET'&&params.has('nda'))&&await requireLibraryNda(req,res,{actor,api,params:copyActor?params:ndaParams}))return;
     if(params.has('accountPreview')){
       const id=params.get('accountPreview'),copy=await workingCopy(api,actor,id);
       if(req.method==='GET'&&params.get('copyStatus')==='1')return json(200,{access:copy.actor.access});
@@ -238,6 +240,15 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
       const safeEnv=Object.fromEntries(['NUFI_LIBRARY_CATALOGUE_KEY','SUPABASE_URL','SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY','SITE_URL'].filter(k=>env[k]).map(k=>[k,env[k]]));
       const next=new URLSearchParams(params);next.delete('accountPreview');
       return handleLibraryWork(req,copyResponse(res,id,copy.actor.access),{env:safeEnv,load,params:next,apiFactory:()=>copy.api,copyActor:copy.actor,fetcher:async()=>{throw new HttpError(403,'External actions are unavailable in the working copy.');}});
+    }
+    if(studio==='account'){
+      if(req.method==='POST'){
+        if(copyActor)throw new HttpError(403,'Account changes are unavailable in the working copy.');
+        const result=await changeMyAccount(f,{actor,api,env,res});
+        if(result.saved==='password')issue(res,key,{role:actor.role,id:actor.id,...(result.codeHash?{generation:sign(key,result.codeHash)}:{})});
+        res.statusCode=303;res.setHeader('Location',route+'&studio=account&saved='+result.saved);return res.end();
+      }
+      return writePage(res,200,await myAccountScreen(actor,api,params,env,{copy:!!copyActor}),actor,'account');
     }
     if(studio==='nda'){
       const page=await ndaAdminScreen(req,res,{actor,api,params});
