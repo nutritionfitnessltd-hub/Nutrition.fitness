@@ -95,7 +95,6 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='review-preview'){
       let status=200,retained={};
       if(req.method==='POST'){
-      if(f.action?.startsWith('idea-')){const next=await changeShinyThing(params,f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();}
         try{
           if(!['review-decision','review-retry','review-schedule'].includes(f.action))throw new HttpError(400,'Choose a review action.');
           const result=await reviewDecision(params,f,data,api,env,fetcher);
@@ -110,6 +109,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='article-image'){const r=data.byId.get(params.get('id'));if(r?.workerImage&&!r.articleImage)return await sendWorkerImage(res,r,env,fetcher);return await sendArticleImage(req,res,params,data);}
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
+      if(f.action?.startsWith('idea-')){const next=await changeShinyThing(params,f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();}
       if(['hq-message','hq-idea','hq-approve-plan'].includes(f.action)){const result=await changeHq(params,f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url(result.section,result).replaceAll('&amp;','&'));return res.end();}
 
       if(f.action==='software-manager-review'){await hqRequest(env,{action:'message',worker:'ellis',message:f.message,clientMessageId:f.requestId},fetcher);res.statusCode=303;res.setHeader('Location',url('worker-chat',{worker:'ellis'}).replaceAll('&amp;','&'));return res.end();}
