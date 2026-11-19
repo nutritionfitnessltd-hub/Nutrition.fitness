@@ -58,7 +58,11 @@ export async function syncNewsletter({record,revision,api,client,now=Date.now()}
   if(!state.campaignId){
    if(state.pendingCreate&&now-Date.parse(state.pendingCreate.at)>23*3600000){state.hold=true;throw new HttpError(409,'An earlier create was not confirmed. Check GHL before reconnecting this draft to avoid a duplicate.');}
    if(!state.pendingCreate){state.initialHash=digest([payload.name,payload.editorType,payload.editorContent]);state.pendingCreate={at:new Date(now).toISOString(),key:'nufi-newsletter-'+randomUUID(),payload};await persist();}
-   const created=await client.create(state.pendingCreate.payload,state.pendingCreate.key);
+   let created;try{created=await client.create(state.pendingCreate.payload,state.pendingCreate.key);}catch(error){
+    // A confirmed validation rejection created nothing; the corrected source may be retried.
+    if([400,413,415,422].includes(error.upstreamStatus))delete state.pendingCreate;
+    throw error;
+   }
    if(typeof created.id!=='string')throw new HttpError(503,'GHL did not confirm the new draft identifier.');
    state.campaignId=created.id;state.campaignUrl=ghlCampaignUrl(created.id);delete state.pendingCreate;
    // Commit the mapping before updating metadata; a retry always reuses this draft.
