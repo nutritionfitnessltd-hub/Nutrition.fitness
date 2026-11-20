@@ -1,3 +1,4 @@
+import {newsletterDraftButton} from './newsletter-draft-links.mjs';
 import {participates,ownsTask} from './studio-project-tasks.mjs';
 import {assignmentProjectId} from './team-assignments.mjs';
 import { canAccess, canReviewContent, canReadContent } from './library-permissions.mjs';
@@ -29,7 +30,7 @@ export function teamWorkRows(data){
     const review=r.kind==='article'||canReviewContent(data,r)&&r.status==='In review';
     recordRows.set(r.id,{id:'content:'+r.id,recordId:r.id,title:r.title,...owner,project:project?.id||'',projectName:project?.name||'',
       state:stateFor(r.status),status:r.status,updated:date(r.updatedAt||r.workerSource?.receivedAt),due:task?.due_date||'',
-      note:r.reviewFeedback?.at(-1)?.changes||'Saved content',review,href:url(review?'review-preview':'item',{id:r.id}),action:review?'Review':'Open'});
+      ghlAction:newsletterDraftButton(data,r),note:r.reviewFeedback?.at(-1)?.changes||'Saved content',review,href:url(review?'review-preview':'item',{id:r.id}),action:review?'Review':'Open'});
   }
   for(const t of tasks){
     const r=recordRows.get(t.record_id);if(r){linked.add(r.recordId);const status=['In review','Changes requested'].includes(r.status)?r.status:t.status;rows.push({...r,id:'task:'+t.id,title:t.title||r.title,state:stateFor(status),status,updated:[date(t.updated_at),r.updated].sort().at(-1),note:t.instructions||r.note});continue;}
@@ -55,7 +56,7 @@ export function teamWorkRows(data){
 }
 function workList(rows){
   if(!rows.length)return '<p class="studio-empty">No work matches this view.</p>';
-  return '<ul class="team-work-list">'+rows.map(r=>'<li class="team-work-row" data-work-id="'+esc(r.id)+'"><div class="team-work-owner"><span class="team-work-avatar" aria-hidden="true">'+esc((r.ownerName||'?').slice(0,1))+'</span><div><strong>'+esc(r.ownerName)+'</strong><small>'+esc(r.type==='ai'?'AI worker':'Team member')+'</small></div></div><div class="team-work-detail"><a '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.title)+'</a><small>'+esc(r.projectName)+'</small>'+(r.note?'<p>'+esc(r.note.length>180?r.note.slice(0,177)+'…':r.note)+'</p>':'')+'</div><div class="team-work-status">'+badge(r.status)+(r.due?'<small>Due '+esc(stamp(date(r.due)))+'</small>':'')+(r.updated?'<small>Updated '+esc(stamp(r.updated))+'</small>':'')+'</div><a class="btn" '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.action)+'</a></li>').join('')+'</ul>';
+  return '<ul class="team-work-list">'+rows.map(r=>'<li class="team-work-row" data-work-id="'+esc(r.id)+'"><div class="team-work-owner"><span class="team-work-avatar" aria-hidden="true">'+esc((r.ownerName||'?').slice(0,1))+'</span><div><strong>'+esc(r.ownerName)+'</strong><small>'+esc(r.type==='ai'?'AI worker':'Team member')+'</small></div></div><div class="team-work-detail"><a '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.title)+'</a><small>'+esc(r.projectName)+'</small>'+(r.note?'<p>'+esc(r.note.length>180?r.note.slice(0,177)+'…':r.note)+'</p>':'')+(r.ghlAction?'<div class="studio-actions">'+r.ghlAction+'</div>':'')+'</div><div class="team-work-status">'+badge(r.status)+(r.due?'<small>Due '+esc(stamp(date(r.due)))+'</small>':'')+(r.updated?'<small>Updated '+esc(stamp(r.updated))+'</small>':'')+'</div><a class="btn" '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.action)+'</a></li>').join('')+'</ul>';
 }
 export function teamWorkDashboard(data){
   const rows=teamWorkRows(data),recent=Date.now()-7*86400000;
