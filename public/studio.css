@@ -384,6 +384,7 @@
 .studio-eyebrow { display:block; font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
 .dashboard-welcome { display:grid; grid-template-columns:1.05fr 1fr; gap:26px; padding:32px; border-radius:20px; background:#084c5b; color:white; }
 .welcome-copy { align-self:center; min-width:0; }
+.launch-pack-image{display:block;width:100%;max-width:560px;height:auto;border-radius:10px}.launch-pack-contents summary{font-weight:600}.launch-pack-contents>details>article{margin:16px 0 0}
 .welcome-copy .studio-eyebrow { color:#d5e5db; line-height:1.6; }
 .studio .welcome-copy h1 { color:white; font-size:36px; margin:10px 0 6px; }
 .welcome-copy .welcome-lead { font-size:23px; color:#f4cfb8; margin:0 0 12px; }
