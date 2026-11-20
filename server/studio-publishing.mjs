@@ -8,6 +8,7 @@ export {markdownArticle} from './article-reader.mjs';
 
 export const testOrigin='https://nutrition-fitness-website-2.vercel.app';
 export const liveOrigin='https://nutrition.fitness';
+export function publicationDestination(env={}){return env.NUFI_STUDIO_PUBLISH_TARGET==='vercel'?{environment:'test',origin:testOrigin,label:'the Vercel website',ready:true}:{environment:'live',origin:liveOrigin,label:'nutrition.fitness',ready:env.NUFI_STUDIO_LIVE_READY==='true'};}
 export const releasePath=id=>'/content/'+encodeURIComponent(id)+'/';
 export function releaseEnvironment(req){
  const host=String(req.headers.host||'').toLowerCase();
@@ -43,7 +44,7 @@ export function releaseBody(r,image=''){
  else content=f.bodyFormat==='html'?articleHtml(f.body):markdownArticle(f.body||f.introduction||f.purpose||f.brief||'');
  return '<h1>'+esc(r.title)+'</h1>'+(image?'<figure><img class="studio-article-photo" src="'+esc(image)+'" alt="'+esc(f.imageAlt||'')+'"><figcaption>'+esc(f.imageCredit||'')+'</figcaption></figure>':'')+content;
 }
-export async function publishedContent(req,res,params,api,sendImage){
+export async function publishedContent(req,res,params,api,sendImage,env={}){
  const environment=releaseEnvironment(req),id=params.get('id'),mode=params.get('view');
  if(mode==='studio-feed'){
   const rows=await api('/rest/v1/nufi_studio_releases?select=item_id,payload,published_at&environment=eq.'+environment+'&payload->>kind=eq.article&order=published_at.desc&limit=500',{service:true});
@@ -55,6 +56,6 @@ export async function publishedContent(req,res,params,api,sendImage){
  if(mode==='studio-release-image')return sendImage(r);
  const image=r.workerImage||r.articleImage?'/api/content?view=studio-release-image&id='+encodeURIComponent(id):'';
  res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('X-Robots-Tag',environment==='test'?'noindex, nofollow':'index, follow');
- if(r.kind==='article')return res.end(readerDocument(r,image,environment==='test'?'Test website · awaiting final live approval':'',environment!=='live'));
+ if(r.kind==='article')return res.end(readerDocument(r,image,environment==='test'&&env.NUFI_STUDIO_PUBLISH_TARGET!=='vercel'?'Test website · awaiting final live approval':'',environment!=='live'));
  return res.end('<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(r.title)+' | nutrition.fitness</title><link rel="stylesheet" href="/studio.css"></head><body><header class="panel"><a href="/">nutrition.fitness®</a>'+(environment==='test'?'<p>Test website · awaiting final live approval</p>':'')+'</header><main class="studio-article">'+releaseBody(r,image)+'<p><a href="/knowledge-centre/">Back to Knowledge Centre</a></p></main></body></html>');
 }

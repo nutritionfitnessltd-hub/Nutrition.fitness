@@ -85,6 +85,7 @@
     }
   ],
   "env": {
+    "NUFI_STUDIO_PUBLISH_TARGET": "vercel",
     "NUFI_AUTH_MODE": "public",
     "NUFI_ACCOUNT_MANAGEMENT_READY": "true",
     "NUFI_PASSWORD_AUTH_READY": "true",
@@ -97,6 +98,7 @@
     "NUFI_AUTH_CAPTCHA_READY": "false"
   },
   "crons": [
+    {"path":"/api/publication-sync/","schedule":"*/5 * * * *"},
     {
       "path": "/api/newsletter-sync/",
       "schedule": "*/5 * * * *"

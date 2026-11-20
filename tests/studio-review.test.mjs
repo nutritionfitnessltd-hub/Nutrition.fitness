@@ -26,7 +26,7 @@ test('review list opens accessible preview with saved revision and two clear dec
 test('article review window has one article and persistent controls without manager navigation or nested frames',()=>{
  const f=fixture(),html=reviewWindowDocument(params,f.data);
  assert.match(html,/article-review-window/);assert.match(html,/review-window-controls/);
- for(const label of ['Approve','Schedule','Edit','Request changes'])assert.ok(html.includes('>'+label+'<'));
+ for(const label of ['Approve','Edit','Request changes'])assert.ok(html.includes('>'+label+'<'));
  assert.doesNotMatch(html,/<iframe|Studio navigation|review-popup-header/);
  assert.equal((html.match(/<h1>/g)||[]).length,1);
 });
@@ -35,9 +35,9 @@ test('staff article window offers Edit only for assigned content with editing ac
  const html=reviewWindowDocument(params,f.data);assert.match(html,/>Edit</);assert.doesNotMatch(html,/>Approve<|>Schedule<|>Request changes</);
  f.data.actor.access.edit=false;assert.doesNotMatch(reviewWindowDocument(params,f.data),/>Edit</);
 });
-test('draft preview provides Submit for review without approving the article',async()=>{
+test('administrator draft preview hides the separate submission step',async()=>{
  const f=fixture();f.data.byId.get('worker:sample').status='Draft';
- assert.match(reviewWindowDocument(params,f.data),/>Submit for review</);
+ assert.doesNotMatch(reviewWindowDocument(params,f.data),/>Submit for review<|>Schedule<|publishing is separate/);
  const result=await reviewDecision(params,{action:'review-decision',decision:'submit',revision:'1',reviewId:randomUUID()},f.data,f.api);
  assert.equal(result.record.status,'In review');assert.equal(result.record.approval,undefined);assert.equal(result.record.fields.body,'Read the evidence.');
  assert.doesNotMatch(reviewWindowDocument(params,{...f.data,byId:new Map([[result.id,result.record]])}),/>Submit for review</);
@@ -92,4 +92,52 @@ test('article save-and-preview returns the saved revision and standalone URL, wi
  const body={action:'content-save',intent:'preview',previewWindow:'yes',revision:'1',title:'Updated title',fields:JSON.stringify({body:'Saved edited content.'})};
  let res=out();await handleStudio({method:'POST',body},res,opts);assert.equal(res.statusCode,200);const result=JSON.parse(res.body);assert.equal(result.record.revision,2);assert.equal(result.record.fields.body,'Saved edited content.');assert.match(result.previewUrl,/studio=review-preview/);
  res=out();await handleStudio({method:'POST',body},res,opts);assert.equal(res.statusCode,409);assert.match(JSON.parse(res.body).error,/newer version/);assert.equal(f.writes,1);
+});
+
+
+test('approval saves first and opens publishing choices only for the administrator',async()=>{
+ const f=fixture();const result=await reviewDecision(params,{action:'review-decision',decision:'approve',revision:'1',reviewId:randomUUID()},f.data,f.api);
+ f.data.byId.set(result.id,result.record);f.data.items=[result.record];
+ const html=reviewWindowDocument(new URLSearchParams({id:result.id,reviewed:'approve'}),f.data);
+ assert.match(html,/data-publication-dialog data-open-on-load/);
+ for(const label of ['Publish now','Schedule','Keep as approved draft'])assert.ok(html.includes('>'+label+'<'));
+ assert.equal(result.record.approval.revision,result.record.revision);
+});
+
+test('publication choices validate approval, save London time and publish only on a separate explicit action',async()=>{
+ const {publishFromReview,runScheduledPublications,londonPublicationTime}=await import('../server/studio-review-publication.mjs');
+ const f=fixture();f.data.livePublishingReady=true;const r={...f.data.items[0],status:'Approved',approval:{by:'owner',revision:1}};
+ const result=await publishFromReview({action:'review-schedule',revision:'1',scheduledAt:'2099-12-01T09:30'},r,f.data,f.api);
+ assert.equal(result.record.publicationPlan.scheduledAt,'2099-12-01T09:30:00.000Z');assert.equal(result.record.approval.revision,2);
+ assert.equal(londonPublicationTime('2099-07-01T09:30'),'2099-07-01T08:30:00.000Z');
+ await assert.rejects(publishFromReview({action:'review-publish',revision:'0'},r,f.data,f.api),/changed/);
+ await assert.rejects(publishFromReview({action:'review-publish',revision:'1'},{...r,status:'Draft'},f.data,f.api),/Approve/);
+ const calls=[];await publishFromReview({action:'review-publish',revision:'1'},r,f.data,async(path,o)=>{calls.push(o.payload.target);return [];});assert.deepEqual(calls,['test','live']);
+ let releases=0;const scheduled={...result.record,publicationPlan:{...result.record.publicationPlan,scheduledAt:'2026-01-01T09:00:00Z'}};
+ const api=async(path,o)=>{if(path.includes('nufi_studio_items'))return [{id:scheduled.id,revision:2,payload:scheduled}];if(path.includes('nufi_studio_release')){if(o?.method==='POST'){releases++;return [];}return [];}return [];};
+ assert.equal((await runScheduledPublications({api,env:{NUFI_STUDIO_LIVE_READY:'true'}})).published,1);assert.equal(releases,2);
+ releases=0;scheduled.approval.revision=1;await runScheduledPublications({api,env:{NUFI_STUDIO_LIVE_READY:'true'}});assert.equal(releases,0,'Edited versions cannot be auto-published');
+});
+
+
+test('review handler dispatches the new schedule and keep-draft actions',async()=>{
+ const f=fixture();const r=f.data.items[0];r.status='Approved';r.approval={by:'owner',revision:1};f.data.livePublishingReady=true;
+ const result=await reviewDecision(params,{action:'review-schedule',revision:'1',scheduledAt:'2099-12-01T09:30'},f.data,f.api);
+ assert.equal(result.reviewed,'scheduled');assert.equal(result.record.publicationPlan.state,'scheduled');
+ f.data.byId.set(r.id,result.record);
+ const kept=await reviewDecision(params,{action:'review-keep-draft',revision:'2'},f.data,f.api);
+ assert.equal(kept.record.publicationPlan,undefined);assert.equal(kept.record.status,'Approved');
+});
+
+
+test('Vercel destination publishes and schedules to the existing website without enabling nutrition.fitness live releases',async()=>{
+ const {publicationDestination}=await import('../server/studio-publishing.mjs');
+ const {publishFromReview,runScheduledPublications}=await import('../server/studio-review-publication.mjs');
+ const f=fixture();const r={...f.data.items[0],status:'Approved',approval:{by:'owner',revision:1}};
+ f.data.publicationDestination=publicationDestination({NUFI_STUDIO_PUBLISH_TARGET:'vercel'});f.data.livePublishingReady=false;
+ const calls=[];await publishFromReview({action:'review-publish',revision:'1'},r,f.data,async(path,o)=>{calls.push(o.payload.target);return [];});assert.deepEqual(calls,['test']);
+ const result=await publishFromReview({action:'review-schedule',revision:'1',scheduledAt:'2099-12-01T09:30'},r,f.data,f.api);assert.equal(result.record.publicationPlan.destination,'test');
+ const scheduled={...result.record,publicationPlan:{...result.record.publicationPlan,scheduledAt:'2026-01-01T09:00:00Z'}};
+ const published=[];const api=async(path,o)=>path.includes('nufi_studio_items')?[{id:scheduled.id,revision:2,payload:scheduled}]:o?.method==='POST'?(published.push(o.payload.target),[]):[];
+ assert.equal((await runScheduledPublications({api,env:{NUFI_STUDIO_PUBLISH_TARGET:'vercel'}})).published,1);assert.deepEqual(published,['test']);
 });

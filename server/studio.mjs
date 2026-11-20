@@ -15,7 +15,7 @@ import { assetsPage, brandMediaPage, workspaceArchive, softwareReleases, saveSof
 
 import { teamWorkPage } from './studio-team-work.mjs';
 import { reviewHistoryPage } from './studio-review-history.mjs';
-import {publicationPanel,publishStudio} from './studio-publishing.mjs';
+import {publicationPanel,publishStudio,publicationDestination} from './studio-publishing.mjs';
 import {reviewPreview,reviewDecision,reviewWindowDocument} from './studio-review.mjs';
 import {sendWorkerImage} from './worker-images.mjs';
 import {readerDocument} from './article-reader.mjs';
@@ -117,6 +117,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(['home','team-work','library'].includes(section))await loadNewsletterDraftLinks(data,api).catch(()=>{});
     data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');
     data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';
+    data.publicationDestination=publicationDestination(env);
     if(section==='newsletter-preview'||section==='newsletter-html')return await sendNewsletter(req,res,readable(data,params.get('id')),section,env);
     if(section==='article-preview'||(section==='item'&&params.get('tab')==='knowledge-document')){
       if(req.method!=='GET')throw new HttpError(405,'Use GET to open an article preview.');
@@ -130,7 +131,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       let status=200,retained={};
       if(req.method==='POST'){
         try{
-          if(!['review-decision','review-retry','review-schedule'].includes(f.action))throw new HttpError(400,'Choose a review action.');
+          if(!['review-decision','review-retry','review-schedule','review-publish','review-keep-draft'].includes(f.action))throw new HttpError(400,'Choose a review action.');
           const result=await reviewDecision(params,f,data,api,env,fetcher);
           data.byId.set(result.id,result.record);data.items=data.items.map(r=>r.id===result.id?result.record:r);params.set('reviewed',result.reviewed);
         }catch(e){status=e instanceof HttpError?e.status:503;retained={...f,message:e instanceof HttpError?e.message:'Could not save your review. Your feedback is still here.'};}
