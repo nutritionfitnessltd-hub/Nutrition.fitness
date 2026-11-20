@@ -1,4 +1,5 @@
 import {ownsTask} from './studio-project-tasks.mjs';
+import {includeAdministrator} from './team-owner.mjs';
 import {projectTrackingSummaries} from './studio-production-tracker.mjs';
 import {assignmentProjectId} from './team-assignments.mjs';
 import { requireAccess, canReadContent, canReviewContent, reviewsKind } from './library-permissions.mjs';
@@ -24,13 +25,14 @@ export async function allRows(api,url){
   }
 }
 export async function studioData(api,actor,load){
-  const [index,overlays,projects,tasks,people,releases]=await Promise.all([
+  let [index,overlays,projects,tasks,people,releases]=await Promise.all([
     load(),allRows(api,itemTable+'?select=id,payload,revision,updated_at&order=id&id=not.like.studio:notification:*'),
     allRows(api,projectTable+'?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&or=(creator_id.eq.'+actor.id+',entries.cs.'+encodeURIComponent(JSON.stringify([{assignee:actor.id}]))+')')),
     allRows(api,'/rest/v1/nufi_library_tasks?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&staff_id=eq.'+actor.id)),
     actor.role==='admin'?api('/rest/v1/nufi_library_staff?select=id,name,email&order=name',service):Promise.resolve([{id:actor.id,name:actor.name}]),
     actor.role==='admin'?allRows(api,'/rest/v1/nufi_studio_releases?select=item_id,environment,source_revision,published_at&order=item_id'):Promise.resolve([])
   ]);
+  if(actor.role==='admin')people=await includeAdministrator(api,actor,people);
   if(actor.role!=='admin'){
     const linked=new Set(tasks.map(assignmentProjectId).filter(Boolean));
     const missing=[...linked].filter(id=>!projects.some(p=>p.id===id));
