@@ -19,13 +19,10 @@ export function releaseEnvironment(req){
 }
 export function publicationPanel(r,data){
  if(data.actor.role!=='admin'||isNewsletterContent(r))return '';
- const releases=data.releases||[],test=releases.find(x=>x.item_id===r.id&&x.environment==='test'),live=releases.find(x=>x.item_id===r.id&&x.environment==='live');
- const approved=r.status==='Approved'&&r.approval?.revision===r.revision, currentTest=test?.source_revision===r.revision;
- return '<section class="panel studio-publishing"><h2>Publish this content</h2><p>Approve the draft, check it on the test website, then give final approval for nutrition.fitness.</p>'+
-  (test?'<p>Test website · version '+test.source_revision+' '+button('View test page',testOrigin+releasePath(r.id))+'</p>':'')+
-  (live?'<p>Live · version '+live.source_revision+' '+button('View live page',liveOrigin+releasePath(r.id))+'</p>':'')+
-  (!approved?'<p>Submit this draft for approval before publishing.</p>':form('publish-test',hidden('revision',r.revision),{section:'item',id:r.id},currentTest?'Update test website':'Publish to test website'))+
-  (approved&&currentTest&&data.livePublishingReady?form('publish-live',hidden('revision',r.revision)+'<label class="check"><input type="checkbox" name="finalApproval" value="yes" required> I checked this version on the test website and approve it for nutrition.fitness.</label>',{section:'item',id:r.id},'Give final approval & publish live'):approved&&currentTest?'<p>Live publishing will be available when nutrition.fitness is connected. This test version is ready for your review.</p>':'')+'</section>';
+ const approved=r.status==='Approved'&&r.approval?.revision===r.revision;
+ const label=approved?'Open approved content options':'Review & approve';
+ return '<section class="panel studio-publishing"><h2>'+(approved?'Approved content':'Review this content')+'</h2><p>'+(approved?'Choose the next step for this approved version.':'Open the preview to approve this saved version or request changes.')+'</p>'+button(label,url('review-preview',{id:r.id}),true).replace('<a ','<a data-review-preview target="_blank" rel="noopener" ')+(!['article'].includes(r.kind)?'<p class="meta">Approved content stays in the library. Assign the next step to staff when needed.</p>':'')+'</section>';
+
 }
 export async function publishStudio(params,f,data,api){
  if(data.actor.role!=='admin')throw new HttpError(403,'Only the administrator can publish content.');
