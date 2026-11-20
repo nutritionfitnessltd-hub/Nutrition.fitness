@@ -1,3 +1,4 @@
+import {workerSettingsCommand} from './team-worker-settings.mjs';
 import {saveOrganisation} from './team-organisation.mjs';
 import {allRows} from './studio-store.mjs';
 import {assignmentForm,saveAssignment,assignmentLink} from './team-assignments.mjs';
@@ -126,10 +127,10 @@ async function teamScreen(api,actor,origin,env,params=new URLSearchParams(),fetc
   const target=link({work:'1',studio:'team'});
   const createMarkup=form('create-user','<label>Full name<input name="name" maxlength="100" required autocomplete="off"></label><label>Email<input name="email" type="email" maxlength="254" required autocomplete="off"></label>'+accessFields(null)+'<button class="primary">Create user</button>',target);
   const accessMarkup=s=>'<p>'+(s.code_hash?'Access enabled':'Access disabled or password not set')+'</p><div class="studio-actions">'+(s.code_hash?'<details class="team-welcome-details"><summary>Reset password</summary>'+welcomePanel(s,{origin,env,purpose:'reset'})+'</details>':form('issue-code',field('staff',s.id)+'<button>Enable account</button>',target))+(s.code_hash?form('disable-user',field('staff',s.id)+'<button>Disable access</button>',target):'')+'</div>'+form('save-access',field('staff',s.id)+field('accessRevision',s.access_revision||1)+accessFields(s.access)+'<div class="studio-actions"><button class="primary">Save access</button><button type="submit" name="previewAccount" value="yes" data-account-preview formaction="/content-library/?work=1&amp;studio=account-preview" formtarget="_blank" formnovalidate>Preview account ↗</button></div>',target)+(s.code_hash?'<details class="team-welcome-details"><summary>Send welcome details to '+esc(s.name)+'</summary>'+welcomePanel(s,{origin,env})+'</details>':'<p class="meta">Enable this account to prepare its welcome email and password setup link.</p>');
-  let hqChat,hqError;
-  if(params.get('worker'))try{hqChat=await hqRequest(env,{action:'chat',worker:params.get('worker')},fetcher);}catch(e){hqError=e.message;}
+  let hqChat,hqError,hqSettings,hqSettingsError;
+  if(params.get('worker'))await Promise.all([ (async()=>{try{hqChat=await hqRequest(env,{action:'chat',worker:params.get('worker')},fetcher);}catch(e){hqError=e.message;}})(), (async()=>{try{hqSettings=await hqRequest(env,{action:'worker-settings',worker:params.get('worker')},fetcher);}catch(e){hqSettingsError=e.message;}})() ]);
   if(params.get('tab')==='organisation')try{data.hqStatus=await hqRequest(env,{action:'status'},fetcher);}catch(e){data.hqError=e.message;}
-  return renderTeamPage({params,actor,staff,data,accessMarkup,createMarkup,hqChat,hqError});
+  return renderTeamPage({params,actor,staff,data,accessMarkup,createMarkup,hqChat,hqError,hqSettings,hqSettingsError});
 }
 
 function passwordResult(person,origin,env){
@@ -314,6 +315,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
           catch(e){if(!(e instanceof HttpError))throw e;return writePage(res,e.status,assignmentForm(person,projects,f,e.message),actor,'team');}
           res.statusCode=303;res.setHeader('Location',route+'&studio=team&person='+encodeURIComponent(f.staff)+'&saved=assignment');return res.end();
         }
+        if(['team-worker-prompt-save','team-worker-routine-save','team-worker-routine-toggle'].includes(f.action)){await hqRequest(env,workerSettingsCommand(f),fetcher);res.statusCode=303;res.setHeader('Location',route+'&studio=team&tab=workers&worker='+encodeURIComponent(f.worker)+'&saved=worker-settings');return res.end();}
         if(f.action==='team-worker-pause'){if(!['yes','no'].includes(f.paused))throw new HttpError(400,'Choose a worker state.');await hqRequest(env,{action:'worker-pause',worker:f.worker,version:Number(f.version),paused:f.paused==='yes'},fetcher);res.statusCode=303;res.setHeader('Location',route+'&studio=team&tab=organisation&role=workers');return res.end();}
         if(['team-role-save','team-role-delete'].includes(f.action)){const staff=await api(staffTable+'?select=id,name,email&order=name.asc',service);await saveOrganisation(f,actor,staff,await teamWorkSnapshot(api),api);res.statusCode=303;res.setHeader('Location',route+'&studio=team&tab=organisation&saved=role');return res.end();}
         if(f.action==='team-reporting-save'){const staff=await api(staffTable+'?select=id,name,email&order=name.asc',service);const {section,...destination}=await saveTeamReporting(f,actor,staff,await teamWorkSnapshot(api),api);res.statusCode=303;res.setHeader('Location',route+'&studio=team&'+new URLSearchParams({...destination,saved:'reporting'}));return res.end();}
@@ -323,7 +325,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
         if(message)return writePage(res,200,message,actor,'team');
         res.statusCode=303;res.setHeader('Location',route+'&studio=team'+(f.action==='save-access'?'&saved=access&person='+encodeURIComponent(f.staff):f.action==='disable-user'?'&person='+encodeURIComponent(f.staff):''));return res.end();
       }
-      return writePage(res,200,(params.get('saved')==='reporting'?'<p role="status" class="team-profile-saved">Reporting details saved.</p>':params.get('saved')==='profile'?'<p role="status" class="team-profile-saved">Profile saved.</p>':params.get('saved')==='assignment'?'<p role="status" class="panel">Work assigned.</p>':params.get('saved')==='access'?'<p role="status" class="panel">Access saved. The new settings apply on this person’s next request.</p>':'')+await teamScreen(api,actor,origin,env,params,fetcher)+'<script type="module" src="/team-account-preview.js"></script>',actor,'team');
+      return writePage(res,200,(params.get('saved')==='worker-settings'?'<p role="status" class="team-profile-saved">James HQ settings saved.</p>':params.get('saved')==='reporting'?'<p role="status" class="team-profile-saved">Reporting details saved.</p>':params.get('saved')==='profile'?'<p role="status" class="team-profile-saved">Profile saved.</p>':params.get('saved')==='assignment'?'<p role="status" class="panel">Work assigned.</p>':params.get('saved')==='access'?'<p role="status" class="panel">Access saved. The new settings apply on this person’s next request.</p>':'')+await teamScreen(api,actor,origin,env,params,fetcher)+'<script type="module" src="/team-account-preview.js"></script>',actor,'team');
     }
     if(studio)return handleStudio(req,res,{params,actor,api,load,env,fetcher});
     if(asset){
