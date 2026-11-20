@@ -6,6 +6,15 @@ import {handleStudio} from '../server/studio.mjs';
 import {teamWorkRows,teamWorkPage,teamWorkDashboard} from '../server/studio-team-work.mjs';
 import {accessFor,accessFromForm} from '../server/library-permissions.mjs';
 const reviewer={role:'staff',id:'reviewer',name:'Article reviewer',access:{library:true,work:true,review_articles:true}};
+test('current publication replaces review action and survives linked task status',async()=>{
+ const d=await fixture().data({role:'admin',id:'admin'});
+ d.publicationDestination={environment:'test',origin:'https://nutrition-fitness-website-2.vercel.app'};
+ d.releases=[{item_id:'nina-draft',environment:'test',source_revision:1}];
+ d.tasks=[{id:'linked',record_id:'nina-draft',status:'To do',staff_id:'admin'}];
+ const row=teamWorkRows(d).find(r=>r.recordId==='nina-draft');
+ assert.equal(row.status,'Published');assert.equal(row.action,'View published article');assert.equal(row.state,'completed');assert.equal(row.review,false);assert.match(row.href,/\/content\/nina-draft\/$/);
+ d.releases[0].source_revision=0;assert.equal(teamWorkRows(d).find(r=>r.recordId==='nina-draft').action,'Review');
+});
 function fixture(){
  const record=(id,kind,status,extra={})=>({id,kind,status,title:id,revision:1,fields:{body:'Private body '+id,shortAnswer:'A short answer'},...extra});
  const records=[record('nina-submitted','article','In review',{workerId:'nina'}),record('nina-draft','article','Draft',{workerId:'nina'}),record('human-submitted','article','In review'),record('recipe-submitted','recipe','In review'),record('my-draft','article','Draft')];
