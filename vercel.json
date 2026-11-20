@@ -5,6 +5,7 @@
   "outputDirectory": "dist",
   "trailingSlash": true,
   "functions": {
+    "api/workspace-assistant.js": {"maxDuration": 120},
     "api/content.js": {
       "includeFiles": "server/{guest-catalogue.enc,brand-assets/**}"
     },
