@@ -60,6 +60,7 @@ const routes = {
   release: ['work', 'library'], export: ['work', 'library']
 };
 const actions = {
+  'course-structure-review': ['work','library'],
   'product-save': ['library','edit'], 'product-asset-save': ['library','edit'], 'product-asset-link': ['library','edit'], 'product-asset-status': ['library','edit'], 'product-file-save': ['library','edit'],
   'review-decision': ['work', 'library'], 'review-retry': ['work', 'library'],
   'content-save': ['library', 'edit'], 'content-comment': ['library', 'edit'],

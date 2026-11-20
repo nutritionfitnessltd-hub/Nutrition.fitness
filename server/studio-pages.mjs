@@ -1,4 +1,5 @@
 import {newsletterDraftButton} from './newsletter-draft-links.mjs';
+import {coursePreview,courseEditorRecord} from './studio-courses.mjs';
 import {ownsTask,deleteTaskControl,deletedTasksPanel} from './studio-project-tasks.mjs';
 import {projectCreatePage} from './studio-project-create.mjs';
 import {isNewsletter,isNewsletterContent} from './studio-newsletters.mjs';
@@ -258,13 +259,14 @@ export function itemPage(params,data){
     return out+weeklyPlan(selected,data,frequencies);
   }
   if(preview){
-    out+=videoTools(r)+(r.kind==='recipe'?recipePreview(r):r.kind==='session'?workoutSession(r,data,{standalone:true}):contentPreview(r,data,readable));
+    out+=videoTools(r)+(r.kind==='course'?coursePreview(r,data,readable):r.kind==='recipe'?recipePreview(r):r.kind==='session'?workoutSession(r,data,{standalone:true}):contentPreview(r,data,readable));
     const included=r.kind==='course'?(r.fields.lessonIds||[]).map(id=>data.byId.get(id)||data.byId.get('training:'+id)).filter(Boolean):children;
     const unique=[...new Map([...included,...children].map(x=>[x.id,x])).values()];
-    if(unique.length)out+='<section class="panel"><h2>'+ (r.kind==='course'?'Lessons & supporting content':'Included content')+'</h2>'+list(unique,contentRow)+'</section>';
+    if(unique.length&&r.kind!=='course')out+='<section class="panel"><h2>Included content</h2>'+list(unique,contentRow)+'</section>';
+    if(r.kind==='course'&&children.some(x=>x.kind!=='lesson'))out+='<details class="panel"><summary>Supporting files</summary>'+list(children.filter(x=>x.kind!=='lesson'),contentRow)+'</details>';
   }else{
     if(checks.length&&r.kind!=='communication')out+='<details class="editor-checks"><summary>'+checks.length+' '+(checks.length===1?'thing':'things')+' to complete before checking</summary><ul>'+checks.map(c=>'<li>'+esc(c)+'</li>').join('')+'</ul></details>';
-    out+=videoTools(r)+editorForm(r,data,{feedback:data.unsavedFeedback||'',unsaved:data.unsaved===true})+referenceData(data);
+    out+=videoTools(r)+editorForm(r.kind==='course'&&!data.unsaved?courseEditorRecord(r,data):r,data,{feedback:data.unsavedFeedback||'',unsaved:data.unsaved===true})+referenceData(data);
   }
   if(r.kind==='communication')return out;
   if(canEdit){

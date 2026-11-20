@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {productionAction,productionDraftId} from '../server/course-production.mjs';
 import {createCourseProductionHandler} from '../api/course-production.js';
+import {coursePlan} from '../server/studio-courses.mjs';
 const env={NUFI_COURSE_PRODUCTION_TOKEN:'test-production-secret'};
 const req={headers:{authorization:'Bearer test-production-secret'}};
 const source={id:'C00579',title:'BMR',group:'Courses'};
@@ -28,6 +29,16 @@ test('source exposes the full course order and saves real course/module associat
  assert.equal(course.payload.title,'Fat Loss Course');assert.deepEqual(course.payload.fields.lessonIds,[saved.id]);
  assert.equal(saved.record.fields.production.course.lessonPosition,1);assert.equal(saved.record.fields.production.course.module,'Module 1');
  assert.equal(saved.record.workerId,'imogen');assert.equal(saved.record.status,'Draft');
+});
+test('worker reads actual structure approval and feedback without gaining approval powers',async()=>{
+ const ctx=fixture(),saved=await productionAction(req,input,ctx),parent=ctx.rows.get(saved.record.parent);
+ const read=()=>productionAction(req,{action:'source',sourceId:source.id},ctx);
+ assert.equal((await read()).structureReview.status,'awaiting_review');
+ const fingerprint=coursePlan(parent.payload,{byId:new Map(),trackingMeta:{courses:{'Fat Loss Course':ctx.manifest}}}).fingerprint;
+ parent.payload.courseStructureReview={decision:'approve',fingerprint,by:'James',note:'Order checked',at:'2026-11-20'};
+ let result=await read();assert.equal(result.structureReview.status,'approved');assert.equal(result.structureReview.note,'Order checked');assert.equal(result.launchPack.fields.courseId,parent.id);
+ ctx.manifest.sections[0].entries.reverse();result=await read();assert.equal(result.structureReview.status,'awaiting_review');assert.equal(result.structureReview.structureChangedSinceReview,true);
+ assert.equal(parent.payload.status,'Draft');
 });
 test('unconfirmed or ambiguous mappings cannot create orphan lessons',async()=>{
  for(const ambiguous of [false,true]){const ctx=fixture();if(ambiguous)ctx.manifest.sections[0].entries.push({...ctx.manifest.sections[0].entries[0],position:3});else ctx.manifest.order='partial';

@@ -1,4 +1,5 @@
 import {createHash} from 'node:crypto';
+import {courseProductionBrief,coursePackFields,coursePlan} from './studio-courses.mjs';
 import {HttpError,requireSecret} from './platform.mjs';
 import {blankFields,cleanText} from './studio-model.mjs';
 import {saveRecord,itemTable} from './studio-store.mjs';
@@ -14,7 +15,13 @@ export async function productionAction(req,input,{env,api,index}){
  const source=index.records.find(r=>r.id===input.sourceId&&r.group==='Courses');if(!source)throw new HttpError(404,'Choose an existing course source.');
  const id=productionDraftId(source.id),read=async()=>{const rows=await api(itemTable+'?id=eq.'+encodeURIComponent(id)+'&select=id,payload,revision&limit=1',{service:true});return rows[0]||null;};
  const current=await read();
- if(input.action==='source')return {source,draft:current,draftId:id,course:await sourceCourseManifest(api,source.id)};
+ if(input.action==='source'){
+  const course=await sourceCourseManifest(api,source.id);
+  const parent=course.id?(await api('/rest/v1/nufi_studio_items?id=eq.'+encodeURIComponent(course.id)+'&select=id,payload,revision&limit=1',{service:true}))[0]:null;
+  const plan=parent?coursePlan(parent.payload,{byId:new Map(),trackingMeta:{courses:{[course.name]:course}}}):null;
+  const structureReview={status:plan?.approved?'approved':plan?.review?.decision==='changes'&&plan.review.fingerprint===plan.fingerprint?'changes_requested':'awaiting_review',note:plan?.review?.note||'',reviewedBy:plan?.review?.by||'',reviewedAt:plan?.review?.at||'',structureChangedSinceReview:Boolean(plan?.review&&plan.review.fingerprint!==plan.fingerprint)};
+  return {source,draft:current,draftId:id,course,structureReview,courseBrief:courseProductionBrief,launchPack:{courseId:course.id||null,kind:'marketing',fields:{coursePack:true,courseId:course.id||null,workerId:'imogen',...Object.fromEntries(Object.keys(coursePackFields).map(k=>[k,'']))},saveWith:'Content Manager save_content_draft, using a stable ID per course. Read existing revision first. Upload the real hero image to that same draft with upload_content_image, including its description and source/rights. Studio displays the private uploaded image automatically; heroImageUrl is only for a real hosted image. All outputs remain Draft.'}};
+ }
  if(input.action==='read-draft')return {draft:current};
  const allowed=['action','sourceId','expectedRevision','title','body','introduction','script','takeaway','activity','canvaUrl','files','durationSeconds'];
  if(Object.keys(input).some(k=>!allowed.includes(k)))throw new HttpError(400,'Only lesson draft fields may be changed.');
