@@ -3,7 +3,7 @@ import {esc,url,button,heading} from './studio-ui.mjs';
 
 export function organisationMap(actor,staff,data){
   const members=teamProfiles(actor,staff,data),owner=members.find(m=>m.owner),visited=new Set();
-  const card=m=>'<a class="org-card'+(m.owner?' org-owner':'')+'" data-team-open href="'+m.href+'"><span class="org-type'+(m.worker?' org-type-ai':'')+'">'+esc(m.type)+'</span>'+teamAvatar(m)+'<strong>'+esc(m.name)+'</strong><span class="org-role">'+esc(m.role)+'</span><span class="org-open">Edit profile <span aria-hidden="true">↗</span></span></a>';
+  const card=m=>'<a class="org-card'+(m.owner?' org-owner':'')+'" data-team-open href="'+m.href+'"><span class="org-type'+(m.worker?' org-type-ai':'')+'">'+esc(m.type)+'</span>'+teamAvatar(m)+'<strong>'+esc(m.name)+'</strong><span class="org-role">'+esc(m.role)+'</span>'+(m.team?'<span class="org-team">'+esc(m.team)+'</span>':'')+'<span class="org-open">Edit profile <span aria-hidden="true">↗</span></span></a>';
   const branch=m=>{
     visited.add(m.key);const children=members.filter(c=>c.parent===m.key&&!visited.has(c.key));
     return '<li class="org-branch'+(children.length?' org-has-reports':'')+'">'+card(m)+(children.length?'<div class="org-report-label">Reports to '+esc(m.name)+'</div><ul class="org-reports">'+children.map(branch).join('')+'</ul>':'')+'</li>';

@@ -1,6 +1,6 @@
 import {assignmentForm,assignmentProjectId} from './team-assignments.mjs';
 import {organisationMap} from './team-organisation.mjs';
-import {profileId,teamProfiles,teamAvatar,teamProfileEditor,validProfilePhoto,validateReportingLine} from './team-profiles.mjs';
+import {profileId,teamProfiles,teamAvatar,teamProfileEditor,teamReportingPanel,profileDestination,validProfilePhoto,validateReportingLine} from './team-profiles.mjs';
 import {workers} from './studio-workers.mjs';
 import {workerContent} from './studio-worker-content.mjs';
 import {allRows,saveRecord} from './studio-store.mjs';
@@ -52,6 +52,7 @@ export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarku
     const view=workerKey==='morgan'?url('shiny-things'):workerKey==='ellis'?url('software-releases'):url('library',{worker:workerKey,view:'all'});
     return '<div class="team-profile" data-team-profile>'+profileHeader(teamAvatar(w),w.name,w.role,'AI worker · '+state)+
       '<div class="studio-actions">'+linkButton('Message '+w.name,url('worker-chat',{worker:workerKey}))+linkButton('Assign work',url('worker-chat',{worker:workerKey,brief:'1'}))+button('View work',view)+'</div>'+
+      teamReportingPanel(w,members)+
       '<section class="team-profile-section"><h2>Role & responsibilities</h2>'+teamProfileEditor(w,members)+'<p class="meta">This profile describes their role in the team. Instructions in James HQ are managed separately.</p></section>'+
       (hqChat?.employee?.instructions?'<details class="team-profile-section"><summary>Role instructions in James HQ</summary><p class="prose">'+esc(String(hqChat.employee.instructions).slice(0,16000))+'</p></details>':'')+
       (hqError?'<p role="status" class="team-activity-note">'+esc(hqError)+'</p>':'')+
@@ -68,6 +69,7 @@ export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarku
     const member=members.find(m=>m.id===person.id),work=personWork(person,data);
     return '<div class="team-profile" data-team-profile>'+profileHeader(teamAvatar(member),person.name,member.role,member.owner?'Administrator account':person.code_hash?(work.open.length?taskCount(work.open.length):'No open tasks recorded'):'Access disabled')+
       (person.email?'<p class="team-profile-email">'+esc(person.email)+'</p>':'')+'<div class="studio-actions">'+(person.email?button('Email '+person.name,'mailto:'+encodeURIComponent(person.email)):'')+button('View work','/content-library/?work=1&assignments=1&staff='+encodeURIComponent(person.id))+linkButton('Assign work',teamUrl({person:person.id,assign:'1'}))+'</div>'+
+      teamReportingPanel(member,members)+
       '<section class="team-profile-section"><h2>Role & responsibilities</h2>'+teamProfileEditor(member,members)+'</section>'+
       '<section class="team-profile-section"><h2>Current work</h2>'+list(work.projects.filter(p=>!finished(p.status)),p=>'<a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a>'+badge(p.status),'No active projects assigned.')+list(work.open.slice(0,15),row,'No open tasks recorded.')+'</section>'+
       '<section class="team-profile-section"><h2>Recent completed work</h2>'+list(work.recent,row,'No completed work recorded.')+'</section>'+
@@ -93,5 +95,19 @@ export async function saveTeamProfile(f,actor,staff,data,api){
   const portrait=f.portrait??old?.fields?.portrait??'';
   if(portrait!==''&&!validProfilePhoto(portrait))throw new HttpError(400,'Choose a photo using Change photo. The saved image must be smaller than 120 KB.');
   const reportsTo=validateReportingLine(member,text(f.reportsTo??member.manager,160),members);
-  await saveRecord(api,actor,{id:profileId(id),kind:'settings',title:'Team profile',status:'Draft',fields:{...old?.fields,role:text(f.role||'',160),responsibilities:text(f.responsibilities||'',4000),reportsTo,portrait}},revision);
+  const enteredTeam=text(f.team??old?.fields?.team??'',80),team=members.find(m=>m.team.toLowerCase()===enteredTeam.toLowerCase())?.team||enteredTeam;
+  await saveRecord(api,actor,{id:profileId(id),kind:'settings',title:'Team profile',status:'Draft',fields:{...old?.fields,role:text(f.role||'',160),responsibilities:text(f.responsibilities||'',4000),reportsTo,portrait,team}},revision);
+}
+
+export async function saveTeamReporting(f,actor,staff,data,api){
+  if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
+  if(typeof f.memberVersion!=='string'||!/^((?:person:[\da-f-]+)|(?:worker:[a-z]+))\|\d+$/.test(f.memberVersion))throw new HttpError(400,'Choose a person or AI worker.');
+  const [key,revision]=f.memberVersion.split('|'),members=teamProfiles(actor,staff,data);
+  const member=members.find(m=>m.key===key),destination=members.find(m=>m.key===f.returnTo);
+  if(!member||!destination)throw new HttpError(404,'This team profile is unavailable.');
+  if(member.owner&&f.reportsTo!=='')throw new HttpError(400,'The account owner has no manager.');
+  if(typeof f.reportsTo!=='string')throw new HttpError(400,'Choose who they report to.');
+  await saveTeamProfile({...(member.worker?{worker:member.worker}:{staff:member.id}),revision,
+    role:member.fields.role??member.role,responsibilities:member.responsibilities,reportsTo:f.reportsTo,...(f.team===undefined?{}:{team:f.team})},actor,staff,data,api);
+  return profileDestination(destination);
 }
