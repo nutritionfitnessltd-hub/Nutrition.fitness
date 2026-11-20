@@ -1,3 +1,4 @@
+import {newsletterDraftButton} from './newsletter-draft-links.mjs';
 import {ownsTask} from './studio-project-tasks.mjs';
 import {projectCreatePage} from './studio-project-create.mjs';
 import {isNewsletter,isNewsletterContent} from './studio-newsletters.mjs';
@@ -115,7 +116,8 @@ export function library(params,data,meta={}){
     '<div data-worker-updates="library">'+pages(params,rows,rs=>'<div class="studio-content-grid">'+rs.map(r=>{
       const preview=meta.training?.[r.id]||meta.assets?.[r.id]?.preview||meta.training?.[r.parent];
       const photo=r.kind==='ebook'&&r.bookAssets?.front?bookAssetUrl(r.id,'front').replaceAll('&amp;','&'):recipeImage(r)||articleImage(r);
-      return '<a class="studio-content-card" '+(r.kind==='article'?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+url(r.kind==='article'?'review-preview':'item',{id:r.id})+'">'+(photo?'<span class="studio-card-photo"><img src="'+esc(photo)+'" alt="" loading="lazy">'+(r.kind==='article'&&imageCaption(r)?'<span class="studio-photo-caption">'+esc(imageCaption(r))+'</span>':'')+'</span>':preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(isNewsletterContent(r)?'Newsletter':r.kind==='programme-family'?'Training programmes':kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks · '+(r.id==='training:nufi365'?'Year-round programme':'Standalone programme')+'</p>':r.kind==='programme-family'?'<p>Start · Progress · Develop · Own It</p>':'')+badge(published(r)?'Published':r.status)+'</div></a>';
+      const ghlAction=newsletterDraftButton(data,r);
+      return (ghlAction?'<div class="studio-linked-content-card">':'')+'<a class="studio-content-card" '+(r.kind==='article'?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+url(r.kind==='article'?'review-preview':'item',{id:r.id})+'">'+(photo?'<span class="studio-card-photo"><img src="'+esc(photo)+'" alt="" loading="lazy">'+(r.kind==='article'&&imageCaption(r)?'<span class="studio-photo-caption">'+esc(imageCaption(r))+'</span>':'')+'</span>':preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(isNewsletterContent(r)?'Newsletter':r.kind==='programme-family'?'Training programmes':kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks · '+(r.id==='training:nufi365'?'Year-round programme':'Standalone programme')+'</p>':r.kind==='programme-family'?'<p>Start · Progress · Develop · Own It</p>':'')+badge(published(r)?'Published':r.status)+'</div></a>'+(ghlAction?'<div class="studio-actions">'+ghlAction+'</div></div>':'');
     }).join('')+'</div>')+'</div>';
 }
 export function createPage(params,data,values={}){
