@@ -56,6 +56,13 @@
 .login-shell .auth .remember-me{display:flex;align-items:center;gap:9px;font-weight:400;cursor:pointer;}.login-shell .remember-me input{width:18px;height:18px;min-height:0;margin:0;padding:0;accent-color:#064c60;}
 .team-row .studio-actions form { margin:0; }
 .studio .side { height:100dvh; position:sticky; }
+/* Keep both desktop panes within the window, including at browser zoom. */
+@media (min-width:761px) {
+ .studio>.shell { height:100dvh; min-height:0; overflow:hidden; }
+ .studio .side { position:static; height:100%; overflow:hidden; }
+ .studio .side-scroll { min-height:0; overflow-y:auto; overscroll-behavior-y:contain; scrollbar-gutter:stable; }
+ .studio .workspace { min-height:0; overflow-y:auto; overscroll-behavior-y:contain; scrollbar-gutter:stable; scroll-padding-block:1rem; }
+}
 .studio .workspace main { max-width: 1640px; margin: auto; padding: 32px 40px 64px; }
 .studio .top .studio-form { margin:0; display:block; width:auto; }
 .studio .top button { background:white; color:var(--muted); border:0; font-size:13px; }
