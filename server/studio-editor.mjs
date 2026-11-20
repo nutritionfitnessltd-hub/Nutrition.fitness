@@ -27,7 +27,7 @@ export function editorForm(r,data,{create=false,project='',entry='',feedback='',
       '<details class="editor-details"><summary>Add a review note (optional)</summary>'+textarea('feedback','Review note',feedback,3)+'</details>')+
     '<div class="studio-save-bar"><span data-editor-status'+(unsaved?' data-unsaved="true"':'')+' role="status">'+(unsaved?'Unsaved changes':create?'New draft':'All changes saved')+'</span><div class="studio-actions">'+
       '<button type="submit" name="intent" value="draft">Save draft</button><button type="submit" name="intent" value="preview">Save &amp; preview</button>'+
-      (!create?'<button class="primary" type="submit" name="intent" value="review">Submit for Approval</button>'+(data.actor.role==='admin'&&r.status==='In review'?'<button type="submit" name="intent" value="approve">Approve content</button>':''):'')+'</div></div></form>';
+      (!create?(data.actor.role==='admin'?'<button class="primary" type="submit" name="intent" value="approve">Approve content</button>':'<button class="primary" type="submit" name="intent" value="review">Submit for Approval</button>'):'')+'</div></div></form>';
 }
 function messageEditorForm(r,data,{create,project,entry,unsaved}){
   return '<form method="post" action="'+url(create?'new':'item',create?{kind:r.kind}:{id:r.id,tab:'edit'})+'" class="studio-form content-editor message-editor" id="studio-editor-form">'+
@@ -38,7 +38,7 @@ function messageEditorForm(r,data,{create,project,entry,unsaved}){
       '<button type="submit" name="intent" value="preview">Save &amp; preview</button><button class="primary" type="submit" name="intent" value="draft">Save</button>'+(!create&&isNewsletterContent(r)?'<button type="submit" name="intent" value="review">Submit for Approval</button>':'')+'</div></div>'+
     '<details class="message-options"><summary>Options</summary><div id="studio-message-options"></div>'+
     (create?'<label>Project<select name="project">'+(data.actor.role==='admin'?'<option value="">None</option>':'')+data.projects.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===project?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></label>':
-      '<div class="studio-actions">'+(!isNewsletterContent(r)?'<button type="submit" name="intent" value="review">Submit for Approval</button>'+(data.actor.role==='admin'&&r.status==='In review'?'<button type="submit" name="intent" value="approve">Approve content</button>':''):'')+button('History',url('history',{id:r.id}))+'</div>')+
+      '<div class="studio-actions">'+(!isNewsletterContent(r)?(data.actor.role==='admin'?'<button class="primary" type="submit" name="intent" value="approve">Approve content</button>':'<button class="primary" type="submit" name="intent" value="review">Submit for Approval</button>'):'')+button('History',url('history',{id:r.id}))+'</div>')+
     '</details></form>';
 }
 export function contentPreview(r,data,readable){

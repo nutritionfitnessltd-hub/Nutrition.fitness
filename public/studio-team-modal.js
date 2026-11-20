@@ -6,7 +6,7 @@ function alertIn(state,message){state.error.textContent=message;state.error.hidd
 function renderProfile(state,doc){
   const main=doc.querySelector('main');if(!main)throw Error('The profile could not be opened. Please try again.');
   main.querySelector('footer')?.remove();main.querySelectorAll('script').forEach(s=>s.remove());
-  state.body.replaceChildren(...main.childNodes);state.dirty=false;state.back.hidden=Boolean(state.body.querySelector('[data-team-profile]'));
+  state.body.replaceChildren(...main.childNodes);state.dirty=false;state.dirtyForms.clear();state.back.hidden=Boolean(state.body.querySelector('[data-team-profile]'));
   const title=state.body.querySelector('h1,h2');if(title){title.id='team-modal-title';state.dialog.setAttribute('aria-labelledby',title.id);}
   state.body.querySelectorAll('[data-welcome-copy]').forEach(b=>b.hidden=false);
   state.dialog.scrollTop=0;state.close.focus();
@@ -33,12 +33,13 @@ async function openProfile(link){
   const back=document.createElement('button');back.type='button';back.textContent='Back to profile';back.hidden=true;back.className='team-modal-back';const close=document.createElement('button');close.type='button';close.textContent='Close';close.setAttribute('aria-label','Close profile');header.append(label,back,close);
   const error=document.createElement('p');error.hidden=true;error.tabIndex=-1;error.className='team-modal-error';error.setAttribute('role','alert');
   const body=document.createElement('div');body.className='team-modal-body';body.textContent='Opening profile…';dialog.append(header,error,body);document.body.append(dialog);
-  const state={dialog,body,error,close,back,opener:link,dirty:false,busy:false,url:link.href};profile=state;
+  const state={dialog,body,error,close,back,opener:link,dirty:false,dirtyForms:new Set(),busy:false,url:link.href};profile=state;
   back.addEventListener('click',async()=>{if(state.busy||state.dirty&&!confirm('Discard your unsaved changes?'))return;try{await loadProfile(state,link.href);}catch(e){alertIn(state,e.message);}});
   close.addEventListener('click',()=>closeProfile(state));dialog.addEventListener('cancel',e=>{e.preventDefault();closeProfile(state);});
   dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeProfile(state);}});
-  dialog.addEventListener('input',()=>state.dirty=true);
-  dialog.addEventListener('change',()=>state.dirty=true);
+  const markDirty=event=>{state.dirty=true;const form=event.target.closest('form');if(form)state.dirtyForms.add(form);};
+  dialog.addEventListener('input',markDirty);
+  dialog.addEventListener('change',markDirty);
   dialog.addEventListener('close',()=>{clearInterval(state.poll);dialog.remove();document.body.classList.remove('team-profile-open');profile=null;(link.isConnected?link:[...document.querySelectorAll('[data-team-open]')].find(a=>a.href===link.href)||document.querySelector('[data-team-open]'))?.focus();});
   document.body.classList.add('team-profile-open');dialog.showModal();
   try{await loadProfile(state,link.href);}catch(e){alertIn(state,e.message);}
@@ -62,6 +63,7 @@ document.addEventListener('click',async event=>{
 document.addEventListener('submit',async event=>{
   const state=profile,form=event.target;if(!state?.dialog.contains(form)||event.defaultPrevented||event.submitter?.hasAttribute('data-account-preview'))return;
   event.preventDefault();if(state.busy)return;
+  if([...state.dirtyForms].some(other=>other!==form)&&!confirm('Saving this will discard unsaved changes in the other sections of this profile. Continue?'))return;
   const method=(form.getAttribute('method')||'GET').toUpperCase(),body=new URLSearchParams(new FormData(form));
   const action=new URL(form.getAttribute('action')||state.url,location.href);
   if(method==='GET')for(const [key,value]of body)action.searchParams.set(key,value);

@@ -1,6 +1,6 @@
 import {allRows} from './studio-store.mjs';
 import {assignmentForm,saveAssignment,assignmentLink} from './team-assignments.mjs';
-import {teamWorkSnapshot,renderTeamPage,saveTeamProfile} from './studio-team.mjs';
+import {teamWorkSnapshot,renderTeamPage,saveTeamProfile,saveTeamReporting} from './studio-team.mjs';
 import {includeAdministrator} from './team-owner.mjs';
 import {hqRequest} from './studio-hq.mjs';
 import { reviewOptions, accessOptions, accessFor, accessFromForm, canAccess, requireAccess } from './library-permissions.mjs';
@@ -312,13 +312,14 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
           catch(e){if(!(e instanceof HttpError))throw e;return writePage(res,e.status,assignmentForm(person,projects,f,e.message),actor,'team');}
           res.statusCode=303;res.setHeader('Location',route+'&studio=team&person='+encodeURIComponent(f.staff)+'&saved=assignment');return res.end();
         }
+        if(f.action==='team-reporting-save'){const staff=await api(staffTable+'?select=id,name,email&order=name.asc',service);const {section,...destination}=await saveTeamReporting(f,actor,staff,await teamWorkSnapshot(api),api);res.statusCode=303;res.setHeader('Location',route+'&studio=team&'+new URLSearchParams({...destination,saved:'reporting'}));return res.end();}
         if(f.action==='team-profile-save'){const staff=await api(staffTable+'?select=id,name,email&order=name.asc',service);await saveTeamProfile(f,actor,staff,await teamWorkSnapshot(api),api);res.statusCode=303;res.setHeader('Location',route+'&studio=team'+(f.worker?'&tab=workers&worker='+encodeURIComponent(f.worker):'&person='+encodeURIComponent(f.staff))+'&saved=profile');return res.end();}
         if(!['create-user','issue-code','disable-user','save-access'].includes(f.action))throw new HttpError(400,'Choose a team action.');
         const message=await change(actor,f,api,load,origin,env);
         if(message)return writePage(res,200,message,actor,'team');
         res.statusCode=303;res.setHeader('Location',route+'&studio=team'+(f.action==='save-access'?'&saved=access&person='+encodeURIComponent(f.staff):f.action==='disable-user'?'&person='+encodeURIComponent(f.staff):''));return res.end();
       }
-      return writePage(res,200,(params.get('saved')==='profile'?'<p role="status" class="team-profile-saved">Profile saved.</p>':params.get('saved')==='assignment'?'<p role="status" class="panel">Work assigned.</p>':params.get('saved')==='access'?'<p role="status" class="panel">Access saved. The new settings apply on this person’s next request.</p>':'')+await teamScreen(api,actor,origin,env,params,fetcher)+'<script type="module" src="/team-account-preview.js"></script>',actor,'team');
+      return writePage(res,200,(params.get('saved')==='reporting'?'<p role="status" class="team-profile-saved">Reporting details saved.</p>':params.get('saved')==='profile'?'<p role="status" class="team-profile-saved">Profile saved.</p>':params.get('saved')==='assignment'?'<p role="status" class="panel">Work assigned.</p>':params.get('saved')==='access'?'<p role="status" class="panel">Access saved. The new settings apply on this person’s next request.</p>':'')+await teamScreen(api,actor,origin,env,params,fetcher)+'<script type="module" src="/team-account-preview.js"></script>',actor,'team');
     }
     if(studio)return handleStudio(req,res,{params,actor,api,load,env,fetcher});
     if(asset){

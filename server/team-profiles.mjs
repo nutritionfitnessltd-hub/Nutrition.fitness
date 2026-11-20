@@ -16,6 +16,7 @@ export function teamProfiles(actor,staff,data){
   for(const m of members){
     const saved=data.byId?.get(profileId(m.id));m.revision=saved?.revision||0;m.fields=saved?.fields||{};
     m.role=m.fields.role||m.role;m.responsibilities=m.fields.responsibilities??m.responsibilities;
+    m.team=m.fields.team||'';
     m.defaultPortrait=m.portrait;m.portrait=validProfilePhoto(m.fields.portrait)?m.fields.portrait:m.portrait;
     m.manager=m.owner?'':m.fields.reportsTo??(m.worker?'person:'+actor.id:'');
   }
@@ -34,15 +35,32 @@ export function teamAvatar(member){
   const initials=member.name.trim().split(/\s+/).slice(0,2).map(s=>s[0]||'').join('').toUpperCase();
   return '<span class="team-person-avatar team-initials" aria-hidden="true">'+esc(initials)+'</span>';
 }
-export function teamProfileEditor(member,members){
-  const managers={'':'No manager set',...Object.fromEntries(members.filter(m=>m.key!==member.key).map(m=>[m.key,m.name+(m.worker?' · AI worker':'')]))};
-  const current=resolveManager(member.manager,members)?.key||member.manager;
-  if(current&&!Object.hasOwn(managers,current))managers[current]=member.manager+' (check reporting line)';
+export const profileDestination=member=>({section:'team',...(member.worker?{worker:member.worker}:{person:member.id})});
+export function teamProfileEditor(member){
   const photo='<div class="team-photo-editor" data-team-photo><div data-team-photo-preview data-name="'+esc(member.name)+'" data-default-portrait="'+esc(member.defaultPortrait)+'">'+teamAvatar(member)+'</div><div><label class="team-photo-pick">Change photo<input type="file" accept="image/jpeg,image/png,image/webp" data-team-photo-file></label><button type="button" class="team-photo-remove" data-team-photo-remove'+(member.fields.portrait?'':' hidden')+'>Use default</button><p class="meta" data-team-photo-status role="status">JPG, PNG or WebP · up to 8 MB</p></div>'+hidden('portrait',validProfilePhoto(member.fields.portrait)?member.fields.portrait:'')+'</div>';
   return form('team-profile-save',hidden(member.worker?'worker':'staff',member.worker||member.id)+hidden('revision',member.revision)+photo+
-    input('role','Job role',member.role,'text','maxlength="160"')+textarea('responsibilities','Responsibilities',member.responsibilities,4)+
-    (member.owner?'<p class="meta">Account owner</p>':select('reportsTo','Reports to',managers,current)),
-    {section:'team',...(member.worker?{worker:member.worker}:{person:member.id})},'Save profile','data-team-profile-form');
+    input('role','Job role',member.role,'text','maxlength="160"')+textarea('responsibilities','Responsibilities',member.responsibilities,4),
+    profileDestination(member),'Save profile','data-team-profile-form');
+}
+export function teamReportingPanel(member,members){
+  const canReportTo=(person,manager)=>{try{validateReportingLine(person,manager.key,members);return !person.owner;}catch{return false;}};
+  const managers={'':'No manager set',...Object.fromEntries(members.filter(m=>canReportTo(member,m)).map(m=>[m.key,m.name+(m.worker?' · AI worker':'')]))};
+  const current=resolveManager(member.manager,members)?.key||member.manager;
+  if(current&&!Object.hasOwn(managers,current))managers[current]=member.manager+' (check reporting line)';
+  const destination=profileDestination(member),returnTo=hidden('returnTo',member.key);
+  const identity=person=>hidden('memberVersion',person.key+'|'+person.revision);
+  const teams=[...new Set(['Content','Marketing','Operations',...members.map(m=>m.team).filter(Boolean)])].sort((a,b)=>a.localeCompare(b));
+  const teamField=input('team','Team',member.team,'text','maxlength="80" list="team-profile-teams" placeholder="Choose or enter a team"')+'<datalist id="team-profile-teams">'+teams.map(team=>'<option value="'+esc(team)+'"></option>').join('')+'</datalist>';
+  const managerField=member.owner?hidden('reportsTo','')+'<div class="team-manager-owner"><strong>Reports to</strong><span>Account owner · no manager</span></div>':select('reportsTo','Reports to',managers,current);
+  const managerForm=form('team-reporting-save',identity(member)+returnTo+'<div class="team-manager-fields">'+managerField+teamField+'</div>',destination,'Save reporting details','data-team-reporting-form');
+  const reports=members.filter(m=>m.parent===member.key&&!m.owner);
+  const candidates=members.filter(m=>m.parent!==member.key&&canReportTo(m,member));
+  const choices={'':'Choose a person or AI worker',...Object.fromEntries(candidates.map(m=>[m.key+'|'+m.revision,m.name+(m.worker?' · AI worker':'')+(m.parent?' — currently reports to '+members.find(p=>p.key===m.parent)?.name:'')]))};
+  const reportCards=reports.length?'<ul class="team-direct-reports">'+reports.map(r=>'<li><a data-team-load href="'+r.href+'">'+teamAvatar(r)+'<span><strong>'+esc(r.name)+'</strong><small>'+esc(r.role)+'</small></span></a>'+form('team-reporting-save',identity(r)+returnTo+hidden('reportsTo',''),destination,'Remove','data-team-reporting-form aria-label="Remove '+esc(r.name)+' from direct reports"')+'</li>').join('')+'</ul>':'<p class="team-reports-empty">No one reports to '+esc(member.name)+' yet.</p>';
+  const colleagues=member.team?members.filter(m=>m.key!==member.key&&m.team.toLowerCase()===member.team.toLowerCase()):[];
+  const teamList=member.team?'<div class="team-colleagues"><h3>'+esc(member.team)+' team</h3>'+(colleagues.length?'<div>'+colleagues.map(m=>'<a data-team-load href="'+m.href+'">'+teamAvatar(m)+'<span>'+esc(m.name)+'</span></a>').join('')+'</div>':'<p class="meta">No other profiles have joined this team yet.</p>')+'</div>':'';
+  return '<section class="team-reporting"><h2>Reporting & team</h2>'+managerForm+teamList+'<div class="team-direct-heading"><h3>Reports to them</h3><span>'+reports.length+'</span></div>'+reportCards+
+    (candidates.length?form('team-reporting-save',returnTo+hidden('reportsTo',member.key)+select('memberVersion','Add a direct report',choices),destination,'Add direct report','data-team-reporting-form'):'')+'</section>';
 }
 export function validateReportingLine(member,value,members){
   if(member.owner)return '';

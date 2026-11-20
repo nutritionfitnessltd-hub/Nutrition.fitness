@@ -32,13 +32,23 @@ test('newsletters, recipes, courses, programmes and video assets share the draft
 function fixture(){const record={...draftDocument(input,null,namespace),revision:1};const actor={role:'admin',id:'human'};return {record,data:{actor,byId:new Map([[record.id,record]]),items:[record],assigned:new Set([record.id]),projects:[],releases:[]},params:new URLSearchParams({id:record.id})};}
 test('submit for approval and approval are separate and preserve the saved article',async()=>{
  const {record,data,params}=fixture();let saved;const api=async(_,o)=>{saved=o.payload.document;return [{revision:o.payload.expected+1}];};
- const form=editorForm(record,data);assert.match(form,/Submit for Approval/);assert.doesNotMatch(form,/value="approve"/);
+ const form=editorForm(record,data);assert.match(form,/Approve content/);assert.doesNotMatch(form,/Submit for Approval/);
  await changeStudio(params,{action:'content-save',intent:'review',revision:1,title:record.title,fields:JSON.stringify(record.fields)},data,api);
  assert.equal(saved.status,'In review');assert.equal(saved.fields.body,input.body);
  const review={...saved,revision:2};data.byId.set(record.id,review);data.items=[review];assert.match(editorForm(review,data),/Approve content/);
  await changeStudio(params,{action:'content-save',intent:'approve',revision:2,title:record.title,fields:JSON.stringify(record.fields)},data,api);
  assert.equal(saved.status,'Approved');assert.equal(saved.approval.revision,3);
 });
+test('administrators can approve a draft directly while staff still submit for review',async()=>{
+ const {record,data,params}=fixture();let saved;
+ for(const status of ['Draft','Changes requested','In review']){
+  const form=editorForm({...record,status},data);assert.match(form,/value="approve"/);assert.doesNotMatch(form,/Submit for Approval/);
+ }
+ const staffForm=editorForm(record,{...data,actor:{role:'staff'}});assert.match(staffForm,/Submit for Approval/);assert.doesNotMatch(staffForm,/value="approve"/);
+ await changeStudio(params,{action:'content-save',intent:'approve',revision:1,title:record.title,fields:JSON.stringify(record.fields)},data,async(_,o)=>{saved=o.payload.document;return [{revision:2}];});
+ assert.equal(saved.status,'Approved');assert.equal(saved.approval.revision,2);assert.equal(saved.fields.body,input.body);assert.equal(saved.publication,undefined);
+});
+
 test('release requires admin, current approval and explicit final approval',async()=>{
  const {record,data,params}=fixture();let writes=0;const api=async()=>{writes++;return [];};
  await assert.rejects(()=>publishStudio(params,{action:'publish-test',revision:1},data,api));
