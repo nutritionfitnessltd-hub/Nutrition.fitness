@@ -11,14 +11,14 @@ import {isProductAsset,productStoragePrefix} from './studio-products.mjs';
 export const productFileTypes={jpg:'image/jpeg',jpeg:'image/jpeg',png:'image/png',webp:'image/webp',pdf:'application/pdf',docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',zip:'application/zip',mp4:'video/mp4',webm:'video/webm',mp3:'audio/mpeg'};
 const maximumSizeInBytes=250*1024*1024;
 function filePath(r,pathname){
- const prefix=productStoragePrefix(r.id),tail=typeof pathname==='string'&&pathname.startsWith(prefix)?pathname.slice(prefix.length):'';
+ const prefix=productStoragePrefix(r.fields?.fileStorageProductId&&r.fields.productIds?.includes(r.fields.fileStorageProductId)?r.fields.fileStorageProductId:r.id),tail=typeof pathname==='string'&&pathname.startsWith(prefix)?pathname.slice(prefix.length):'';
  const match=/^([a-f0-9-]{36})\.([a-z0-9]+)$/.exec(tail);
  if(!match||!productFileTypes[match[2]])throw new HttpError(400,'Choose a supported file for this asset.');
  return {id:match[1],type:productFileTypes[match[2]]};
 }
 function uploadRecord(data,id,env){
  requireAccess(data.actor,'library','edit');const r=editable(data,id);
- if(!isProductAsset(r))throw new HttpError(400,'Save a product asset before uploading its files.');
+ if(!isProductAsset(r)&&r.kind!=='product')throw new HttpError(400,'Save a product before uploading its files.');
  if(!env.BLOB_READ_WRITE_TOKEN)throw new HttpError(503,'File uploads are unavailable in this workspace. You can add a team folder link in Edit details.');
  return r;
 }
@@ -37,10 +37,19 @@ export async function attachProductFile(params,f,data,api,env,inspect=head){
  if((r.productFiles||[]).some(file=>file.pathname===f.pathname))return;
  checkFileLimit(r);
  const name=cleanText(f.name||'',200).replace(/[\\/]/g,'-');if(!name)throw new HttpError(400,'Give the file a name.');
- if(!['Finished export','Editable original','Thumbnail','Supporting document'].includes(f.slot))throw new HttpError(400,'Choose the file purpose.');
+ const productSlots=['Product photo','Lifestyle image','Front label','Back label','Advert / creative','Other'];
+ if(!(r.kind==='product'?productSlots:['Finished export','Editable original','Thumbnail','Supporting document']).includes(f.slot))throw new HttpError(400,'Choose the file purpose.');
  const blob=await inspect(f.pathname,{token:env.BLOB_READ_WRITE_TOKEN});
  if(blob.pathname!==f.pathname||blob.contentType!==expected.type||blob.size<=0||blob.size>maximumSizeInBytes||!new URL(blob.url).hostname.endsWith('.private.blob.vercel-storage.com'))throw new HttpError(400,'This private upload could not be verified.');
  if(f.slot==='Thumbnail'&&!expected.type.startsWith('image/'))throw new HttpError(400,'Use a JPG, PNG or WebP thumbnail.');
+ if(r.kind==='product'){
+  const id='studio:product:'+expected.id;
+  const existing=data.byId.get(id);
+  if(existing){if(isProductAsset(existing)&&existing.fields.productIds?.includes(r.id)&&existing.productFiles?.some(file=>file.pathname===f.pathname))return;throw new HttpError(409,'This file is already attached elsewhere.');}
+  const type=f.slot.includes('label')?'Packaging & labels':f.slot==='Lifestyle image'?'Lifestyle image':f.slot==='Product photo'?'Product photo':expected.type.startsWith('video/')?'Video':f.slot==='Advert / creative'?'Social graphic':'Other';
+  await saveRecord(api,data.actor,{id,kind:'asset',title:name,status:'Draft',comments:[],fields:{productAsset:true,productIds:[r.id],fileStorageProductId:r.id,assetRole:f.slot==='Advert / creative'?'advert':'product',type,category:f.slot,channel:'Unspecified',altText:name},productFiles:[{...expected,pathname:f.pathname,name,type:expected.type,bytes:blob.size,slot:f.slot,uploadedAt:new Date().toISOString()}]},0);
+  return;
+ }
  const next=structuredClone(r);delete next.revision;delete next.updatedAt;delete next.approval;next.status='Draft';
  next.productFiles=[...(next.productFiles||[]),{...expected,pathname:f.pathname,name,type:expected.type,bytes:blob.size,slot:f.slot,uploadedAt:new Date().toISOString()}];
  await saveRecord(api,data.actor,next,r.revision);
