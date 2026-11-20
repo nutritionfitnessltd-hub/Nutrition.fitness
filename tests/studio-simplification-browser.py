@@ -61,8 +61,10 @@ try:
   expect(page.locator('[data-script-text]')).not_to_be_visible()
   checks.append('Script copies without displaying narration; actual duration shown')
   goto('studio=item&id=training:course')
-  lessons=page.locator('.studio-list a').all_text_contents()
+  lessons=page.locator('.course-module ol a').all_text_contents()
   assert lessons[:2]==['Second lesson','First lesson'],lessons
+  expect(page.get_by_role('button',name='Approve course structure',exact=True)).to_be_visible()
+  expect(page.locator('.course-pack')).to_contain_text('Introduction video script')
   checks.append('Stored lesson order is retained')
   goto('studio=item&id=training:workout-plan&tab=plan')
   page.get_by_role('link',name='Edit days',exact=True).click()

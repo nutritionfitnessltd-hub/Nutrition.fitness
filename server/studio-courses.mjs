@@ -16,8 +16,9 @@ const imageUrl=v=>{try{const u=new URL(v);return u.protocol==='https:'&&!u.usern
 
 export function coursePlan(r,data){
  const name=r.fields.production?.collection,source=name?data.trackingMeta?.courses?.[name]:null;
+ const savedLesson=id=>data.byId.get(id)||data.byId.get('training:'+id);
  const sections=source?(source.sections||[]).map(s=>({title:s.title||'Lessons',lessons:(s.entries||[]).map(e=>({id:e.id,title:e.title||'Lesson'}))})):
-  name?[]:[{title:'Lessons',lessons:(r.fields.lessonIds||[]).map(id=>({id,title:data.byId.get(id)?.title||'Lesson unavailable'}))}];
+  name?[]:[{title:'Lessons',lessons:(r.fields.lessonIds||[]).map(id=>({id:savedLesson(id)?.id||id,title:savedLesson(id)?.title||'Lesson unavailable'}))}];
  const lessons=sections.flatMap(s=>s.lessons),ids=lessons.map(l=>l.id);
  const complete=lessons.length>0&&new Set(ids).size===ids.length&&ids.every(id=>typeof id==='string'&&id)&&
   (source?source.order==='confirmed':ids.every(id=>data.byId.has(id)));

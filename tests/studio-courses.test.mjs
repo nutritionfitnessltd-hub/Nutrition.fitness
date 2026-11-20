@@ -82,6 +82,14 @@ test('worker instructions explicitly include the launch pack and continuing dail
  assert.match(courseProductionBrief,/marketing and landing page copy/);assert.match(courseProductionBrief,/hero image/);
  assert.match(courseProductionBrief,/three course lessons every day plus/);assert.match(courseProductionBrief,/do not stop/);assert.match(courseProductionBrief,/Never approve or publish/);
 });
+test('older training lesson references retain their saved order and working links',()=>{
+ const {course,data}=courseFixture();delete course.fields.production;
+ const first={id:'training:old-one',title:'First older lesson',kind:'lesson',status:'Draft',fields:{}},second={...first,id:'training:old-two',title:'Second older lesson'};
+ data.items.push(first,second);data.byId.set(first.id,first);data.byId.set(second.id,second);
+ course.fields.lessonIds=['old-two','old-one'];const plan=coursePlan(course,data);
+ assert.equal(plan.complete,true);assert.deepEqual(plan.lessons.map(l=>l.title),[second.title,first.title]);
+ assert.match(coursePreview(course,data,v=>String(v)),/id=training%3Aold-two/);
+});
 test('the authenticated Studio form saves structure approval and redirects back to the draft',async()=>{
  const {course,lesson,data,params}=courseFixture();delete course.fields.production;
  const rows=[course,lesson].map(r=>({id:r.id,revision:r.revision||1,payload:r}));let saved;
