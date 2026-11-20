@@ -17,3 +17,5 @@ if(publication){
  });
  if(publication.hasAttribute('data-open-on-load'))publication.showModal();
 }
+
+document.querySelector('[data-create-staff-task]')?.addEventListener('click',()=>{const panel=document.querySelector('[data-staff-task]');panel.hidden=!panel.hidden;if(!panel.hidden)panel.querySelector('select')?.focus();});

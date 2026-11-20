@@ -15,12 +15,12 @@ export function newsletterPublicationChoices(r,data,params,retained={}){
  '<section data-publication-schedule'+(retained.action==='review-schedule'?'':' hidden')+'><h3>Schedule the GHL draft</h3>'+form('review-schedule',hidden('revision',r.revision)+'<label>Save to GHL on<input type="datetime-local" name="scheduledAt" value="'+esc(retained.scheduledAt||r.ghlDraftPlan?.localDateTime||'')+'" required></label><p class="meta">Europe/London time. The draft will be saved within five minutes of this time. Sending is arranged separately in GHL.</p>',{section:'review-preview',id:r.id},'Confirm schedule')+'</section>'+(retained.message?'<p role="alert">'+esc(retained.message)+'</p>':'')+'</dialog>';
 }
 
-export function newsletterHandoffStatus(r,data){
+export function newsletterHandoffStatus(r,data,includeButton=true){
  if(!isNewsletterContent(r))return '';
  const plan=r.ghlDraftPlan,valid=r.status==='Approved'&&r.approval?.revision===r.revision&&plan?.revision===r.revision;
  const state=data.ghlDraftStates?.get(r.id),saved=valid&&state?.status==='synced'&&state.sourceRevision===r.revision;
  const text=saved?'This approved version is saved in GHL as a draft.':valid&&state?.status==='held'?'GHL updates are paused to protect changes made in GHL. Check Connections.':valid&&plan.state==='scheduled'?'GHL draft scheduled for '+plan.localDateTime.replace('T',' at ')+' (London time).':valid&&plan.state==='queued'?'GHL draft requested. The connection retries if needed.':'';
- return (text?'<p class="meta">'+esc(text)+'</p>':'')+newsletterDraftButton(data,r);
+ return (text?'<p class="meta">'+esc(text)+'</p>':'')+(includeButton?newsletterDraftButton(data,r):'');
 }
 
 export async function publishNewsletterDraft(f,r,data,api,env={},fetcher=fetch){
