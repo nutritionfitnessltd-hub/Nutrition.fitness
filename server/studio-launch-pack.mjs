@@ -1,3 +1,4 @@
+import {launchPackChildren,launchPackFields} from './launch-packs.mjs';
 import {canReadContent} from './library-permissions.mjs';
 import {workerImagePath} from './worker-images.mjs';
 import {esc,url} from './studio-ui.mjs';
@@ -15,10 +16,10 @@ function photo(record,data,fallback=''){
 }
 export function launchPackPreview(r,data){
  if(!canReadContent(data,r))return '';
- const f=r.fields,hero=photo(r,data,f.heroImageUrl),course=data.byId.get(f.courseId);
- const images=[{role:'Course hero',record:r,src:hero,alt:f.imageAlt||f.heroImageAlt,credit:f.imageCredit||f.heroImageCredit},
+ const children=launchPackChildren(r,data),f=launchPackFields(r,data),heroRecord=children.find(x=>x.fields.launchPackPart==='hero')||r,hero=photo(heroRecord,data,f.heroImageUrl),course=data.byId.get(f.courseId);
+ const images=[{role:'Course hero',record:heroRecord,src:hero,alt:heroRecord.fields.imageAlt||f.heroImageAlt,credit:heroRecord.fields.imageCredit||f.heroImageCredit},
   ...[['Video thumbnail',f.videoThumbnailAssetId],['Social image',f.socialImageAssetId]].map(([role,id])=>{
-   const record=data.byId.get(id);return {role,record,src:photo(record,data),alt:record?.fields.imageAlt,credit:record?.fields.imageCredit};
+   const record=children.find(x=>x.fields.launchPackPart===(role==='Video thumbnail'?'videoThumbnail':'socialImage'))||data.byId.get(id);return {role,record,src:photo(record,data),alt:record?.fields.imageAlt,credit:record?.fields.imageCredit};
   })];
  const seconds=Number(f.introductionScriptTimingEstimateSeconds),timing=Number.isFinite(seconds)&&seconds>0?'Estimated narration: '+Math.round(seconds)+' seconds. Confirm the length after recording.':'Narration length has not been estimated.';
  const nav=[['overview','Overview'],['landing','Landing page'],['video','Intro video'],['email','Welcome email'],['social','Social post'],['images','Images']];
@@ -29,5 +30,6 @@ export function launchPackPreview(r,data){
   section('video','Introduction video script',f.introductionScript,'<p class="launch-timing">'+esc(timing)+'</p>')+
   section('email','Welcome email',f.welcomeEmail)+section('social','Social post',f.socialCopy)+
   '<section id="launch-images" class="launch-section"><header><h2>Images</h2><span class="meta">'+images.filter(i=>i.src).length+' / 3 added</span></header><div class="launch-image-grid">'+images.map(i=>'<figure><h3>'+i.role+'</h3>'+(i.src?'<a href="'+esc(i.src)+'" target="_blank" rel="noopener"><img src="'+esc(i.src)+'" alt="'+esc(i.alt||i.role)+'" loading="lazy"></a><figcaption>'+esc(i.credit||'Credit not added')+'</figcaption><a class="btn" href="'+esc(i.src)+'" download="'+esc(i.role.toLowerCase().replaceAll(' ','-'))+'.png">Download image</a>':'<p class="meta">Not added yet.</p>')+'</figure>').join('')+'</div></section>'+
+  (children.length?'<section class="launch-section"><h2>Launch pack contents</h2><ul>'+children.map(child=>'<li><a href="'+url('item',{id:child.id})+'">'+esc(child.title)+'</a> · '+esc(child.status)+'</li>').join('')+'</ul></section>':'')+
   '<details class="launch-notes"><summary>Production notes &amp; original brief</summary>'+paragraphs(f.productionNotes||'This launch pack is a draft. Check the copy and images before use.')+'<details><summary>Original worker submission</summary><pre>'+esc(f.body||'')+'</pre></details></details></article>';
 }

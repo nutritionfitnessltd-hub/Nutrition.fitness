@@ -1,6 +1,4 @@
-import {canReadContent,canEditContent} from './library-permissions.mjs';
-import {workerImagePath} from './worker-images.mjs';
-import {esc,url,heading,button,badge} from './studio-ui.mjs';
+import {canReadContent} from './library-permissions.mjs';
 
 export const launchPackParts=[
  ['overview','Course overview, outcomes & audience','marketing'],
@@ -15,17 +13,12 @@ export function launchPackParent(record,data){
 export function launchPackChildren(pack,data){
  return data.items.filter(r=>r.status!=='Archived'&&canReadContent(data,r)&&launchPackParent(r,data)?.id===pack.id);
 }
-export function launchPackPage(pack,data){
- const children=launchPackChildren(pack,data),f=pack.fields||{};
- const image=r=>r.workerImage?.bucket==='worker-content'&&workerImagePath(r.workerImage.path)?url('article-image',{id:r.id}):'';
- const part=r=>r.fields?.launchPackPart||(f.videoThumbnailAssetId===r.id?'videoThumbnail':f.socialImageAssetId===r.id?'socialImage':'');
- const card=r=>{const src=image(r);return '<article class="panel"><h3><a href="'+url('item',{id:r.id})+'">'+esc(r.title)+'</a></h3><p>'+badge(r.status)+'</p>'+(src?'<a href="'+url('item',{id:r.id})+'"><img class="launch-pack-image" src="'+src+'" alt="'+esc(r.fields.imageAlt||r.title)+'" loading="lazy"></a>':'')+'</article>';};
- return heading(pack.title,'One launch pack. Review each deliverable separately.',canEditContent(data,pack.id)?button('Edit pack',url('item',{id:pack.id,tab:'edit'})):'')+
-  (f.courseId&&data.byId.has(f.courseId)?'<p>'+button('Open course',url('item',{id:f.courseId}))+'</p>':'')+
-  (f.introduction?'<p class="prose">'+esc(f.introduction)+'</p>':'')+
-  '<section class="launch-pack-contents"><h2>Launch pack contents</h2>'+launchPackParts.map(([key,label])=>{
-   const rows=children.filter(r=>part(r)===key);
-   const attached=key==='hero'&&!rows.length&&image(pack);
-   return '<details class="panel"'+(rows.length||attached?' open':'')+'><summary>'+esc(label)+' · '+(rows.length?rows.length+' saved':attached?'Attached to pack':'Not saved separately yet')+'</summary>'+rows.map(card).join('')+(attached?'<figure><img class="launch-pack-image" src="'+attached+'" alt="'+esc(f.imageAlt||f.heroImageAlt||'Course hero image')+'" loading="lazy"></figure>':'')+'</details>';
-  }).join('')+children.filter(r=>!launchPackParts.some(([key])=>part(r)===key)).map(card).join('')+'</section>';
+export function launchPackFields(pack,data){
+ const fields={...pack.fields},mappings={landingPage:'marketingCopy',introScript:'introductionScript',welcomeEmail:'welcomeEmail',socialCopy:'socialCopy'};
+ for(const child of launchPackChildren(pack,data)){
+  const part=child.fields.launchPackPart,key=mappings[part];
+  if(part==='overview')for(const field of ['introduction','outcome','audience'])if(child.fields[field]?.trim())fields[field]=child.fields[field];
+  if(key)fields[key]=child.fields[key]||child.fields.script||child.fields.body||fields[key];
+ }
+ return fields;
 }

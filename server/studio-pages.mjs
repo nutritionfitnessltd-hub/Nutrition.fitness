@@ -1,4 +1,3 @@
-import {launchPackPage} from './launch-packs.mjs';
 import {newsletterDraftButton} from './newsletter-draft-links.mjs';
 import {isLaunchPack} from './studio-launch-pack.mjs';
 import {coursePreview,courseEditorRecord} from './studio-courses.mjs';
@@ -238,7 +237,6 @@ function programmePage(params,data,r){
 }
 export function itemPage(params,data){
   const r=data.byId.get(params.get('id'));if(!canReadContent(data,r))return heading('Content unavailable');
-  if(r.fields?.coursePack===true&&params.get('tab')!=='edit')return launchPackPage(r,data);
   if(r.kind==='article'&&params.get('tab')!=='edit')return articlePage(r,data);
   if(r.kind==='mealplan'&&r.fields.plannerVersion===1&&params.get('tab')!=='edit')return mealPlanPage(params,data,r);
   if(r.kind==='ebook'&&r.bookAssets&&params.get('tab')!=='edit')return bookPage(r,data);

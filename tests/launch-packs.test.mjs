@@ -5,7 +5,7 @@ import {itemPage} from '../server/studio-pages.mjs';
 import {teamWorkRows} from '../server/studio-team-work.mjs';
 import {coursePack,courseProductionBrief} from '../server/studio-courses.mjs';
 function fixture(){
- const pack={id:'pack',title:'Course launch pack',kind:'marketing',status:'Draft',workerId:'imogen',fields:{coursePack:true,courseId:'course'}};
+ const pack={id:'pack',title:'Course launch pack',kind:'campaign',status:'Draft',workerId:'imogen',fields:{coursePack:true,courseId:'course'}};
  const child={id:'social',title:'Social artwork',kind:'asset',status:'Draft',workerId:'imogen',fields:{launchPackId:'pack',courseId:'course',launchPackPart:'socialImage'}};
  const data={actor:{role:'admin'},items:[pack,child],byId:new Map([[pack.id,pack],[child.id,child]]),assigned:new Set(),tasks:[],projects:[],people:[]};
  return {pack,child,data};
