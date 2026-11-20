@@ -4,7 +4,7 @@ import {newsletterEligible,newsletterSource,newsletterPayload} from '../server/n
 import {syncNewsletter,sealGhlToken,openGhlToken,runNewsletterSync} from '../server/newsletter-sync.mjs';
 import {ghlClient,ghlLocation} from '../server/ghl-newsletter-client.mjs';
 import {createNewsletterSyncHandler} from '../api/newsletter-sync.js';
-const source=()=>({id:'worker:newsletter',workerId:'nina',kind:'communication',status:'Draft',title:'Newsletter — hello',fields:{subject:'Hello -- everyone',emailHtml:'<!doctype html><!--[if mso]>keep--><![endif]--><html><head><style>.one{--colour:red;color:var(--colour)}</style></head><body><p>Hi {{FIRST_NAME_OR_THERE}}, good — news.</p><img src="{{HERO_IMAGE_URL}}" alt="Food"><a href="{{UNSUBSCRIBE_URL}}">Unsubscribe</a></body></html>',ghlImageUrls:{HERO_IMAGE_URL:'https://files.leadconnectorhq.com/file/abc/food.jpg'}}});
+const source=()=>({id:'worker:newsletter',workerId:'nina',kind:'communication',status:'Approved',approval:{revision:1},ghlDraftPlan:{state:'queued',revision:1,scheduledAt:'2026-01-01T00:00:00Z'},title:'Newsletter — hello',fields:{subject:'Hello -- everyone',emailHtml:'<!doctype html><!--[if mso]>keep--><![endif]--><html><head><style>.one{--colour:red;color:var(--colour)}</style></head><body><p>Hi {{FIRST_NAME_OR_THERE}}, good — news.</p><img src="{{HERO_IMAGE_URL}}" alt="Food"><a href="{{UNSUBSCRIBE_URL}}">Unsubscribe</a></body></html>',ghlImageUrls:{HERO_IMAGE_URL:'https://files.leadconnectorhq.com/file/abc/food.jpg'}}});
 function fixture(){
  const record=source(),db={state:{}},remote=new Map(),createdKeys=new Map(),calls=[];let sourceRevision=1,creates=0;
  const api=async(path,o={})=>{
@@ -20,8 +20,8 @@ function fixture(){
  },update:async(id,payload)=>{calls.push(['update',id,structuredClone(payload)]);remote.set(id,{...remote.get(id),...payload});return {id};}};
  return {record,api,client,db,remote,calls,get creates(){return creates;},setRevision:n=>sourceRevision=n};
 }
-test('newsletter scope is Nina only and respects archive and newsletter type',()=>{
- assert.ok(newsletterEligible(source()));assert.ok(!newsletterEligible({...source(),title:'Welcome email sequence',workerSource:{kind:'email'}}));for(const patch of [{workerId:'rory'},{status:'Archived'},{kind:'article'},{fields:{body:'ordinary email'},title:'Welcome message'}])assert.ok(!newsletterEligible({...source(),...patch}));
+test('newsletter scope recognises HTML and named newsletters while respecting archive',()=>{
+ assert.ok(newsletterEligible(source()));assert.ok(newsletterEligible({...source(),workerId:'rory'}));for(const patch of [{status:'Archived'},{kind:'article'},{fields:{body:'ordinary email'},title:'Welcome message'}])assert.ok(!newsletterEligible({...source(),...patch}));
 });
 test('HTML keeps tables, styles and Outlook comments while resolving images, merge fields and punctuation',async()=>{
  const prepared=newsletterSource(source());const payload=await newsletterPayload(prepared,{},async()=>{throw Error('No upload needed');},async()=>{});
@@ -63,6 +63,13 @@ test('a source edit during processing prevents all campaign writes',async()=>{
 });
 test('lease contention cannot create a second draft',async()=>{
  const f=fixture(),api=async(path,o)=>path.includes('nufi_claim_newsletter')?[]:f.api(path,o);assert.equal((await syncNewsletter({...f,api,revision:1})).status,'busy');assert.equal(f.creates,0);
+});
+
+test('direct sync refuses drafts, missing requests, future plans and stale approval versions before any API call',async()=>{
+ for(const patch of [{status:'Draft'},{ghlDraftPlan:undefined},{approval:{revision:2}},{ghlDraftPlan:{state:'scheduled',revision:1,scheduledAt:'2099-01-01T00:00:00Z'}}]){
+  const result=await syncNewsletter({record:{...source(),...patch},revision:1,api:()=>assert.fail('No storage or GHL call'),client:{}});
+  assert.equal(result.status,'not-requested');
+ }
 });
 test('connection token is authenticated encrypted and no cron runs without its secret',async()=>{
  const env={NUFI_GHL_SEAL_KEY:'a'.repeat(64)},token='private-token-12345678901234567890',sealed=sealGhlToken(token,env);assert.ok(!sealed.includes(token));assert.equal(openGhlToken(sealed,env),token);assert.throws(()=>openGhlToken(sealed,{NUFI_GHL_SEAL_KEY:'b'.repeat(64)}));

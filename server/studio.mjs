@@ -116,7 +116,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     meta=meta||{};
     data.trackingMeta=meta;
     if(['home','team-work'].includes(section)&&actor.role==='admin'&&env.NUFI_HQ_SITE_TOKEN)data.hqIdeas=await workerIdeaSummaries(env,fetcher);
-    if(['home','team-work','library'].includes(section))await loadNewsletterDraftLinks(data,api).catch(()=>{});
+    if(['home','team-work','library','review-preview'].includes(section))await loadNewsletterDraftLinks(data,api).catch(()=>{});
     data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');
     data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';
     data.publicationDestination=publicationDestination(env);

@@ -3,11 +3,11 @@ import {createHash} from 'node:crypto';
 import {HttpError} from './platform.mjs';
 import {esc} from './studio-ui.mjs';
 import {trustedGhlImage} from './ghl-newsletter-client.mjs';
+import {isNewsletterContent} from './studio-newsletter-type.mjs';
 export const digest=value=>createHash('sha256').update(typeof value==='string'||Buffer.isBuffer(value)?value:JSON.stringify(value)).digest('hex');
 export const newsletterCopy=value=>String(value||'').replace(/(?:&[mn]dash;|&#(?:8211|8212);|&#x201[34];)/gi,', ').replace(/\s*(?:--+|[\u2013\u2014])\s*/g,', ');
 const tokens=['GREETING_IMAGE_URL','HERO_IMAGE_URL','SIGNATURE_IMAGE_URL'];
-export const newsletterEligible=r=>r.workerId==='nina'&&r.kind==='communication'&&['Draft','In review','Changes requested','Approved'].includes(r.status)&&
- (r.workerSource?.kind==='newsletter'||/\bnewsletter\b/i.test([r.fields?.contentType,r.fields?.type,r.fields?.channel,r.title].filter(Boolean).join(' ')));
+export const newsletterEligible=r=>r.kind==='communication'&&['Draft','In review','Changes requested','Approved'].includes(r.status)&&isNewsletterContent(r);
 function publicImage(value){
  let u;try{u=new URL(value);}catch{throw new HttpError(400,'A newsletter image needs a valid HTTPS address.');}
  const h=u.hostname.toLowerCase();

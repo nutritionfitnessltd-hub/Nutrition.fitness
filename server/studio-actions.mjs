@@ -60,7 +60,7 @@ function reviewRecord(next,status,f,data,revision){
   if(status!=='In review')adminOnly(data);
   const missing=issues(next,data.items.map(r=>r.id===next.id?next:r));
   if(status==='Approved'&&missing.length)throw new HttpError(400,missing.join(' '));
-  next.status=status;delete next.approval;
+  next.status=status;delete next.approval;delete next.ghlDraftPlan;
   if(status==='Approved')next.approval={by:data.actor.id,at:new Date().toISOString(),revision:revision+1};
   const note=cleanText(f.feedback||'',4000);
   if(note)next.comments=[...(next.comments||[]),{id:randomUUID(),body:note,author:data.actor.name||'Administrator',at:new Date().toISOString()}];
@@ -127,7 +127,7 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
       if(next.fields.productAsset===true)throw new HttpError(400,'Link product assets from the Products area.');
       if(next.kind==='mealplan'&&r.fields.plannerVersion===1)next.fields=refreshMealPlan(next.fields,data,r.fields);
       if(next.source&&f.sourceChecked==='yes')next.source.needsChecking=false;
-      next.status='Draft';delete next.approval;
+      next.status='Draft';delete next.approval;delete next.ghlDraftPlan;
       if(f.intent==='approve'||f.intent==='review')reviewRecord(next,f.intent==='approve'?'Approved':'In review',f,data,r.revision);
       else if(f.feedback?.trim()){
         next.comments=[...(next.comments||[]),{id:randomUUID(),body:cleanText(f.feedback,4000),author:data.actor.name||'Administrator',at:new Date().toISOString()}];

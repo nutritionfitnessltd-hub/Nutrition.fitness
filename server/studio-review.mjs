@@ -7,6 +7,7 @@ import {issues,cleanText} from './studio-model.mjs';
 import {contentWorker,workerNames} from './studio-worker-content.mjs';
 import {itemPage} from './studio-pages.mjs';
 import {isNewsletterContent} from './studio-newsletters.mjs';
+import {newsletterPublicationChoices,publishNewsletterDraft,newsletterHandoffStatus} from './studio-review-newsletter.mjs';
 import {isProductAsset,productAssetPage} from './studio-products.mjs';
 const reviewBody=(params,data)=>isProductAsset(data.byId.get(params.get('id')))?'<div class="product-space">'+productAssetPage(new URLSearchParams({id:params.get('id'),tab:'review'}),data)+'</div>':itemPage(params,data);
 import {readerDocument} from './article-reader.mjs';
@@ -31,7 +32,7 @@ export function reviewPreview(params,data,retained={}){
  (reviewer?'<footer class="review-popup-footer"><p role="status" tabindex="-1" data-review-status>'+(retained.message?esc(retained.message):params.get('reviewed')==='submit'?'Submitted for review.':pending?'Feedback saved for '+esc(name)+'’s next worker check.':params.get('reviewed')==='approve'?'Approved.':params.get('reviewed')==='changes'?'Change request saved for '+esc(name)+'.':'')+'</p><div class="studio-actions">'+
  (r.status!=='Approved'?form('review-decision',hidden('revision',r.revision)+hidden('decision','approve')+hidden('reviewId',randomUUID()),{section:'review-preview',id:r.id},newsletter?'Approve for GHL':'Approve','data-review-form'):'<span class="studio-status">'+(newsletter?'Approved for GHL':'Approved')+'</span>')+
  (canEditContent(data,r.id)?button('Edit',url('item',{id:r.id,tab:'edit'})):'')+'<button type="button" data-request-changes>Request changes</button></div>'+(newsletter?'<p class="meta">Approval is for the GHL handoff. It does not send this email.</p>':'')+
- (admin&&r.status==='Approved'&&r.kind==='article'?'<button type="button" data-open-publication>Publishing options</button>':'')+publicationChoices(r,data,params,retained)+
+ (admin&&r.status==='Approved'&&(r.kind==='article'||newsletter)?'<button type="button" data-open-publication>'+(newsletter?'GHL draft options':'Publishing options')+'</button>':'')+(newsletter?newsletterHandoffStatus(r,data)+newsletterPublicationChoices(r,data,params,retained):publicationChoices(r,data,params,retained))+
  '<section data-review-feedback'+(retained.decision==='changes'?'':' hidden')+'><h3>Request changes from '+esc(name)+'</h3>'+form('review-decision',hidden('revision',r.revision)+hidden('decision','changes')+hidden('reviewId',retained.reviewId||randomUUID())+
  '<label>What needs changing?<textarea name="feedback" rows="4" maxlength="4000" required>'+esc(retained.feedback||'')+'</textarea></label><label>Remember for future work (optional)<textarea name="guidance" rows="3" maxlength="2000" placeholder="For example: use shorter introductions and explain technical terms.">'+esc(retained.guidance||'')+'</textarea></label><p class="meta">Your feedback is saved against this version for '+esc(name)+'’s next worker check. Future guidance stays available for later drafts.</p>',{section:'review-preview',id:r.id},'Send change request','data-review-form')+'</section></footer>':'')+'</section>';
 }
@@ -40,7 +41,7 @@ const withoutVersion=r=>{const next=structuredClone(r);delete next.revision;dele
 export function reviewWindowDocument(params,data,retained={}){
  const r=readable(data,params.get('id')),preview=reviewPreview(params,data,retained);
  const footer=preview.includes('<footer class="review-popup-footer">')?preview.slice(preview.indexOf('<footer class="review-popup-footer">'),preview.lastIndexOf('</footer>')+9):canEditContent(data,r.id)?'<footer class="review-popup-footer">'+button('Edit',url('item',{id:r.id,tab:'edit'}))+'</footer>':'';
- const notice=!retained.message?({schedule:'Schedule saved to the content calendar.',scheduled:'Publication scheduled.',published:'Published on '+(data.publicationDestination?.label||'nutrition.fitness')+'.',approve:isNewsletterContent(r)?'Approved for GHL. No email has been sent.':data.actor.role==='admin'?'':'Approved. Nothing has been published.',changes:'Change request saved.'})[params.get('reviewed')]||'':'';
+ const notice=!retained.message?({schedule:'Schedule saved to the content calendar.',scheduled:'Publication scheduled.',published:'Published on '+(data.publicationDestination?.label||'nutrition.fitness')+'.',approve:isNewsletterContent(r)?'Approved for GHL. No email has been sent.':data.actor.role==='admin'?'':'Approved. Nothing has been published.',changes:'Change request saved.','ghl-saved':'Saved in GHL as a draft. No email has been sent.','ghl-scheduled':'GHL draft scheduled. This does not schedule an email to subscribers.','ghl-kept':'Kept here as an approved draft. No GHL transfer is scheduled.','ghl-attention':'The GHL draft could not be confirmed yet. Check Connections for its status; the saved request can retry.'})[params.get('reviewed')]||'':'';
  const controls='<div class="review-window-controls">'+(notice?'<p role="status">'+esc(notice)+'</p>':'')+(params.get('reviewed')==='published'&&data.publicationDestination?.origin?button('View published article',data.publicationDestination.origin+releasePath(r.id)).replace('<a ','<a target="_blank" rel="noopener" '):'')+footer+'</div>';
  const page=r.kind==='article'?readerDocument(r,articleImage(r)):'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(r.title)+'</title>'+(isNewsletterContent(r)?'<link rel="stylesheet" href="/library-reader.css">':'')+'<link rel="stylesheet" href="/studio.css"></head><body'+(isNewsletterContent(r)?' class="newsletter-review-window"':'')+'>'+reviewBody(new URLSearchParams({id:r.id,tab:'preview'}),data)+newsletterApprovalHistory(r,data)+'</body></html>';
  return page.replace('</head>','<link rel="stylesheet" href="/product-workspace.css"><link rel="stylesheet" href="/review-window.css"><script type="module" src="/studio-review.js"></script></head>').replace('<body class="kc-page">','<body class="kc-page article-review-window">').replace('</body>',controls+'</body>');
@@ -64,7 +65,7 @@ export async function reviewDecision(params,f,data,api,env={},fetcher=fetch){
  if(!canReviewContent(data,r))throw new HttpError(403,'Only the administrator or a designated reviewer can review this submitted content.');
  const admin=data.actor.role==='admin';
  if(!admin&&(f.action!=='review-decision'||!['approve','changes'].includes(f.decision)))throw new HttpError(403,'Reviewers can approve submitted work or request changes.');
- if(['review-publish','review-keep-draft'].includes(f.action)||f.action==='review-schedule'&&f.scheduledAt)return publishFromReview(f,r,data,api);
+ if(['review-publish','review-keep-draft'].includes(f.action)||f.action==='review-schedule'&&(f.scheduledAt||isNewsletterContent(r)))return isNewsletterContent(r)?publishNewsletterDraft(f,r,data,api,env,fetcher):publishFromReview(f,r,data,api);
  let next=r;
  if(f.action==='review-schedule'){
   if(Number(f.revision)!==r.revision)throw new HttpError(409,'This item changed. Reopen the latest preview before scheduling.');
@@ -84,7 +85,7 @@ export async function reviewDecision(params,f,data,api,env={},fetcher=fetch){
   const changes=cleanText(f.feedback||'',4000),guidance=cleanText(f.guidance||'',2000),workerId=contentWorker(r,data.byId);
   if(f.decision==='changes'&&!changes.trim())throw new HttpError(400,'Describe what needs changing.');
   if(f.decision==='approve'){const missing=issues(r,data.items);if(missing.length)throw new HttpError(400,missing.join(' '));}
-  next=withoutVersion(r);next.status=f.decision==='approve'?'Approved':f.decision==='submit'?'In review':'Changes requested';delete next.approval;
+  next=withoutVersion(r);next.status=f.decision==='approve'?'Approved':f.decision==='submit'?'In review':'Changes requested';delete next.approval;delete next.ghlDraftPlan;
   const at=new Date().toISOString(),entry={id:f.reviewId,decision:f.decision,reviewedRevision:r.revision,workerId,changes,guidance,author:data.actor.name||'James',authorId:data.actor.id,reviewedTitle:r.title,at,delivery:f.decision==='changes'&&workerId?'pending':'not-required'};
   next.reviewFeedback=[...(r.reviewFeedback||[]),entry];
   next.comments=[...(r.comments||[]),{id:entry.id,body:f.decision==='approve'?'Approved saved version '+r.revision+'.':f.decision==='submit'?'Submitted saved version '+r.revision+' for review.':changes+(guidance?'\n\nRemember for future work: '+guidance:''),author:entry.author,at}];
