@@ -3,6 +3,14 @@ body.newsletter-review-window{max-width:1200px;margin:0 auto;padding:28px 24px 2
 .newsletter-review-window .newsletter-approval-history{margin-top:24px}
 .newsletter-review-window .newsletter-approval-history article+article{border-top:1px solid #d8d4cb;margin-top:16px;padding-top:16px}
 @media(max-width:600px){body.newsletter-review-window{padding:20px 12px 230px}}
+.article-review-window .kc-article-layout>*{min-width:0}
+.article-review-window .kc-article-body,.article-review-window .kc-article-content{overflow-wrap:anywhere}
+.review-window-controls .review-popup-footer{padding:0;border:0;max-height:none;overflow:visible}
+.review-window-controls .studio-actions{margin:0;gap:10px;align-items:center}
+.review-window-controls .studio-actions>form{display:flex;flex:0 0 auto;width:auto}
+.review-window-controls .studio-actions button,.review-window-controls .studio-actions .btn{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-height:46px;margin:0;line-height:1.4;white-space:normal}
+.review-window-controls .studio-status{display:inline-flex;align-items:center;min-height:46px;font-weight:600;padding:0 8px}
+.review-draft-details{margin-top:12px}.review-draft-details summary{cursor:pointer;font-size:14px}.review-draft-details pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:35dvh;overflow:auto;font:14px/1.5 monospace;background:#f1f4f3;padding:16px}
 .article-review-window .kc-back{display:none}
 .article-review-window .kc-article{max-width:1200px}
 .article-review-window .kc-article-aside{align-self:start;position:sticky;top:24px;max-height:calc(100dvh - 220px);overflow:auto}

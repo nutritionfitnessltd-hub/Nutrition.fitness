@@ -51,6 +51,15 @@ export function articlePresentation(record){
    body=raw.slice(first.index+first[0].length);
   }
   body=body.replace(/^:::writing[^\n]*\n?/gm,'').replace(/^:::\s*$/gm,'');
+  // Older worker submissions append a production handoff to the article text.
+  // Keep that original in the editor, but never render email provenance or raw JSON.
+  const handoff=/^(?:\*\*)?(?:Source email|Source received|Source sender|Source Outlook message ID|Hero image source page|Checked sources JSON):/mi.exec(body);
+  if(handoff){
+   let start=handoff.index;
+   const before=body.slice(0,start),margin=/^(?:\*\*)?Margin note:(?:\*\*)?\s*(.+)\s*$/mi.exec(before);
+   if(margin&&before.slice(margin.index+margin[0].length).trim()===''){metadata['margin note']=clean(margin[1]);start=margin.index;}
+   body=body.slice(0,start).replace(/^(?:\*\*)?Status:(?:\*\*)?\s*awaiting approval\s*$/gmi,'');
+  }
   body=body.split(/^#{1,6}\s+(?:salesUse|Sales [&a-z ]*notes|Proposed real hero photograph)\s*$/mi)[0];
   const sources=/^#{1,6}\s+Sources\b[^\n]*\n/m.exec(body);
   if(sources){sourcesMarkdown=body.slice(sources.index+sources[0].length);body=body.slice(0,sources.index);}
