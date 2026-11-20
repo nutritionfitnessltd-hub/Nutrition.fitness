@@ -31,10 +31,13 @@ export function coursePack(r,data){
  // Only readable, explicitly linked packs appear; a similarly named item is not a match.
  const linked=data.items.filter(x=>x.id!==r.id&&x.status!=='Archived'&&x.fields?.coursePack===true&&x.fields.courseId===r.id&&canReadContent(data,x))
   .sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''))[0];
- const fields={...r.fields,...(linked?.fields||{})},imageRecord=linked||r;
+ const fields={...r.fields,...(linked?.fields||{})};
+ // An owner's saved course edits take precedence over subsequent worker drafts.
+ for(const key of Object.keys(coursePackFields))if(text(r.fields[key]))fields[key]=r.fields[key];
+ const imageRecord=r.workerImage?r:linked||r;
  const uploaded=imageRecord.workerImage?.bucket==='worker-content'&&workerImagePath(imageRecord.workerImage.path);
- const hero=uploaded?url('article-image',{id:imageRecord.id}).replaceAll('&amp;','&'):imageUrl(fields.heroImageUrl);
- if(uploaded){fields.heroImageAlt=fields.imageAlt||fields.heroImageAlt;fields.heroImageCredit=fields.imageCredit||fields.heroImageCredit;}
+ const hero=imageUrl(r.fields.heroImageUrl)||(uploaded?url('article-image',{id:imageRecord.id}).replaceAll('&amp;','&'):imageUrl(fields.heroImageUrl));
+ if(uploaded){fields.heroImageAlt=r.fields.heroImageAlt||fields.imageAlt||fields.heroImageAlt;fields.heroImageCredit=r.fields.heroImageCredit||fields.imageCredit||fields.heroImageCredit;}
  const checks=[
   ['overview','Overview, outcomes & audience',['introduction','outcome','audience'].every(k=>text(fields[k]))],
   ['marketingCopy','Marketing & landing page copy',Boolean(text(fields.marketingCopy))],
@@ -44,6 +47,10 @@ export function coursePack(r,data){
   ['socialCopy','Social launch copy',Boolean(text(fields.socialCopy))]
  ];
  return {fields,linked,hero,checks,ready:checks.filter(([, ,ready])=>ready).length};
+}
+export function courseEditorRecord(r,data){
+ const {fields}=coursePack(r,data);
+ return {...r,fields:{...r.fields,...Object.fromEntries(Object.keys(coursePackFields).map(key=>[key,fields[key]||'']))}};
 }
 export function courseProgressLink(r,data){
  const pack=coursePack(r,data),plan=coursePlan(r,data);

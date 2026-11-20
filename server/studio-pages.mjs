@@ -1,5 +1,5 @@
 import {newsletterDraftButton} from './newsletter-draft-links.mjs';
-import {coursePreview} from './studio-courses.mjs';
+import {coursePreview,courseEditorRecord} from './studio-courses.mjs';
 import {ownsTask,deleteTaskControl,deletedTasksPanel} from './studio-project-tasks.mjs';
 import {projectCreatePage} from './studio-project-create.mjs';
 import {isNewsletter,isNewsletterContent} from './studio-newsletters.mjs';
@@ -266,7 +266,7 @@ export function itemPage(params,data){
     if(r.kind==='course'&&children.some(x=>x.kind!=='lesson'))out+='<details class="panel"><summary>Supporting files</summary>'+list(children.filter(x=>x.kind!=='lesson'),contentRow)+'</details>';
   }else{
     if(checks.length&&r.kind!=='communication')out+='<details class="editor-checks"><summary>'+checks.length+' '+(checks.length===1?'thing':'things')+' to complete before checking</summary><ul>'+checks.map(c=>'<li>'+esc(c)+'</li>').join('')+'</ul></details>';
-    out+=videoTools(r)+editorForm(r,data,{feedback:data.unsavedFeedback||'',unsaved:data.unsaved===true})+referenceData(data);
+    out+=videoTools(r)+editorForm(r.kind==='course'&&!data.unsaved?courseEditorRecord(r,data):r,data,{feedback:data.unsavedFeedback||'',unsaved:data.unsaved===true})+referenceData(data);
   }
   if(r.kind==='communication')return out;
   if(canEdit){

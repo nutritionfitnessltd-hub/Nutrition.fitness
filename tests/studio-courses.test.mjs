@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {coursePlan,coursePack,coursePreview,reviewCourseStructure,courseProductionBrief} from '../server/studio-courses.mjs';
+import {coursePlan,coursePack,coursePreview,courseEditorRecord,reviewCourseStructure,courseProductionBrief} from '../server/studio-courses.mjs';
 import {itemPage} from '../server/studio-pages.mjs';
 import {authorizeStudioRequest} from '../server/library-permissions.mjs';
 import {attachProductionLesson} from '../server/course-production-manifest.mjs';
@@ -61,6 +61,9 @@ test('a linked worker pack renders saved copy, copyable script and private uploa
  data.items.push(pack);data.byId.set(pack.id,pack);
  const model=coursePack(course,data),html=coursePreview(course,data,v=>String(v));
  assert.equal(model.ready,6);assert.match(html,/Copy introduction script/);assert.match(html,/Estimated narration/);assert.match(html,/studio=article-image/);
+ assert.equal(courseEditorRecord(course,data).fields.marketingCopy,'Landing copy');
+ course.fields.marketingCopy='Owner revised copy';assert.equal(coursePack(course,data).fields.marketingCopy,'Owner revised copy');
+ assert.equal(courseEditorRecord(course,data).fields.marketingCopy,'Owner revised copy');
  assert.match(html,/Landing copy/);assert.doesNotMatch(html,/src="https?:\/\/.*12345678/);
  pack.fields.heroImageUrl='javascript:alert(1)';delete pack.workerImage;assert.equal(coursePack(course,data).ready,5);
 });
