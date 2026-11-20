@@ -23,3 +23,7 @@ body.newsletter-review-window{max-width:1200px;margin:0 auto;padding:28px 24px 2
 
 [data-publication-dialog]{width:min(580px,calc(100vw - 40px));box-sizing:border-box;border:1px solid #d8d4cb;border-radius:14px;padding:28px;background:#fffdf8;color:#003349;box-shadow:0 20px 80px #00334940;font:16px/1.5 Arial,sans-serif}
 [data-publication-dialog]::backdrop{background:#00334980}[data-publication-dialog] h2{margin:0 0 12px;font-size:25px}[data-publication-dialog] .studio-actions{align-items:stretch}[data-publication-dialog] .studio-actions form{display:flex}[data-publication-dialog] input{max-width:100%}
+body.content-review-window{max-width:1180px;margin:0 auto;padding:28px 24px 230px;background:#faf6ef;overflow-wrap:anywhere}
+.content-review-window .studio-heading{margin-bottom:20px}.content-review-window .studio-heading h1{font-size:30px}
+.content-review-window .panel{background:white}
+@media(max-width:760px){body.content-review-window{padding:20px 16px 250px}.content-review-window .studio-heading h1{font-size:25px}}
