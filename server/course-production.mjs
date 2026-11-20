@@ -1,3 +1,4 @@
+import {launchPackParts} from './launch-packs.mjs';
 import {createHash} from 'node:crypto';
 import {courseProductionBrief,coursePackFields,coursePlan} from './studio-courses.mjs';
 import {HttpError,requireSecret} from './platform.mjs';
@@ -20,7 +21,7 @@ export async function productionAction(req,input,{env,api,index}){
   const parent=course.id?(await api('/rest/v1/nufi_studio_items?id=eq.'+encodeURIComponent(course.id)+'&select=id,payload,revision&limit=1',{service:true}))[0]:null;
   const plan=parent?coursePlan(parent.payload,{byId:new Map(),trackingMeta:{courses:{[course.name]:course}}}):null;
   const structureReview={status:plan?.approved?'approved':plan?.review?.decision==='changes'&&plan.review.fingerprint===plan.fingerprint?'changes_requested':'awaiting_review',note:plan?.review?.note||'',reviewedBy:plan?.review?.by||'',reviewedAt:plan?.review?.at||'',structureChangedSinceReview:Boolean(plan?.review&&plan.review.fingerprint!==plan.fingerprint)};
-  return {source,draft:current,draftId:id,course,structureReview,courseBrief:courseProductionBrief,launchPack:{courseId:course.id||null,kind:'marketing',fields:{coursePack:true,courseId:course.id||null,workerId:'imogen',...Object.fromEntries(Object.keys(coursePackFields).map(k=>[k,'']))},saveWith:'Content Manager save_content_draft, using a stable ID per course. Read existing revision first. Upload the real hero image to that same draft with upload_content_image, including its description and source/rights. Studio displays the private uploaded image automatically; heroImageUrl is only for a real hosted image. All outputs remain Draft.'}};
+  return {source,draft:current,draftId:id,course,structureReview,courseBrief:courseProductionBrief,launchPack:{courseId:course.id||null,kind:'marketing',deliverables:launchPackParts.map(([part,label,kind])=>({part,label,kind,fields:{launchPackId:'Exact parent Studio ID',launchPackPart:part,courseId:course.id||null,workerId:'imogen'}})),fields:{coursePack:true,courseId:course.id||null,workerId:'imogen',...Object.fromEntries(Object.keys(coursePackFields).map(k=>[k,'']))},saveWith:'Content Manager save_content_draft, using a stable ID per course. Read existing revision first. Maintain one parent index and separate linked child drafts, not separate jobs. Generate new branded images instead of selecting existing photographs; upload each to its image child with alt text and AI provenance. Studio displays the private uploaded image automatically; heroImageUrl is only for a real hosted image. All outputs remain Draft.'}};
  }
  if(input.action==='read-draft')return {draft:current};
  const allowed=['action','sourceId','expectedRevision','title','body','introduction','script','takeaway','activity','canvaUrl','files','durationSeconds'];

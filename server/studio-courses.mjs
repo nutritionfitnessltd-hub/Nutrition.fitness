@@ -1,3 +1,4 @@
+import {launchPackChildren} from './launch-packs.mjs';
 import {createHash} from 'node:crypto';
 import {HttpError} from './platform.mjs';
 import {canReadContent,reviewsKind} from './library-permissions.mjs';
@@ -10,7 +11,7 @@ export const coursePackFields={
  heroImageUrl:'Hero image link',heroImageAlt:'Hero image description',heroImageCredit:'Hero image source / rights',
  welcomeEmail:'Welcome email',socialCopy:'Social launch copy'
 };
-export const courseProductionBrief='Before starting each course, check the complete source index, scripts, lesson order and supporting files; flag missing material. Prepare the complete course structure for James to approve separately from finished content. Produce the course introduction, learning outcomes, audience, marketing and landing page copy, introduction video script, a real branded hero image with description and source/rights, welcome email and social launch copy. Save all as drafts linked to the existing course. Continue three course lessons every day plus other assigned library content; do not stop because three drafts are awaiting review. Never approve or publish your own work. Preserve the evidenced teaching content and flag unsupported claims, prices or promises. Label narration timing estimates separately from measured video duration.';
+export const courseProductionBrief='Before starting each course, check the complete source index, scripts, lesson order and supporting files; flag missing material. Prepare the complete course structure for James to approve separately from finished content. Produce the course introduction, learning outcomes, audience, marketing and landing page copy, introduction video script, a real branded hero image with description and source/rights, welcome email and social launch copy. Keep ONE parent launch pack linked to the existing course. Save the overview, marketing and landing page copy, intro script, welcome email, social copy and each generated image as separate reviewable child drafts, not separate top-level jobs. Every child must carry fields.launchPackId (the exact parent Studio ID) and fields.launchPackPart from the launchPack contract. The parent is their index. Generate new images using our Brand kit, approved course colours, DM Sans/Kalam and current logo/tagline; do not select stock or library photos. Upload real generated files with alt text and AI provenance. Save all as Draft. Continue three course lessons every day plus other assigned library content; do not stop because three drafts are awaiting review. Never approve or publish your own work. Preserve the evidenced teaching content and flag unsupported claims, prices or promises. Label narration timing estimates separately from measured video duration.';
 const text=v=>typeof v==='string'?v.trim():'';
 const imageUrl=v=>{try{const u=new URL(v);return u.protocol==='https:'&&!u.username&&!u.password?u.href:'';}catch{return '';}};
 
@@ -32,12 +33,15 @@ export function coursePack(r,data){
  const linked=data.items.filter(x=>x.id!==r.id&&x.status!=='Archived'&&x.fields?.coursePack===true&&x.fields.courseId===r.id&&canReadContent(data,x))
   .sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''))[0];
  const fields={...r.fields,...(linked?.fields||{})};
+ const children=linked?launchPackChildren(linked,data):[];
+ const mappings={landingPage:'marketingCopy',introScript:'introductionScript',welcomeEmail:'welcomeEmail',socialCopy:'socialCopy'};
+ for(const child of children){const part=child.fields.launchPackPart,key=mappings[part];if(part==='overview')for(const field of ['introduction','outcome','audience'])if(text(child.fields[field]))fields[field]=child.fields[field];if(key)fields[key]=child.fields[key]||child.fields.script||child.fields.body||fields[key];}
  // An owner's saved course edits take precedence over subsequent worker drafts.
  for(const key of Object.keys(coursePackFields))if(text(r.fields[key]))fields[key]=r.fields[key];
- const imageRecord=r.workerImage?r:linked||r;
+ const imageRecord=r.workerImage?r:children.find(x=>x.fields.launchPackPart==='hero'&&x.workerImage)||linked||r;
  const uploaded=imageRecord.workerImage?.bucket==='worker-content'&&workerImagePath(imageRecord.workerImage.path);
  const hero=imageUrl(r.fields.heroImageUrl)||(uploaded?url('article-image',{id:imageRecord.id}).replaceAll('&amp;','&'):imageUrl(fields.heroImageUrl));
- if(uploaded){fields.heroImageAlt=r.fields.heroImageAlt||fields.imageAlt||fields.heroImageAlt;fields.heroImageCredit=r.fields.heroImageCredit||fields.imageCredit||fields.heroImageCredit;}
+ if(uploaded){fields.heroImageAlt=r.fields.heroImageAlt||imageRecord.fields?.imageAlt||fields.imageAlt||fields.heroImageAlt;fields.heroImageCredit=r.fields.heroImageCredit||imageRecord.fields?.imageCredit||fields.imageCredit||fields.heroImageCredit;}
  const checks=[
   ['overview','Overview, outcomes & audience',['introduction','outcome','audience'].every(k=>text(fields[k]))],
   ['marketingCopy','Marketing & landing page copy',Boolean(text(fields.marketingCopy))],

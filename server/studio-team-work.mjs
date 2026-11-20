@@ -1,3 +1,4 @@
+import {launchPackParent} from './launch-packs.mjs';
 import {releasePath,publicationDestination} from './studio-publishing.mjs';
 import {newsletterDraftButton} from './newsletter-draft-links.mjs';
 import {isNewsletterContent} from './studio-newsletters.mjs';
@@ -56,7 +57,7 @@ export function teamWorkRows(data){
     for(const [id,idea] of Object.entries(data.hqIdeas||{}))if(idea?.title?.trim()&&!['rejected','superseded'].includes(idea.state))rows.push({id:'idea:'+id,title:idea.title,...worker(id),project:'',projectName:'Daily ideas',state:stateFor(idea.state),status:({pending:'Awaiting your approval',scoped:'Scope ready',scoping:'Preparing scope',active:'Plan in progress',done:'Completed'})[idea.state]||'Requested',updated:date(idea.updatedAt||idea.createdAt),note:'Idea & plan update',href:url('worker-chat',{worker:id}),action:'Open idea'});
   }
   for(const f of data.reviewHistory||[])rows.push({id:'review:'+f.id,title:f.title,...person(f.authorId||data.actor.id),ownerName:f.author||person(f.authorId||data.actor.id).ownerName,project:'',projectName:'Review history',state:'completed',status:f.decision==='approve'?'Approved':'Changes requested',updated:date(f.at),note:'Reviewed version '+f.reviewedRevision,href:url('review-history',{id:f.recordId,review:f.id}),action:'Read review'});
-  return rows.sort((a,b)=>b.updated.localeCompare(a.updated)||a.title.localeCompare(b.title));
+  return rows.filter(row=>{const id=row.recordId||tasks.find(t=>'task:'+t.id===row.id)?.record_id;return !launchPackParent(data.byId.get(id),data);}).sort((a,b)=>b.updated.localeCompare(a.updated)||a.title.localeCompare(b.title));
 }
 function workList(rows){
   if(!rows.length)return '<p class="studio-empty">No work matches this view.</p>';
