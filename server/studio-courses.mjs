@@ -50,7 +50,15 @@ export function coursePack(r,data){
   ['welcomeEmail','Welcome email',Boolean(text(fields.welcomeEmail))],
   ['socialCopy','Social launch copy',Boolean(text(fields.socialCopy))]
  ];
- return {fields,linked,hero,checks,ready:checks.filter(([, ,ready])=>ready).length};
+ const partKeys={overview:'overview',marketingCopy:'landingPage',introductionScript:'introScript',heroImageUrl:'hero',welcomeEmail:'welcomeEmail',socialCopy:'socialCopy'};
+ const parts=checks.map(([key,label,ready])=>{const record=children.find(c=>c.fields.launchPackPart===partKeys[key])||linked;return {key,label,ready,record};});
+ return {fields,linked,hero,imageRecord,parts,children,checks,ready:checks.filter(([, ,ready])=>ready).length};
+}
+export function courseApprovalRecord(r,data){
+ const pack=coursePack(r,data),snapshot=courseEditorRecord(r,data);
+ if(!snapshot.workerImage&&pack.imageRecord?.workerImage)snapshot.workerImage=structuredClone(pack.imageRecord.workerImage);
+ snapshot.courseApprovalSources=[pack.linked,...pack.children].filter(Boolean).map(x=>({id:x.id,revision:x.revision}));
+ return snapshot;
 }
 export function courseEditorRecord(r,data){
  const {fields}=coursePack(r,data);
@@ -78,8 +86,8 @@ export function coursePreview(r,data,readable){
  out+='<div id="course-structure-review">';
  if(reviewsKind(data.actor,'course')&&canReadContent(data,r)&&r.status!=='Archived')out+='<form method="post" action="'+url('item',{id:r.id})+'" class="studio-form course-review-form">'+hidden('action','course-structure-review')+hidden('revision',r.revision)+hidden('fingerprint',plan.fingerprint)+textarea('note','Structure review note (optional)', '',2)+'<div class="studio-actions">'+
   (plan.complete&&!plan.approved?'<button class="primary" name="decision" value="approve">Approve course structure</button>':'')+'<button name="decision" value="changes">Request structure changes</button></div></form>';
- out+='</div></section><section class="panel course-pack"><div class="project-section-heading"><h2>Course launch content</h2><span>'+pack.ready+' / '+pack.checks.length+' drafts ready</span></div><p class="meta">Imogen prepares these alongside the lessons. Drafts ready means content is saved, not approved.</p>'+
-  '<ul class="course-pack-checks">'+pack.checks.map(([key,label,ready])=>'<li><span>'+esc(label)+'</span><span>'+ (ready?'Draft ready':'Still needed')+'</span></li>').join('')+'</ul>'+
+ out+='</div></section><section class="panel course-pack"><div class="project-section-heading"><h2>Course launch content</h2><span>'+pack.ready+' / '+pack.checks.length+' saved · '+pack.parts.filter(p=>p.ready&&p.record?.status==='Approved'&&p.record.approval?.revision===p.record.revision).length+' / '+pack.checks.length+' approved</span></div><p class="meta">Imogen prepares these alongside the lessons. Drafts ready means content is saved, not approved.</p>'+
+  '<ul class="course-pack-checks">'+pack.parts.map(({label,ready,record})=>'<li><span>'+(record?'<a data-review-preview target="_blank" rel="noopener" href="'+url('review-preview',{id:record.id})+'">'+esc(label)+'</a>':esc(label))+'</span><span>'+(!ready?'Still needed':record?.status==='Approved'&&record.approval?.revision===record.revision?'Approved':record?.status==='Changes requested'?'Changes requested':record?.status==='In review'?'Needs review':'Draft ready')+'</span></li>').join('')+'</ul><p class="meta">Launch items have their own approval status. Approving the course does not approve every linked draft.</p>'+
   (pack.linked?'<p>'+button('Open supporting draft',url('item',{id:pack.linked.id}))+'</p>':'');
  if(text(f.introductionScript))out+='<section class="studio-video-tools" aria-label="Introduction script"><button type="button" data-copy-script>Copy introduction script</button><textarea hidden data-script-text>'+esc(f.introductionScript)+'</textarea><span>Estimated narration: '+Math.ceil(text(f.introductionScript).split(/\s+/).length/140*60)+' seconds at 140 words/minute</span><span role="status" data-copy-status></span></section>';
  out+=['marketingCopy','welcomeEmail','socialCopy'].filter(k=>text(f[k])).map(k=>'<details><summary>'+esc(coursePackFields[k])+'</summary><div class="prose">'+readable(f[k],data)+'</div></details>').join('')+'</section>';
