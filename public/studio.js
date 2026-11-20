@@ -107,7 +107,7 @@ if(fieldsInput&&editor){
   function renderFields(){
     editor.replaceChildren();
     const messageOptions=document.querySelector('#studio-message-options');
-    const main=editor.dataset.kind==='communication'&&values.emailHtml?['subject','emailHtml',Object.hasOwn(values,'plainText')?'plainText':'body']:primaryFields[editor.dataset.kind]||Object.keys(values),details=messageOptions||element('details',undefined,'editor-details');
+    const main=editor.dataset.kind==='campaign'&&values.coursePack===true?['introduction','audience','outcome','marketingCopy','introductionScript','introductionScriptTimingEstimateSeconds','welcomeEmail','socialCopy','productionNotes']:editor.dataset.kind==='communication'&&values.emailHtml?['subject','emailHtml',Object.hasOwn(values,'plainText')?'plainText':'body']:primaryFields[editor.dataset.kind]||Object.keys(values),details=messageOptions||element('details',undefined,'editor-details');
     if(!messageOptions)details.append(element('summary','More details'));
     const imageFields=upload?['imageUrl','imageAlt','imageCredit','imageCreditUrl']:[];
     for(const key of main)if(Object.hasOwn(values,key)&&!imageFields.includes(key))editor.append(draw(key,values[key],next=>values[key]=next));

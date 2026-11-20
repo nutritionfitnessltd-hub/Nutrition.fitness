@@ -1,6 +1,7 @@
+import {saveOrganisation} from './team-organisation.mjs';
 import {allRows} from './studio-store.mjs';
 import {assignmentForm,saveAssignment,assignmentLink} from './team-assignments.mjs';
-import {teamWorkSnapshot,renderTeamPage,saveTeamProfile} from './studio-team.mjs';
+import {teamWorkSnapshot,renderTeamPage,saveTeamProfile,saveTeamReporting} from './studio-team.mjs';
 import {includeAdministrator} from './team-owner.mjs';
 import {hqRequest} from './studio-hq.mjs';
 import { reviewOptions, accessOptions, accessFor, accessFromForm, canAccess, requireAccess } from './library-permissions.mjs';
@@ -127,6 +128,7 @@ async function teamScreen(api,actor,origin,env,params=new URLSearchParams(),fetc
   const accessMarkup=s=>'<p>'+(s.code_hash?'Access enabled':'Access disabled or password not set')+'</p><div class="studio-actions">'+(s.code_hash?'<details class="team-welcome-details"><summary>Reset password</summary>'+welcomePanel(s,{origin,env,purpose:'reset'})+'</details>':form('issue-code',field('staff',s.id)+'<button>Enable account</button>',target))+(s.code_hash?form('disable-user',field('staff',s.id)+'<button>Disable access</button>',target):'')+'</div>'+form('save-access',field('staff',s.id)+field('accessRevision',s.access_revision||1)+accessFields(s.access)+'<div class="studio-actions"><button class="primary">Save access</button><button type="submit" name="previewAccount" value="yes" data-account-preview formaction="/content-library/?work=1&amp;studio=account-preview" formtarget="_blank" formnovalidate>Preview account ↗</button></div>',target)+(s.code_hash?'<details class="team-welcome-details"><summary>Send welcome details to '+esc(s.name)+'</summary>'+welcomePanel(s,{origin,env})+'</details>':'<p class="meta">Enable this account to prepare its welcome email and password setup link.</p>');
   let hqChat,hqError;
   if(params.get('worker'))try{hqChat=await hqRequest(env,{action:'chat',worker:params.get('worker')},fetcher);}catch(e){hqError=e.message;}
+  if(params.get('tab')==='organisation')try{data.hqStatus=await hqRequest(env,{action:'status'},fetcher);}catch(e){data.hqError=e.message;}
   return renderTeamPage({params,actor,staff,data,accessMarkup,createMarkup,hqChat,hqError});
 }
 
@@ -217,7 +219,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
   const projects=params.get('projects')==='1';
   const asset=params.get('assets');
   const studio=params.get('studio');
-  const destination=params.get('reader')==='1'?Object.fromEntries([...params].filter(([k])=>['reader','file','image','preview'].includes(k))):studio?Object.fromEntries([...params].filter(([k])=>['studio','id','project','week','source','template','kind','tab','category','schedule','view','contentKind','shelf','folder','item','from','progress','q','page','reader','file','image','preview','collection','bucket','bookType','build','worker','person','assign'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
+  const destination=params.get('reader')==='1'?Object.fromEntries([...params].filter(([k])=>['reader','file','image','preview'].includes(k))):studio?Object.fromEntries([...params].filter(([k])=>['studio','id','project','week','source','template','kind','tab','category','schedule','view','contentKind','shelf','folder','item','from','progress','q','page','reader','file','image','preview','collection','bucket','bookType','build','worker','person','assign','role','ai'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
   let actor;
   const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
   const welcomeJson=req.method==='POST'&&['send-welcome','send-password-reset'].includes(f.action)&&req.headers.accept?.includes('application/json');
@@ -312,13 +314,16 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
           catch(e){if(!(e instanceof HttpError))throw e;return writePage(res,e.status,assignmentForm(person,projects,f,e.message),actor,'team');}
           res.statusCode=303;res.setHeader('Location',route+'&studio=team&person='+encodeURIComponent(f.staff)+'&saved=assignment');return res.end();
         }
+        if(f.action==='team-worker-pause'){if(!['yes','no'].includes(f.paused))throw new HttpError(400,'Choose a worker state.');await hqRequest(env,{action:'worker-pause',worker:f.worker,version:Number(f.version),paused:f.paused==='yes'},fetcher);res.statusCode=303;res.setHeader('Location',route+'&studio=team&tab=organisation&role=workers');return res.end();}
+        if(['team-role-save','team-role-delete'].includes(f.action)){const staff=await api(staffTable+'?select=id,name,email&order=name.asc',service);await saveOrganisation(f,actor,staff,await teamWorkSnapshot(api),api);res.statusCode=303;res.setHeader('Location',route+'&studio=team&tab=organisation&saved=role');return res.end();}
+        if(f.action==='team-reporting-save'){const staff=await api(staffTable+'?select=id,name,email&order=name.asc',service);const {section,...destination}=await saveTeamReporting(f,actor,staff,await teamWorkSnapshot(api),api);res.statusCode=303;res.setHeader('Location',route+'&studio=team&'+new URLSearchParams({...destination,saved:'reporting'}));return res.end();}
         if(f.action==='team-profile-save'){const staff=await api(staffTable+'?select=id,name,email&order=name.asc',service);await saveTeamProfile(f,actor,staff,await teamWorkSnapshot(api),api);res.statusCode=303;res.setHeader('Location',route+'&studio=team'+(f.worker?'&tab=workers&worker='+encodeURIComponent(f.worker):'&person='+encodeURIComponent(f.staff))+'&saved=profile');return res.end();}
         if(!['create-user','issue-code','disable-user','save-access'].includes(f.action))throw new HttpError(400,'Choose a team action.');
         const message=await change(actor,f,api,load,origin,env);
         if(message)return writePage(res,200,message,actor,'team');
         res.statusCode=303;res.setHeader('Location',route+'&studio=team'+(f.action==='save-access'?'&saved=access&person='+encodeURIComponent(f.staff):f.action==='disable-user'?'&person='+encodeURIComponent(f.staff):''));return res.end();
       }
-      return writePage(res,200,(params.get('saved')==='profile'?'<p role="status" class="team-profile-saved">Profile saved.</p>':params.get('saved')==='assignment'?'<p role="status" class="panel">Work assigned.</p>':params.get('saved')==='access'?'<p role="status" class="panel">Access saved. The new settings apply on this person’s next request.</p>':'')+await teamScreen(api,actor,origin,env,params,fetcher)+'<script type="module" src="/team-account-preview.js"></script>',actor,'team');
+      return writePage(res,200,(params.get('saved')==='reporting'?'<p role="status" class="team-profile-saved">Reporting details saved.</p>':params.get('saved')==='profile'?'<p role="status" class="team-profile-saved">Profile saved.</p>':params.get('saved')==='assignment'?'<p role="status" class="panel">Work assigned.</p>':params.get('saved')==='access'?'<p role="status" class="panel">Access saved. The new settings apply on this person’s next request.</p>':'')+await teamScreen(api,actor,origin,env,params,fetcher)+'<script type="module" src="/team-account-preview.js"></script>',actor,'team');
     }
     if(studio)return handleStudio(req,res,{params,actor,api,load,env,fetcher});
     if(asset){

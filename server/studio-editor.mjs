@@ -1,4 +1,5 @@
 import {isNewsletter,isNewsletterContent,newsletterPreview} from './studio-newsletters.mjs';
+import {isLaunchPack,launchPackPreview} from './studio-launch-pack.mjs';
 import { workerNames, contentWorker } from './studio-worker-content.mjs';
 import { blankFields } from './studio-model.mjs';
 import { articleImageEditor } from './studio-articles.mjs';
@@ -35,10 +36,11 @@ function messageEditorForm(r,data,{create,project,entry,unsaved}){
       '<button type="submit" name="intent" value="preview">Save &amp; preview</button><button class="primary" type="submit" name="intent" value="draft">Save</button>'+(!create&&isNewsletterContent(r)?'<button type="submit" name="intent" value="review">Submit for Approval</button>':'')+'</div></div>'+
     '<details class="message-options"><summary>Options</summary><div id="studio-message-options"></div>'+
     (create?'<label>Project<select name="project">'+(data.actor.role==='admin'?'<option value="">None</option>':'')+data.projects.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===project?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></label>':
-      '<div class="studio-actions">'+(!isNewsletterContent(r)?'<button type="submit" name="intent" value="review">Submit for Approval</button>'+(data.actor.role==='admin'&&r.status==='In review'?'<button type="submit" name="intent" value="approve">Approve content</button>':''):'')+button('History',url('history',{id:r.id}))+'</div>')+
+      '<div class="studio-actions">'+(!isNewsletterContent(r)?(data.actor.role==='admin'?'<button class="primary" type="submit" name="intent" value="approve">Approve content</button>':'<button class="primary" type="submit" name="intent" value="review">Submit for Approval</button>'):'')+button('History',url('history',{id:r.id}))+'</div>')+
     '</details></form>';
 }
 export function contentPreview(r,data,readable){
+  if(isLaunchPack(r))return launchPackPreview(r,data);
   if(isNewsletter(r))return newsletterPreview(r);
   if(r.kind==='communication')return '<article class="studio-content-preview message-preview">'+
     (r.fields.subject?'<h2>'+esc(r.fields.subject)+'</h2>':'')+'<div class="prose">'+readable(r.fields.body,data)+'</div>'+
