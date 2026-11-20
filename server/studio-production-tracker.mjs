@@ -6,6 +6,19 @@ export const isProductionTracker=p=>['courses','other'].includes(p?.studio?.prod
 const originalId=r=>r.sourceId||r.fields?.production?.sourceId||r.source?.id||r.id;
 const excludedKinds=new Set(['settings','worker-request','account-preview','notification']);
 const courseRecord=(r,sources)=>['course','lesson'].includes(r.kind)||r.group==='Courses'||sources.get(originalId(r))?.group==='Courses';
+export function projectTrackingSummaries(data){
+ const summaries=new Map();
+ if(data.actor.role==='admin'||!canAccess(data.actor,'work')||!canAccess(data.actor,'library'))return summaries;
+ const sources=new Map((data.index?.records||[]).map(r=>[r.id,r]));
+ for(const p of data.projects.filter(p=>isProductionTracker(p)&&!p.assignmentOnly&&p.creator_id===data.actor.id)){
+  const config=p.studio.productionTracking;
+  summaries.set(p.id,data.items.filter(r=>!excludedKinds.has(r.kind)&&r.status!=='Archived'&&contentWorker(r,data.byId)===config.worker&&(config.scope==='courses')===courseRecord(r,sources)).map(r=>({
+   id:r.id,kind:r.kind,title:r.title,status:r.status,sourceId:originalId(r),workerId:config.worker,revision:r.revision,updatedAt:r.updatedAt,
+   fields:{collection:r.fields?.collection,production:{files:(r.fields?.production?.files||[]).map(f=>({url:f.url,bytes:f.bytes,sha256:f.sha256}))}}
+  })));
+ }
+ return summaries;
+}
 export const trackingStages=['To do','Imogen working','Awaiting review','Changes requested','Approved','Saved to SharePoint'];
 function checkedExport(r){return (r?.fields?.production?.files||[]).some(f=>f.bytes>0&&/^[a-f0-9]{64}$/.test(f.sha256||''));}
 function approvedSharePoint(r){
@@ -25,7 +38,8 @@ function actualStage(r,config){
 export function productionTracking(p,data,meta={}){
  if(!isProductionTracker(p)||!canAccess(data.actor,'library'))return null;
  const config=p.studio.productionTracking,sources=new Map((data.index?.records||[]).map(r=>[r.id,r]));
- const assigned=data.items.filter(r=>!excludedKinds.has(r.kind)&&r.status!=='Archived'&&canReadContent(data,r)&&contentWorker(r,data.byId)===config.worker);
+ const summaries=data.trackingByProject?.get(p.id)||[],summaryIds=new Set(summaries.map(r=>r.id));
+ const assigned=[...data.items,...summaries].filter(r=>!excludedKinds.has(r.kind)&&r.status!=='Archived'&&(canReadContent(data,r)||summaryIds.has(r.id))&&contentWorker(r,data.byId)===config.worker);
  const copies=new Map();
  for(const r of assigned){const key=originalId(r),old=copies.get(key);if(!old||(r.updatedAt||'')>(old.updatedAt||''))copies.set(key,r);}
  const manual=p.studio.trackingUpdates||{};
@@ -56,7 +70,7 @@ export function productionTracking(p,data,meta={}){
    const list=rows.filter(r=>r.group===name);
    if(list.length||data.actor.role==='admin'||canAccess(data.actor,'originals'))groups.push({name,confirmed:course.order==='confirmed',rows:list});
   }
-  const unmatched=assigned.filter(r=>r.kind==='lesson'&&!matched.has(r.id));
+  const unmatched=[...copies.values()].filter(r=>r.kind==='lesson'&&!matched.has(r.id));
   if(unmatched.length){const list=unmatched.map(r=>row('item:'+originalId(r),r.title,'Course to confirm',r,{sourceId:originalId(r)}));rows.push(...list);groups.push({name:'Course to confirm',confirmed:false,rows:list});}
  }else{
   // An assignment must exist on the item or its parent. A broad job description
@@ -68,7 +82,7 @@ export function productionTracking(p,data,meta={}){
   for(const [id,r] of candidates){
    if(courseRecord(r,sources)||excludedKinds.has(r.kind))continue;
    const saved=data.byId.get(r.id),group=r.fields?.collection||sources.get(id)?.fields?.collection||r.group||'Other content';
-   rows.push(row('item:'+id,r.title,group,saved?.revision>0?saved:null,{sourceId:id}));
+   rows.push(row('item:'+id,r.title,group,r.revision>0?(saved||r):null,{sourceId:id}));
   }
   rows.sort((a,b)=>a.group.localeCompare(b.group)||a.title.localeCompare(b.title));
   for(const name of new Set(rows.map(r=>r.group)))groups.push({name,confirmed:true,rows:rows.filter(r=>r.group===name)});

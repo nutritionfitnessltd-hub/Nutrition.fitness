@@ -1,4 +1,5 @@
 import {ownsTask} from './studio-project-tasks.mjs';
+import {projectTrackingSummaries} from './studio-production-tracker.mjs';
 import {assignmentProjectId} from './team-assignments.mjs';
 import { requireAccess, canReadContent, canReviewContent, reviewsKind } from './library-permissions.mjs';
 import { HttpError } from './platform.mjs';
@@ -53,6 +54,8 @@ export async function studioData(api,actor,load){
     }
   }
   const data={index,items,byId:records,projects,tasks,people,releases,assigned,actor};
+  // Project owners can track their worker's progress without gaining draft-body access.
+  data.trackingByProject=projectTrackingSummaries(data);
   // Product assignment includes its assets, never the other products sharing an asset.
   const assignedProducts=new Set(items.filter(r=>r.kind==='product'&&assigned.has(r.id)).map(r=>r.id));
   for(const r of items)if(r.kind==='asset'&&r.fields.productAsset===true&&r.fields.productIds?.some(id=>assignedProducts.has(id)))assigned.add(r.id);

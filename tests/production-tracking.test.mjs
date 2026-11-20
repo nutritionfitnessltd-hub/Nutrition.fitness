@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {productionTracking,productionTrackerPanel} from '../server/studio-production-tracker.mjs';
 import {changeStudio} from '../server/studio-actions.mjs';
 import {deleteTaskControl,deletedTasksPanel} from '../server/studio-project-tasks.mjs';
+import {studioData} from '../server/studio-store.mjs';
 
 function fixture(scope='courses'){
  const p={id:'p',name:'Courses',creator_id:'kasia',revision:3,weeks:4,entries:[{id:'task',title:'A task',record:'content',status:'To do'}],studio:{productionTracking:{scope,worker:'imogen',course:'Fat Loss',pilotIds:['pilot']}}};
@@ -44,6 +45,17 @@ test('read permissions apply to both source-only lessons and saved items',()=>{
  const {p,data,meta}=fixture();data.actor={id:'kasia',role:'staff',access:{work:true,library:true}};
  assert.equal(productionTracking(p,data,meta).rows.length,0);data.assigned.add('pilot');assert.equal(productionTracking(p,data,meta).rows.length,1);
  data.actor.access.library=false;assert.equal(productionTrackerPanel(p,data,meta),'');
+});
+test('the project owner sees progress without acquiring access to draft bodies or other workers',async()=>{
+ const {p,pilot,meta}=fixture();pilot.fields.body='Private lesson body';
+ const rows=[pilot,{id:'nina',kind:'article',title:'Nina draft',workerId:'nina',status:'Draft',fields:{body:'Private'}}];
+ const api=async path=>path.includes('nufi_studio_items')?rows.map(payload=>({id:payload.id,payload,revision:1})):path.includes('nufi_library_projects')?[p]:[];
+ const actor={role:'staff',id:'kasia',access:{work:true,library:true,originals:true,edit:true}};
+ const data=await studioData(api,actor,async()=>({records:[]}));
+ assert.equal(data.items.length,0);assert.equal(data.byId.has(pilot.id),false);
+ assert.equal(productionTracking(p,data,meta).rows[0].status,'Imogen working');
+ assert.doesNotMatch(JSON.stringify(data.trackingByProject.get(p.id)),/Private|Nina draft/);
+ actor.id='unrelated';const other=await studioData(api,actor,async()=>({records:[]}));assert.equal(other.trackingByProject.size,0);
 });
 test('tracking edits cannot approve content and require ownership and the current revision',async()=>{
  const {p,data,meta}=fixture(),row=productionTracking(p,data,meta).rows[1];let saved;
