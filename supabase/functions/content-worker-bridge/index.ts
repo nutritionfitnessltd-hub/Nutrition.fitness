@@ -1,3 +1,4 @@
+import {shinyAction} from './shiny-things.mjs';
 import {DraftError,draftDocument,draftResult,draftId,reviewGuidance} from './worker-drafts.mjs';
 const base=Deno.env.get('SUPABASE_URL')!,key=Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const website='https://team.nutrition.fitness';
@@ -30,6 +31,7 @@ Deno.serve(async(req:Request)=>{
   const connections=await api('/rest/v1/nufi_worker_connections?select=id,namespace&enabled=eq.true&token_hash=eq.'+await sha(token));
   const connection=connections[0];if(!connection)throw new DraftError(401,'Worker connection required.');
   const input=await readBody(req),namespace=connection.namespace;
+  if(typeof input?.action==='string'&&input.action.startsWith('idea-'))return respond(await shinyAction(input,connection,api,website));
   const rowFor=async(id:string)=>(await api('/rest/v1/nufi_studio_items?select=*&id=eq.'+encodeURIComponent(draftId(id,namespace))))[0];
   const guidanceFor=async(workerId:string)=>{
    const records=[];

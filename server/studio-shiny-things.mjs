@@ -63,7 +63,7 @@ export function shinyThingsPage(params,data,retained={},env={}){
   if(p)return body+'<section class="panel"><h2>Project created</h2><p>The original idea remains here for reference.</p>'+button('Open project',url('project',{project:p.id}),true)+'</section><p class="prose">'+esc(idea.fields.summary)+'</p>';
   if(!locked)body+=form('idea-save',base+input('title','Idea',retained.title??idea?.title??'','text','required maxlength="160"')+textarea('summary','What is the idea, and why might it matter?',f.summary||'',5)+
     '<div class="studio-actions"><button type="button" data-idea-ai'+(!env.OPENAI_API_KEY?' disabled':'')+'>Generate with AI</button><span role="status" aria-live="polite" data-idea-ai-status>'+(env.OPENAI_API_KEY?'Draft an explanation from your title and any notes.':'AI generation is not connected.')+'</span></div><section data-idea-ai-suggestion hidden><h3>Suggested explanation</h3><p class="prose" data-idea-ai-text></p><div class="studio-actions"><button type="button" data-idea-ai-use>Use this text</button><button type="button" data-idea-ai-dismiss>Keep my text</button></div></section>'+
-    select('urgency','How soon does this need attention?',ideaUrgencies,Object.hasOwn(ideaUrgencies,f.urgency)?f.urgency:'normal')+'<div class="studio-columns">'+input('weeks','Indicative duration in weeks',f.weeks||4,'number','min="1" max="52" required')+select('state','Keep it as',{Saved:'An idea',Parked:'Parked for later'},f.state==='Parked'?'Parked':'Saved')+'</div>',state,'Save idea');
+    input('category','Category',f.category||'','text','maxlength="100"')+select('urgency','How soon does this need attention?',ideaUrgencies,Object.hasOwn(ideaUrgencies,f.urgency)?f.urgency:'normal')+'<div class="studio-columns">'+input('weeks','Indicative duration in weeks',f.weeks||4,'number','min="1" max="52" required')+select('state','Keep it as',{Saved:'An idea',Parked:'Parked for later'},f.state==='Parked'?'Parked':'Saved')+'</div>',state,'Save idea');
   if(!idea)return body;
   if(!locked)body+='<section class="panel"><h2>Ask Morgan to scope it</h2><p>Morgan checks overlap with existing projects and proposes an outcome, tasks, milestones, workers and open questions. The request runs in James HQ.</p>'+
     form('idea-scope',base,state,'Ask Morgan for a plan')+button('Open Morgan’s HQ conversation',url('worker-chat',{worker:'morgan'}))+
@@ -94,7 +94,7 @@ export async function changeShinyThing(params,f,data,api,env,fetcher=fetch){
     if(!next.title||!Number.isInteger(weeks)||weeks<1||weeks>52)throw new HttpError(400,'Add a name and a duration between 1 and 52 weeks.');
     if(f.urgency!==undefined&&!Object.hasOwn(ideaUrgencies,f.urgency))throw new HttpError(400,'Choose an available urgency.');
     const summary=cleanText(f.summary||'',6000),unchanged=idea&&idea.title===next.title&&idea.fields.summary===summary&&idea.fields.weeks===weeks;
-    next.fields={...(unchanged?idea.fields:{}),summary,weeks,urgency:f.urgency||idea?.fields.urgency||'normal',state:f.state==='Parked'?'Parked':unchanged&&idea.fields.state!=='Parked'?idea.fields.state:'Saved'};
+    next.fields={...(unchanged?idea.fields:{}),category:cleanText(f.category??idea?.fields.category??'',100),summary,weeks,urgency:f.urgency||idea?.fields.urgency||'normal',state:f.state==='Parked'?'Parked':unchanged&&idea.fields.state!=='Parked'?idea.fields.state:'Saved'};
   }else{
     if(!idea)throw new HttpError(400,'Save the idea first.');
     if(f.action==='idea-scope'){
