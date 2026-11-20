@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {reviewDecision,reviewWindowDocument} from '../server/studio-review.mjs';
 import {changeStudio} from '../server/studio-actions.mjs';
-import {publishNewsletterDraft} from '../server/studio-review-newsletter.mjs';
+import {publishNewsletterDraft,newsletterHandoffStatus} from '../server/studio-review-newsletter.mjs';
 import {runNewsletterSync,sealGhlToken} from '../server/newsletter-sync.mjs';
 import {ghlLocation} from '../server/ghl-newsletter-client.mjs';
 
@@ -40,6 +40,13 @@ test('approval opens GHL choices and approval alone does not export',async()=>{
  for(const text of ['data-publication-dialog data-open-on-load','Newsletter approved','Save to GHL now','Schedule for later','Keep here for now','does not send the newsletter to subscribers'])assert.ok(html.includes(text),text);
  assert.equal((await run(f)).processed,0);assert.equal(f.calls.length,0);
  await act(f,'review-keep-draft');assert.equal(f.record.ghlDraftPlan,undefined);
+});
+
+test('an existing GHL copy does not label an unapproved newsletter as approved',()=>{
+ const f=fixture();f.mutate(r=>{r.status='Draft';delete r.approval;});
+ const data={...f.data(),ghlDraftStates:new Map([[f.record.id,{status:'synced',sourceRevision:f.record.revision}]]),ghlDrafts:new Map([[f.record.id,'test-draft']])};
+ assert.doesNotMatch(newsletterHandoffStatus(f.record,data),/approved version|scheduled for|draft requested/);
+ assert.match(newsletterHandoffStatus(f.record,data),/Open in GHL/);
 });
 
 test('Save to GHL now creates only a draft and repeated requests reuse the saved mapping',async()=>{

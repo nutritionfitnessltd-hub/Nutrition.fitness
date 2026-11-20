@@ -18,7 +18,7 @@ export function newsletterPublicationChoices(r,data,params,retained={}){
 export function newsletterHandoffStatus(r,data){
  if(!isNewsletterContent(r))return '';
  const plan=r.ghlDraftPlan,valid=r.status==='Approved'&&r.approval?.revision===r.revision&&plan?.revision===r.revision;
- const state=data.ghlDraftStates?.get(r.id),saved=state?.status==='synced'&&state.sourceRevision===r.revision;
+ const state=data.ghlDraftStates?.get(r.id),saved=valid&&state?.status==='synced'&&state.sourceRevision===r.revision;
  const text=saved?'This approved version is saved in GHL as a draft.':valid&&state?.status==='held'?'GHL updates are paused to protect changes made in GHL. Check Connections.':valid&&plan.state==='scheduled'?'GHL draft scheduled for '+plan.localDateTime.replace('T',' at ')+' (London time).':valid&&plan.state==='queued'?'GHL draft requested. The connection retries if needed.':'';
  return (text?'<p class="meta">'+esc(text)+'</p>':'')+newsletterDraftButton(data,r);
 }
