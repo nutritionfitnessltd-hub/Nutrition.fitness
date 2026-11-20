@@ -107,6 +107,9 @@ test('uploads verify storage metadata, attach once, reset approval and remain au
  await attachProductFile(params('product-asset',a),details,await f.data(),f.api,env,async()=>metadata);
  await attachProductFile(params('product-asset',a),details,await f.data(),f.api,env,async()=>{throw new Error('No second head required');});
  const r=(await f.data()).byId.get(a);assert.equal(r.productFiles.length,1);assert.equal(r.status,'Draft');assert.equal(r.approval,undefined);
+ const full=await f.data();full.byId.get(a).productFiles=Array.from({length:20},()=>r.productFiles[0]);
+ await attachProductFile(params('product-asset',a),details,full,f.api,env,async()=>{throw new Error('A repeated successful attachment stays successful at the file limit');});
+ await assert.rejects(productUploadToken({body:{type:'blob.generate-client-token'}},params('product-upload',a),full,env),e=>e.status===400);
  const image=productAssetPage(params('product-asset',a),await f.data());assert.match(image,/data-prefix="nutrition-library\/product-assets\/v1\/[a-f0-9]{64}\//);assert.doesNotMatch(image,/private.blob.vercel-storage.com/);
  const req={method:'GET',headers:{range:'bytes=0-3'}},chunks=[],res=new Writable({write(chunk,enc,cb){chunks.push(chunk);cb();}});res.headers={};res.setHeader=(k,v)=>res.headers[k]=v;
  const fileParams=params('product-file',a,{file:r.productFiles[0].id,inline:'1'});

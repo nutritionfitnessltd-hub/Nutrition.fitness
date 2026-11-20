@@ -20,11 +20,12 @@ function uploadRecord(data,id,env){
  requireAccess(data.actor,'library','edit');const r=editable(data,id);
  if(!isProductAsset(r))throw new HttpError(400,'Save a product asset before uploading its files.');
  if(!env.BLOB_READ_WRITE_TOKEN)throw new HttpError(503,'File uploads are unavailable in this workspace. You can add a team folder link in Edit details.');
- if((r.productFiles||[]).length>=20)throw new HttpError(400,'Use up to 20 files per asset. Add another asset for more files.');
  return r;
 }
+function checkFileLimit(r){if((r.productFiles||[]).length>=20)throw new HttpError(400,'Use up to 20 files per asset. Add another asset for more files.');}
 export async function productUploadToken(req,params,data,env,generate=handleUpload){
  const r=uploadRecord(data,params.get('id'),env);
+ checkFileLimit(r);
  if(req.body?.type!=='blob.generate-client-token')throw new HttpError(400,'Choose a file to upload.');
  return generate({request:req,body:req.body,token:env.BLOB_READ_WRITE_TOKEN,onBeforeGenerateToken:async pathname=>{
   const {type}=filePath(r,pathname);
@@ -34,6 +35,7 @@ export async function productUploadToken(req,params,data,env,generate=handleUplo
 export async function attachProductFile(params,f,data,api,env,inspect=head){
  const r=uploadRecord(data,params.get('id'),env),expected=filePath(r,f.pathname);
  if((r.productFiles||[]).some(file=>file.pathname===f.pathname))return;
+ checkFileLimit(r);
  const name=cleanText(f.name||'',200).replace(/[\\/]/g,'-');if(!name)throw new HttpError(400,'Give the file a name.');
  if(!['Finished export','Editable original','Thumbnail','Supporting document'].includes(f.slot))throw new HttpError(400,'Choose the file purpose.');
  const blob=await inspect(f.pathname,{token:env.BLOB_READ_WRITE_TOKEN});
