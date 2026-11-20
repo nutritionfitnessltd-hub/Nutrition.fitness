@@ -13,6 +13,23 @@ import {changeStudio} from '../server/studio-actions.mjs';
 
 const admin={role:'admin',id:randomUUID()},staff={role:'staff',id:randomUUID(),name:'Designer'};
 const params=(section,id,extra={})=>new URLSearchParams({studio:section,id,...extra});
+test('product uploads create categorised linked assets, retry once and serve private files',async()=>{
+ const f=fixture(),p=await f.product(),env={BLOB_READ_WRITE_TOKEN:'test-token'};
+ const html=productPage(params('product',p),await f.data());
+ for(const label of ['Product photo','Lifestyle image','Front label','Back label','Advert / creative'])assert.ok(html.includes(label));
+ assert.match(html,/multiple data-product-file/);
+ for(const slot of ['Front label','Advert / creative']){
+  const fileId=randomUUID(),pathname=productStoragePrefix(p)+fileId+'.png',details={pathname,name:slot+'.png',slot};
+  const inspect=async()=>({pathname,contentType:'image/png',size:128,url:'https://test.private.blob.vercel-storage.com/'+pathname});
+  await attachProductFile(params('product',p),details,await f.data(),f.api,env,inspect);
+  await attachProductFile(params('product',p),details,await f.data(),f.api,env,inspect);
+  const d=await f.data(),a=d.byId.get('studio:product:'+fileId);
+  assert.deepEqual(a.fields.productIds,[p]);assert.equal(a.fields.category,slot);assert.equal(a.fields.assetRole,slot==='Advert / creative'?'advert':'product');assert.equal(a.productFiles.length,1);
+  const res=new Writable({write(chunk,enc,cb){cb();}});res.setHeader=()=>{};
+  await sendProductFile({method:'GET',headers:{}},res,params('product-file',a.id,{file:fileId,inline:'1'}),d,env,async path=>{assert.equal(path,pathname);return {stream:new ReadableStream({start(c){c.close();}}),headers:new Headers()};});
+ }
+ await assert.rejects(productUploadToken({body:{type:'blob.generate-client-token'}},params('product-upload',p),await f.data(staff),env),e=>e.status===403);
+});
 function fixture(){
  const rows=new Map(),projects=[],tasks=[];
  const api=async(path,options={})=>{
