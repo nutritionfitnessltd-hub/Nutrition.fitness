@@ -69,6 +69,7 @@ const actions = {
   'ai-draft': ['library', 'edit', 'ai'], 'mealplan-generate': ['library', 'edit', 'ai'],
   'mealplan-image-generate': ['library', 'edit', 'ai'],
   'task-save': ['work', 'edit'], 'task-add': ['work', 'edit'],
+  'task-delete': ['work', 'edit'], 'task-restore': ['work', 'edit'], 'tracking-update': ['work', 'edit'],
   'task-attach': ['work', 'library', 'edit'], 'project-save': ['work', 'edit']
 };
 export function authorizeStudioRequest(actor, section, method, fields = {}, params = new URLSearchParams()) {

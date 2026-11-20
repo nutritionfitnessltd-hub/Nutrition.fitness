@@ -1,4 +1,5 @@
-import {projectTasks,ownsTask} from './studio-project-tasks.mjs';
+import {projectTasks,ownsTask,canManageTasks} from './studio-project-tasks.mjs';
+import {productionTracking,trackingStages} from './studio-production-tracker.mjs';
 import { workerNames } from './studio-worker-content.mjs';
 import { saveWorkoutDays } from './studio-workout-days.mjs';
 import { randomUUID } from 'node:crypto';
@@ -140,11 +141,29 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
     }else throw new HttpError(400,'Choose a valid content action.');
     const saved=await saveRecord(api,data.actor,next,r.revision);return {section:'item',id:r.id,...(returnRecord?{record:{...next,revision:saved.revision??r.revision+1}}:{}),...(action==='content-save'?{tab:f.intent==='preview'||f.intent==='approve'?'preview':'edit'}:{})};
   }
-  if(['task-save','task-add','task-attach','project-save'].includes(action)){
+  if(['task-save','task-add','task-attach','task-delete','task-restore','tracking-update','project-save'].includes(action)){
     const p=projectFor(data,params.get('project'));verifyRevision(p,f.projectRevision);
     const entries=structuredClone(p.entries);let update={};
     const week=number(params.get('week')||0,0,p.weeks);
-    if(action==='project-save'){
+    if(['task-delete','task-restore'].includes(action)){
+      if(!canManageTasks(p,data.actor))throw new HttpError(403,'Only the project owner or administrator can delete or restore tasks.');
+      const removed=structuredClone(p.studio.deletedTasks||[]);
+      if(action==='task-delete'){
+        const index=entries.findIndex(e=>e.id===f.entry);if(index<0)throw new HttpError(404,'Task not found.');
+        removed.push({...entries.splice(index,1)[0],deletedAt:new Date().toISOString(),deletedBy:data.actor.id});
+      }else{
+        const index=removed.findIndex(e=>e.id===f.entry);if(index<0)throw new HttpError(404,'Deleted task not found.');
+        if(entries.some(e=>e.id===f.entry))throw new HttpError(409,'This task is already restored.');
+        const entry=removed.splice(index,1)[0];delete entry.deletedAt;delete entry.deletedBy;entries.push(entry);
+      }
+      update={entries,studio:{...p.studio,deletedTasks:removed}};
+    }else if(action==='tracking-update'){
+      if(!canManageTasks(p,data.actor))throw new HttpError(403,'Only the project owner or administrator can update tracking.');
+      const model=productionTracking(p,data,data.trackingMeta||{});
+      if(!model?.rows.some(r=>r.key===f.trackingKey))throw new HttpError(404,'This item is not in this tracker.');
+      if(!trackingStages.slice(0,4).includes(f.status))throw new HttpError(400,'Approval and delivery must be recorded on the content itself.');
+      update.studio={...p.studio,trackingUpdates:{...p.studio.trackingUpdates,[f.trackingKey]:{status:f.status,note:cleanText(f.note||'',1000),by:data.actor.id,at:new Date().toISOString()}}};
+    }else if(action==='project-save'){
       if(data.actor.role!=='admin'&&p.creator_id!==data.actor.id)throw new HttpError(403,'Only the project owner can change project details.');
       const allowed=data.actor.role==='admin'?['Planning','In progress','Ready for review','Complete']:['Planning','In progress','Ready for review'];
       if(!allowed.includes(f.status))throw new HttpError(403,'Choose a permitted project status.');

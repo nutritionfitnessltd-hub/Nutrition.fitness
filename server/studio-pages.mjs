@@ -1,5 +1,5 @@
 import {newsletterDraftButton} from './newsletter-draft-links.mjs';
-import {ownsTask} from './studio-project-tasks.mjs';
+import {ownsTask,deleteTaskControl,deletedTasksPanel} from './studio-project-tasks.mjs';
 import {projectCreatePage} from './studio-project-create.mjs';
 import {isNewsletter,isNewsletterContent} from './studio-newsletters.mjs';
 import { imageCaption } from './knowledge-article.mjs';
@@ -168,13 +168,13 @@ export function projectPage(params,data){
       (admin||ownsTask(p,e,data.actor.id)?'<details><summary>Update task</summary>'+form('task-save',base+hidden('entry',e.id)+
       (admin?select('assignee','Assign to',{'':'Project owner',...personOptions(data)},e.assignee||''):'')+input('title','Task',e.title,'text','required maxlength="160"')+textarea('notes','Brief and feedback',e.notes||'')+
       select('status','Progress',Object.fromEntries((admin?['To do','In progress','Ready for review','Changes requested','Done']:['To do','In progress','Ready for review','Changes requested']).map(x=>[x,x])),e.status)+
-      (blank?hidden('week',e.week):input('week','Week (0 is preparation)',e.week,'number','min="0" max="'+p.weeks+'"'))+input('due','Due date',e.due||'','date'),state)+'</details>':'')+'</section>';
+      (blank?hidden('week',e.week):input('week','Week (0 is preparation)',e.week,'number','min="0" max="'+p.weeks+'"'))+input('due','Due date',e.due||'','date'),state)+'</details>':'')+deleteTaskControl(p,e,data)+'</section>';
   }).join('')+'</section>').join('');
   const candidates=data.items.filter(r=>(r.title+' '+r.kind).toLowerCase().includes((params.get('find')||'').toLowerCase())).slice(0,35);
   return heading(p.name,p.studio.audience||p.brief,canAccess(data.actor,'library')&&(!blank||p.entries.some(e=>e.record))?button('Preview journey',url('journey',{project:p.id}))+button('Export',url('release',{project:p.id})):'' )+
     '<p class="studio-project-meta">'+esc(p.status)+' · '+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</p>'+
     (root&&canAccess(data.actor,'library')?'<p>Programme content · '+itemLink(root)+'</p>':'')+nav+'<div class="studio-columns project-columns"><section><h2>'+(blank?'Tasks':week?'Week '+week:'Preparation')+'</h2>'+(rows||(blank?'<p>No tasks yet. Add your first task to get started.</p>':'<p>No tasks in this week yet.</p>'))+'</section>'+
-    '<aside class="panel"><details'+(blank?' open':'')+'><summary>Add work</summary>'+form('task-add',base+input('title','What needs doing?','','text','required maxlength="160"')+
+    '<aside class="panel">'+deletedTasksPanel(p,data)+'<details'+(blank?' open':'')+'><summary>Add work</summary>'+form('task-add',base+input('title','What needs doing?','','text','required maxlength="160"')+
     (admin?select('assignee','Assign to',{'':'Project owner',...personOptions(data)}):'')+input('due','Due date (optional)','','date')+select('kind',blank?'Task type':'Content type',{...(blank?{Task:'Task'}:{}),'Content to create':'Content to create','PT WhatsApp message':'PT WhatsApp message','GHL workflow':'GHL workflow','Creative asset':'Creative asset','Marketing content':'Marketing content'})+textarea('notes','What does a finished result need?'),state,'Add task')+'</details>'+
     (canAccess(data.actor,'library')?'<details><summary>Attach existing content</summary><form action="/content-library/">'+hidden('work','1')+hidden('studio','project')+hidden('project',p.id)+hidden('week',week)+input('find','Find content',params.get('find')||'')+'<button>Find</button></form>'+
     (params.has('find')?form('task-attach',base+select('record','Library item',Object.fromEntries(candidates.map(r=>[r.id,r.title]))),state,'Attach to this week'):'')+'</details>':'')+

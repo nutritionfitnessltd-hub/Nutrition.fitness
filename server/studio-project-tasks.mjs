@@ -1,6 +1,8 @@
 import {randomUUID} from 'node:crypto';
 import {HttpError} from './platform.mjs';
 import {cleanText} from './studio-model.mjs';
+import {canAccess} from './library-permissions.mjs';
+import {esc,form,hidden} from './studio-ui.mjs';
 
 export function projectTasks(value='[]',people=[]){
  let rows;try{rows=JSON.parse(value);}catch{throw new HttpError(400,'Reopen the project tasks and try again.');}
@@ -17,3 +19,12 @@ export function projectTasks(value='[]',people=[]){
 }
 export const participates=(p,id)=>p.creator_id===id||p.entries.some(e=>e.assignee===id);
 export const ownsTask=(p,e,id)=>(e.assignee||p.creator_id)===id;
+export const canManageTasks=(p,actor)=>canAccess(actor,'edit')&&(actor.role==='admin'||p.creator_id===actor.id);
+export function deleteTaskControl(p,e,data){
+ if(!canManageTasks(p,data.actor))return '';
+ return form('task-delete',hidden('projectRevision',p.revision)+hidden('entry',e.id),{section:'project',project:p.id},'Delete task','data-task-delete');
+}
+export function deletedTasksPanel(p,data){
+ if(!canManageTasks(p,data.actor)||!p.studio.deletedTasks?.length)return '';
+ return '<details class="panel deleted-tasks"><summary>Deleted tasks ('+p.studio.deletedTasks.length+')</summary>'+p.studio.deletedTasks.map(e=>'<div><strong>'+esc(e.title)+'</strong>'+form('task-restore',hidden('projectRevision',p.revision)+hidden('entry',e.id),{section:'project',project:p.id},'Restore task')+'</div>').join('')+'</details>';
+}
