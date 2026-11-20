@@ -1,3 +1,4 @@
+import {releasePath,publicationDestination} from './studio-publishing.mjs';
 import {newsletterDraftButton} from './newsletter-draft-links.mjs';
 import {participates,ownsTask} from './studio-project-tasks.mjs';
 import {assignmentProjectId} from './team-assignments.mjs';
@@ -27,20 +28,22 @@ export function teamWorkRows(data){
     // Imported reference content is not active work until attributed, assigned or submitted.
     if(!w&&!task&&!project&&!['In review','Changes requested'].includes(r.status))continue;
     const owner=task?person(task.staff_id):w?worker(w):project?person(project.creator_id):{owner:'unassigned',ownerName:admin?'Unassigned':'Team submission',type:'people'};
-    const review=r.kind==='article'||canReviewContent(data,r)&&r.status==='In review';
+    const destination=data.publicationDestination||publicationDestination({});
+    const published=(data.releases||[]).some(release=>release.item_id===r.id&&release.environment===destination.environment&&release.source_revision===r.revision);
+    const review=!published&&(r.kind==='article'||canReviewContent(data,r)&&r.status==='In review');
     recordRows.set(r.id,{id:'content:'+r.id,recordId:r.id,title:r.title,...owner,project:project?.id||'',projectName:project?.name||'',
-      state:stateFor(r.status),status:r.status,updated:date(r.updatedAt||r.workerSource?.receivedAt),due:task?.due_date||'',
-      ghlAction:newsletterDraftButton(data,r),note:r.reviewFeedback?.at(-1)?.changes||'Saved content',review,href:url(review?'review-preview':'item',{id:r.id}),action:review?'Review':'Open'});
+      published,state:published?'completed':stateFor(r.status),status:published?'Published':r.status,updated:date(r.updatedAt||r.workerSource?.receivedAt),due:task?.due_date||'',
+      ghlAction:newsletterDraftButton(data,r),note:r.reviewFeedback?.at(-1)?.changes||'Saved content',review,href:published?destination.origin+releasePath(r.id):url(review?'review-preview':'item',{id:r.id}),action:published?'View published article':review?'Review':'Open'});
   }
   for(const t of tasks){
-    const r=recordRows.get(t.record_id);if(r){linked.add(r.recordId);const status=['In review','Changes requested'].includes(r.status)?r.status:t.status;rows.push({...r,id:'task:'+t.id,title:t.title||r.title,state:stateFor(status),status,updated:[date(t.updated_at),r.updated].sort().at(-1),note:t.instructions||r.note});continue;}
+    const r=recordRows.get(t.record_id);if(r){linked.add(r.recordId);const status=r.published?'Published':['In review','Changes requested'].includes(r.status)?r.status:t.status;rows.push({...r,id:'task:'+t.id,title:t.title||r.title,state:stateFor(status),status,updated:[date(t.updated_at),r.updated].sort().at(-1),note:t.instructions||r.note});continue;}
     rows.push({id:'task:'+t.id,title:t.title,...person(t.staff_id),project:assignmentProjectId(t),projectName:t.record_title||'',state:stateFor(t.status),status:t.status,updated:date(t.updated_at||t.created_at),due:t.due_date||'',note:t.instructions||'',href:'/content-library/?work=1&amp;assignments=1&amp;staff='+encodeURIComponent(t.staff_id),action:'Open'});
   }
   for(const p of projects)for(const [i,e] of (p.entries||[]).entries()){
     if(e.status==='Archived'||!admin&&!ownsTask(p,e,data.actor.id))continue;
     const r=recordRows.get(e.record);if(r&&linked.has(r.recordId))continue;if(r)linked.add(r.recordId);
     rows.push({...r,id:'project:'+p.id+':'+(e.id||i),title:e.title||r?.title,...(r?.type==='ai'?{owner:r.owner,ownerName:r.ownerName,type:r.type}:person(e.assignee||p.creator_id)),project:p.id,projectName:p.name,
-      state:stateFor(r&&['In review','Changes requested'].includes(r.status)?r.status:e.status),status:r&&['In review','Changes requested'].includes(r.status)?r.status:e.status,updated:[date(e.updatedAt||p.updated_at),r?.updated||''].sort().at(-1),due:e.due||'',note:e.notes||r?.note||'',
+      state:stateFor(r?.published?'Published':r&&['In review','Changes requested'].includes(r.status)?r.status:e.status),status:r?.published?'Published':r&&['In review','Changes requested'].includes(r.status)?r.status:e.status,updated:[date(e.updatedAt||p.updated_at),r?.updated||''].sort().at(-1),due:e.due||'',note:e.notes||r?.note||'',
       href:r?.href||url('project',{project:p.id,week:e.week||0}),action:r?.action||'Open'});
   }
   rows.push(...[...recordRows.values()].filter(r=>!linked.has(r.recordId)));
