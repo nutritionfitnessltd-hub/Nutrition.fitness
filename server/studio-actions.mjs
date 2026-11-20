@@ -92,12 +92,14 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
     return {section:'project',project:project.id};
   }
   if(action==='content-create'){
+    if(f.kind==='product')throw new HttpError(400,'Add products from the Products area.');
     if(!Object.hasOwn(kinds,f.kind))throw new HttpError(400,'Choose a content type.');
     const title=cleanText(f.title,200);if(!title)throw new HttpError(400,'Add a title.');
     const id='studio:'+uuid(String(f.id||'').replace(/^studio:/,''));
     if(data.byId.has(id))return {section:'item',id};
     if(f.intent&&!['draft','preview'].includes(f.intent))throw new HttpError(400,'Save this new draft before checking it.');
     const record={id,title,kind:f.kind,status:'Draft',fields:f.fields?readFields(f.fields,f.kind):blankFields(f.kind),parent:null,comments:[]};
+    if(record.fields.productAsset===true)throw new HttpError(400,'Add product assets from the Products area.');
     assignWorker(record,f,data);
     await createItem(record,f.project,f.entry,data,api);return {section:'item',id,tab:f.intent==='preview'?'preview':'edit'};
   }
@@ -116,10 +118,12 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
     const r=editable(data,params.get('id'));verifyRevision(r,f.revision);
     let next=structuredClone(r);delete next.revision;delete next.updatedAt;
     if(action==='content-save'){
+      if(r.kind==='product'||r.fields.productAsset===true)throw new HttpError(400,'Use the Products editor to update this item.');
       next.title=cleanText(f.title,200);if(!next.title)throw new HttpError(400,'Add a title.');
       if(f.intent&&!['draft','preview','approve','review'].includes(f.intent))throw new HttpError(400,'Choose a save action.');
       assignWorker(next,f,data);
       next.fields=readFields(f.fields,next.kind);
+      if(next.fields.productAsset===true)throw new HttpError(400,'Link product assets from the Products area.');
       if(next.kind==='mealplan'&&r.fields.plannerVersion===1)next.fields=refreshMealPlan(next.fields,data,r.fields);
       if(next.source&&f.sourceChecked==='yes')next.source.needsChecking=false;
       next.status='Draft';delete next.approval;
