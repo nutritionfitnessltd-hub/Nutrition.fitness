@@ -1,3 +1,4 @@
+import './studio-team-photo.js';
 let profile;
 const parse=html=>new DOMParser().parseFromString(html,'text/html');
 const directoryUrl=()=>{const u=new URL(location.href);u.searchParams.delete('person');u.searchParams.delete('worker');u.searchParams.delete('saved');return u;};
@@ -37,7 +38,8 @@ async function openProfile(link){
   close.addEventListener('click',()=>closeProfile(state));dialog.addEventListener('cancel',e=>{e.preventDefault();closeProfile(state);});
   dialog.addEventListener('click',e=>{if(e.target===dialog){const r=dialog.getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)closeProfile(state);}});
   dialog.addEventListener('input',()=>state.dirty=true);
-  dialog.addEventListener('close',()=>{clearInterval(state.poll);dialog.remove();document.body.classList.remove('team-profile-open');profile=null;(link.isConnected?link:[...document.querySelectorAll('.team-person-card')].find(a=>a.href===link.href)||document.querySelector('.team-person-card'))?.focus();});
+  dialog.addEventListener('change',()=>state.dirty=true);
+  dialog.addEventListener('close',()=>{clearInterval(state.poll);dialog.remove();document.body.classList.remove('team-profile-open');profile=null;(link.isConnected?link:[...document.querySelectorAll('[data-team-open]')].find(a=>a.href===link.href)||document.querySelector('[data-team-open]'))?.focus();});
   document.body.classList.add('team-profile-open');dialog.showModal();
   try{await loadProfile(state,link.href);}catch(e){alertIn(state,e.message);}
   state.poll=setInterval(async()=>{

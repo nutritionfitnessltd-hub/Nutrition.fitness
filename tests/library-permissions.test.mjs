@@ -28,6 +28,7 @@ function fixture(access=null){
       const row={id:p.item,payload:structuredClone(p.document),revision:p.expected+1};copies.set(p.item,row);return [structuredClone(row)];
     }
     if(path.includes('nufi_members'))return [{user_id:admin.id}];
+    if(path.startsWith('/auth/v1/admin/users/'))return {}; // No verified owner directory entry in this fixture.
     if(path.includes('nufi_library_nda_agreements'))return [ndaDocument];
     if(path.includes('nufi_library_nda_acceptances'))return [{id:'fixture-acceptance'}];
     if(path.includes('nufi_library_staff')){

@@ -13,3 +13,12 @@ test('organisation map renders saved hierarchy, unknown managers and circular li
  const staff=[{id:'owner',name:'James Calam'},{id:'a',name:'A'},{id:'b',name:'B'},{id:'c',name:'<script>bad</script>'}],byId=new Map([['studio:team-profile:a',{fields:{reportsTo:'James Calam',role:'Director'}}],['studio:team-profile:b',{fields:{reportsTo:'B'}}]]);
  const html=organisationMap({id:'owner'},staff,{byId});assert.match(html,/James Calam/);assert.match(html,/Director/);assert.match(html,/Reporting line needs setting/);assert.match(html,/Nina/);assert.doesNotMatch(html,/<script>/);
 });
+
+test('organisation cards use portraits and modal links without CSP-blocked inline styling',()=>{
+ const html=organisationMap({id:'owner'},[{id:'owner',name:'James Calam'}],{byId:new Map()});
+ assert.match(html,/class="team-directory organisation-directory"/);
+ assert.equal((html.match(/data-team-open/g)||[]).length,11);
+ assert.match(html,/src="\/assets\/studio-team\/imogen-aligned.png"/);
+ assert.match(html,/Reports to James Calam/);
+ assert.doesNotMatch(html,/<style|style=|Course structure, lesson scripts/);
+});
