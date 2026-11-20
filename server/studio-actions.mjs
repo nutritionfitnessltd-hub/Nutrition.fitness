@@ -1,4 +1,5 @@
 import {projectTasks,ownsTask,canManageTasks} from './studio-project-tasks.mjs';
+import {reviewCourseStructure} from './studio-courses.mjs';
 import {productionTracking,trackingStages} from './studio-production-tracker.mjs';
 import { workerNames } from './studio-worker-content.mjs';
 import { saveWorkoutDays } from './studio-workout-days.mjs';
@@ -78,6 +79,7 @@ export async function createItem(record,projectId,entryId,data,api){
 }
 export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
   const action=f.action;
+  if(action==='course-structure-review')return reviewCourseStructure(params,f,data,api);
   if(action==='workout-days-save')return saveWorkoutDays(params,f,data,api);
   if(action==='project-blank-create'){
     adminOnly(data);

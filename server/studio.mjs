@@ -326,6 +326,8 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         const editParams=new URLSearchParams(params);editParams.set('tab','edit');
         body+='<p>Your unsaved edits are shown below. For a version conflict, open the latest saved copy in another tab before combining changes.</p>'+itemPage(editParams,data);
       }catch{body+='<details><summary>Unsaved content</summary><pre class="source-text">'+esc(f.fields||'')+'</pre></details>';}
+    }else if(req.method==='POST'&&f.action==='course-structure-review'&&data){
+      body+=button('Reopen the course',url('item',{id:params.get('id')}));
     }else if(req.method==='POST'&&f.action?.startsWith('product-')&&data){
       try{body+=productErrorForm(params,f,data);}catch{body+=button('Back to products',url('products'));}
     }else if(req.method==='POST'&&f.action?.startsWith('idea-')&&data?.actor.role==='admin'){

@@ -9,7 +9,7 @@ export async function sourceCourseManifest(api,sourceId){
  for(const [name,course] of Object.entries(rows[0]?.payload?.courses||{})){
   const lessons=(course.sections||[]).flatMap((section,moduleIndex)=>(section.entries||[]).map((e,i)=>({sourceId:e.id,key:e.key||e.id,title:e.title,position:e.position||i+1,module:section.title||'',modulePosition:moduleIndex+1})));
   const selected=lessons.filter(e=>e.sourceId===sourceId);
-  for(const lesson of selected)matches.push({id:productionCourseId(name),name,order:course.order,lesson,lessons,support:course.support||[]});
+  for(const lesson of selected)matches.push({id:productionCourseId(name),name,order:course.order,sections:course.sections||[],lesson,lessons,support:course.support||[]});
  }
  if(matches.length!==1)return {ready:false,reason:matches.length?'This source maps to more than one lesson. Confirm the lesson identity before saving.':'This source is not mapped to a course lesson yet.'};
  const manifest=matches[0];

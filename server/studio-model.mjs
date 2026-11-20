@@ -27,7 +27,7 @@ export function blankFields(kind){
     activity:{type:'',effort:'',notes:'',durationMinutes:0,distanceMetres:0,workSeconds:0,restSeconds:0,repetitions:1},
     recipe:{servings:1,ingredients:[''],instructions:[''],prepMinutes:0,cookMinutes:0,nutrition:{calories:'',protein:'',carbohydrates:'',fat:'',basis:'per serving',source:''},allergens:[],imageUrl:'',sourceText:''},
     mealplan:{introduction:'',days:[{day:1,title:'',recipeIds:[]}],shoppingList:[],notes:''},
-    course:{audience:'',outcome:'',introduction:'',lessonIds:[]},
+    course:{audience:'',outcome:'',introduction:'',marketingCopy:'',introductionScript:'',heroImageUrl:'',heroImageAlt:'',heroImageCredit:'',welcomeEmail:'',socialCopy:'',lessonIds:[]},
     lesson:{introduction:'',body:'',takeaway:'',activity:'',videoUrl:'',script:'',durationSeconds:0},
     article:{introduction:'',body:'',takeaway:''},
     leadmagnet:{audience:'',purpose:'',headline:'',introduction:'',contentIds:[],callToAction:''},
