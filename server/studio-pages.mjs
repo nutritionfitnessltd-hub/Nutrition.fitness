@@ -62,7 +62,7 @@ const shelves={
   messages:{title:'Messages',description:'Coaching, email, WhatsApp and GHL workflows.',icon:'MessageCircle',types:['communication','workflow'],create:'communication'},
   marketing:{title:'Marketing & assets',description:'Campaigns, images, videos and supporting files.',icon:'Briefcase',types:['campaign','asset'],create:'campaign'}
 };
-const createLink=kind=>kind==='newsletter'?url('builder',{build:'newsletter'}):url('new',{kind});
+const createLink=kind=>kind==='product'?url('product',{id:'new'}):kind==='newsletter'?url('builder',{build:'newsletter'}):url('new',{kind});
 function workSummary(data){
   const pending=data.items.filter(r=>r.status==='In review'&&(data.actor.role==='admin'||data.assigned.has(r.id))).length;
   const projects=data.projects.filter(p=>p.status!=='Complete');

@@ -51,6 +51,7 @@ export function accessFromForm(fields) {
 }
 
 const routes = {
+  products: ['library'], product: ['library'], 'product-creatives': ['library'], 'product-asset': ['library'], 'product-file': ['library'], 'product-upload': ['library'],
   home: [], 'team-work': [], assets: [], 'brand-media': ['library'], 'workspace-archive': [], library: ['library'], exercises: ['library'], item: ['library'], history: ['library'], 'review-history': ['work','library'],
   'book-file': ['library'], 'article-image': ['library'], 'article-preview': ['library'], 'newsletter-preview': ['library'], 'newsletter-html': ['library'], 'mealplan-image': ['library'],
   archive: ['originals'], create: ['studio'], new: ['studio'], import: ['studio', 'originals'],
@@ -59,6 +60,7 @@ const routes = {
   release: ['work', 'library'], export: ['work', 'library']
 };
 const actions = {
+  'product-save': ['library','edit'], 'product-asset-save': ['library','edit'], 'product-asset-link': ['library','edit'], 'product-asset-status': ['library','edit'], 'product-file-save': ['library','edit'],
   'review-decision': ['work', 'library'], 'review-retry': ['work', 'library'],
   'content-save': ['library', 'edit'], 'content-comment': ['library', 'edit'],
   'content-review': ['library', 'edit'], 'workout-inline-save': ['library', 'edit'],
@@ -79,6 +81,7 @@ export function authorizeStudioRequest(actor, section, method, fields = {}, para
   if (!Object.hasOwn(routes, section)) throw new HttpError(403, 'Administrator access is required.');
   requireAccess(actor, ...routes[section]);
   if (method === 'POST') {
+    if (section === 'product-upload' && fields.type === 'blob.generate-client-token') { requireAccess(actor,'library','edit'); return; }
     if (!Object.hasOwn(actions, fields.action)) throw new HttpError(403, 'This action is not available to your account.');
     requireAccess(actor, ...actions[fields.action]);
     if (fields.action === 'mealplan-generate' && !params.get('id')) requireAccess(actor, 'studio');

@@ -1,5 +1,7 @@
 import {loadNewsletterDraftLinks} from './newsletter-draft-links.mjs';
 import {saveNewsletterConnection} from './newsletter-sync.mjs';
+import {productsPage,productPage,creativesPage,productAssetPage,changeProducts,productErrorForm,isProductAsset} from './studio-products.mjs';
+import {productUploadToken,attachProductFile,sendProductFile} from './studio-product-files.mjs';
 import {sendNewsletter} from './studio-newsletters.mjs';
 import {changeSoftwareRelease,softwareReleaseErrorForm} from './software-releases.mjs';
 import {projectCreatePage} from './studio-project-create.mjs';
@@ -93,6 +95,17 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       res.setHeader('Content-Type',file.type);res.statusCode=200;return res.end(Buffer.from(file.data,'base64'));
     }
     [data,meta]=await Promise.all([studioData(api,actor,load),displayEntry(env,'shelves').catch(()=>({}))]);
+    if(req.method==='GET'&&section==='item'){
+      const r=data.byId.get(params.get('id'));
+      if(r?.kind==='product'||isProductAsset(r)){
+        readable(data,r.id);res.statusCode=303;res.setHeader('Location',url(r.kind==='product'?'product':'product-asset',{id:r.id,...(params.get('tab')==='edit'?{tab:'edit'}:{})}).replaceAll('&amp;','&'));return res.end();
+      }
+    }
+    if(section==='product-file')return await sendProductFile(req,res,params,data,env);
+    if(req.method==='POST'&&(section==='product-upload'||f.action==='product-file-save')){
+      const result=section==='product-upload'?await productUploadToken(req,params,data,env):await attachProductFile(params,f,data,api,env);
+      res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify(result||{saved:true}));
+    }
     // Old connector links used the embedded reader and missed the review controls.
     if(req.method==='GET'&&section==='item'&&canAccess(actor,'work')&&(!params.has('tab')||params.get('tab')==='preview')&&data.byId.get(params.get('id'))?.kind==='article'){
       const r=readable(data,params.get('id'));
@@ -131,6 +144,9 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='article-image'){const r=data.byId.get(params.get('id'));if(r?.workerImage&&!r.articleImage)return await sendWorkerImage(res,r,env,fetcher);return await sendArticleImage(req,res,params,data);}
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
+      if(f.action?.startsWith('product-')){
+        const next=await changeProducts(params,f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();
+      }
       if(f.action?.startsWith('ghl-sync-')){await saveNewsletterConnection(f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url('connections').replaceAll('&amp;','&'));return res.end();}
       if(f.action==='project-setup')return write(res,200,projectCreatePage(params,data,f),'project-create',actor,meta);
       if(f.action?.startsWith('idea-')){const next=await changeShinyThing(params,f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();}
@@ -205,6 +221,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       }
       if(f.action==='ai-draft'){
         const r=editable(data,params.get('id'));
+        if(r.kind==='product'||isProductAsset(r))throw new HttpError(400,'Use the Products editor to update this item.');
         if(r.kind==='mealplan')throw new HttpError(400,'Use the meal plan settings to generate a complete menu with library recipes.');
         if(r.revision!==Number(f.revision))throw new HttpError(409,'Reopen the latest version before drafting.');
         const result=await generateDraft({env,record:r,prompt:cleanText(f.prompt,8000),standards:data.byId.get('studio:standards')?.fields.guidance,
@@ -225,6 +242,10 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }
     let body;
     switch(section){
+      case 'products':body=productsPage(params,data);break;
+      case 'product':body=productPage(params,data);break;
+      case 'product-creatives':body=creativesPage(params,data);break;
+      case 'product-asset':body=productAssetPage(params,data);break;
       case 'home':body=home(data,meta);break;
       case 'shiny-things':body=shinyThingsPage(params,data,{},env);break;
       case 'assets':body=assetsPage(data);break;
@@ -278,8 +299,12 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       default:throw new HttpError(404,'This studio page is unavailable.');
     }
     if(params.get('notification')==='pending')body='<p role="status">Your changes were saved, but an email needs attention. '+(actor.role==='admin'?button('Check email activity',url('connections')):'Please ask your administrator to check Connections.')+'</p>'+body;
+    if(['products','product','product-creatives','product-asset'].includes(section))body='<div class="product-space">'+body+'</div>';
     return write(res,200,body,section,actor,meta);
   }catch(error){
+    if(req.method==='POST'&&(section==='product-upload'||f.action==='product-file-save')){
+      res.statusCode=error instanceof HttpError?error.status:503;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify({error:error instanceof HttpError?error.message:'Could not save this upload. Please retry.'}));
+    }
     if(req.method==='POST'&&f.action==='idea-generate-summary'){
       res.statusCode=error instanceof HttpError?error.status:503;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify({error:error instanceof HttpError?error.message:'AI could not generate this explanation. Your notes have not changed.'}));
     }
@@ -299,6 +324,8 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         const editParams=new URLSearchParams(params);editParams.set('tab','edit');
         body+='<p>Your unsaved edits are shown below. For a version conflict, open the latest saved copy in another tab before combining changes.</p>'+itemPage(editParams,data);
       }catch{body+='<details><summary>Unsaved content</summary><pre class="source-text">'+esc(f.fields||'')+'</pre></details>';}
+    }else if(req.method==='POST'&&f.action?.startsWith('product-')&&data){
+      try{body+=productErrorForm(params,f,data);}catch{body+=button('Back to products',url('products'));}
     }else if(req.method==='POST'&&f.action?.startsWith('idea-')&&data?.actor.role==='admin'){
       body+=shinyThingsPage(params,data,f,env);
     }else if(req.method==='POST'&&f.action==='workout-days-save'&&data){
@@ -326,6 +353,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }else if(req.method==='POST'&&['import-preview','import-save'].includes(f.action)&&data){
       body+=importPage(params,data,'',f);
     }else body+=button('Return to the studio',url());
+    if(['products','product','product-creatives','product-asset'].includes(section))body='<div class="product-space">'+body+'</div>';
     return write(res,error instanceof HttpError?error.status:503,body,section,actor,meta);
   }
 }

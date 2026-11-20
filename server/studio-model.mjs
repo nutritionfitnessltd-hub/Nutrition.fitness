@@ -5,7 +5,7 @@ export const kinds = {
   exercise:'Exercise', activity:'Activity or drill', recipe:'Recipe', mealplan:'Meal plan',
   course:'Course', lesson:'Lesson', article:'Knowledge Centre article', ebook:'Book', leadmagnet:'Lead magnet', challenge:'Challenge',
   communication:'Coaching message', campaign:'Marketing content', workflow:'GHL workflow',
-  asset:'Creative asset', rule:'Progression rule', review:'Check-in', learning:'Learning content'
+  product:'Physical product', asset:'Creative asset', rule:'Progression rule', review:'Check-in', learning:'Learning content'
 };
 export const states=['Draft','In review','Changes requested','Approved','Archived'];
 export const templates={
@@ -35,6 +35,7 @@ export function blankFields(kind){
     communication:{channel:'WhatsApp',trigger:'',timing:'',subject:'',body:'',callToAction:'',replyPaths:[{reply:'',response:'',nextStep:''}]},
     campaign:{channel:'Email',audience:'',headline:'',body:'',callToAction:'',assetIds:[]},
     workflow:{trigger:'',audience:'',steps:[{timing:'',channel:'WhatsApp',messageId:'',reply:'',nextStep:''}],exitCondition:''},
+    product:{category:'Supplements',stage:'Idea',description:'',sku:'',supplier:'',variants:'',launchDate:'',folderUrl:'',ingredients:'',nutrition:'',usage:'',projectIds:[],coverAssetId:''},
     asset:{type:'Image',brief:'',dimensions:'',altText:'',url:'',sourceRecordId:''},
     rule:{instructions:'',repeatWhen:'',progressWhen:''},review:{questions:[''],nextStep:''},learning:{body:'',takeaway:''}
   };
@@ -103,7 +104,9 @@ export function issues(record,records){
     recipe:['ingredients','instructions'],mealplan:['days'],course:['outcome'],lesson:['body'],article:['body'],
     communication:['channel','trigger','timing','body'],campaign:['body'],workflow:['trigger','steps'],asset:['brief']
   };
-  for(const key of required[record.kind]||[])if(!present(d[key]))out.push('Add '+key.replace(/([A-Z])/g,' $1').toLowerCase()+'.');
+  const productAsset=record.kind==='asset'&&d.productAsset===true;
+  for(const key of productAsset?[]:required[record.kind]||[])if(!present(d[key]))out.push('Add '+key.replace(/([A-Z])/g,' $1').toLowerCase()+'.');
+  if(productAsset&&!present(record.productFiles)&&![d.body,d.url,d.sourceUrl].some(present))out.push('Add the creative copy, a file or a source link before review.');
   if(record.kind==='programme'&&!((record.id==='training:nufi365'&&d.weeks===52)||[4,6,8,12].includes(d.weeks)))out.push('Choose a programme length of 4, 6, 8 or 12 weeks. NUFI365 remains 52 weeks.');
   if(record.kind==='exercise'&&!d.media?.videoUrl)out.push('Add a demonstration video.');
   if(record.kind==='recipe'&&!(Number(d.servings)>0))out.push('Confirm servings.');
