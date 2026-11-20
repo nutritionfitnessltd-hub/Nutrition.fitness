@@ -5,6 +5,13 @@ import {handleStudio} from '../server/studio.mjs';
 import {publishedContent} from '../server/studio-publishing.mjs';
 const body='EDITORIAL WORKFLOW STATUS: AWAITING APPROVAL.\n\n**Summary:** An introduction.\n**Short answer:** A concise answer.\n**Topics:** `food`, `habits`\n\n:::writing{title="Example"}\n# Example\n\nThe **original** introduction.\n\n## First question\n\n- One\n- Two\n\n## Second question\n\n1. First\n2. Second\n:::\n\n### Sources checked today\n\n- [Original research](https://example.com/research). \uE200genui\uE202private-reference\uE201\n\n### Proposed real hero photograph\nPrivate image note';
 const record={id:'worker:example',title:'Example',kind:'article',status:'Draft',revision:1,fields:{body,imageAlt:'Test image',imageCredit:'Photographer'}};
+test('plain production handoffs never appear in reader previews or replace the article',()=>{
+ const source={...record,fields:{body:'## Can you trust the estimate?\nUse it as rough context.\n\nMargin note: Your wrist is a dashboard.\nSource email: Weekly Wisdom\nSource received: 2026-11-20\nSource sender: private@example.com\nSource Outlook message ID:\n'+ 'A'.repeat(1500)+'\nStatus: awaiting approval\nHero image source page: https://example.com/photo\nChecked sources JSON:\n[{"private":"notes"}]'}};
+ const original=structuredClone(source),a=articlePresentation(source),html=readerDocument(source);
+ assert.match(html,/Use it as rough context/);assert.equal(a.marginNote,'Your wrist is a dashboard.');
+ assert.doesNotMatch(html,/Source email|Weekly Wisdom|private@example|Source Outlook|AAAAA|awaiting approval|Checked sources JSON|Hero image source page/);
+ assert.deepEqual(source,original);
+});
 test('worker submission becomes a reader-facing article without mutating its source',()=>{
  const original=structuredClone(record),a=articlePresentation(record),html=readerDocument(record,'/image.jpg');
  assert.deepEqual(record,original);assert.equal(a.summary,'An introduction.');assert.equal(a.shortAnswer,'A concise answer.');assert.deepEqual(a.topics,['food','habits']);

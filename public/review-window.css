@@ -1,4 +1,11 @@
 body.article-review-window{padding-bottom:190px;background:#fffdf8}
+.article-review-window .kc-article-layout>*{min-width:0}
+.article-review-window .kc-article-body,.article-review-window .kc-article-content{overflow-wrap:anywhere}
+.review-window-controls .review-popup-footer{padding:0;border:0;max-height:none;overflow:visible}
+.review-window-controls .studio-actions{margin:0;gap:10px;align-items:center}
+.review-window-controls .studio-actions>form{display:flex;flex:0 0 auto;width:auto}
+.review-window-controls .studio-actions button,.review-window-controls .studio-actions .btn{box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-height:46px;margin:0;line-height:1.4;white-space:normal}
+.review-window-controls .studio-status{display:inline-flex;align-items:center;min-height:46px;font-weight:600;padding:0 8px}
 .article-review-window .kc-back{display:none}
 .article-review-window .kc-article{max-width:1200px}
 .article-review-window .kc-article-aside{align-self:start;position:sticky;top:24px;max-height:calc(100dvh - 220px);overflow:auto}
