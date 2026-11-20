@@ -125,9 +125,9 @@ async function teamScreen(api,actor,origin,env,params=new URLSearchParams(),fetc
   const target=link({work:'1',studio:'team'});
   const createMarkup=form('create-user','<label>Full name<input name="name" maxlength="100" required autocomplete="off"></label><label>Email<input name="email" type="email" maxlength="254" required autocomplete="off"></label>'+accessFields(null)+'<button class="primary">Create user</button>',target);
   const accessMarkup=s=>'<p>'+(s.code_hash?'Access enabled':'Access disabled or password not set')+'</p><div class="studio-actions">'+(s.code_hash?'<details class="team-welcome-details"><summary>Reset password</summary>'+welcomePanel(s,{origin,env,purpose:'reset'})+'</details>':form('issue-code',field('staff',s.id)+'<button>Enable account</button>',target))+(s.code_hash?form('disable-user',field('staff',s.id)+'<button>Disable access</button>',target):'')+'</div>'+form('save-access',field('staff',s.id)+field('accessRevision',s.access_revision||1)+accessFields(s.access)+'<div class="studio-actions"><button class="primary">Save access</button><button type="submit" name="previewAccount" value="yes" data-account-preview formaction="/content-library/?work=1&amp;studio=account-preview" formtarget="_blank" formnovalidate>Preview account ↗</button></div>',target)+(s.code_hash?'<details class="team-welcome-details"><summary>Send welcome details to '+esc(s.name)+'</summary>'+welcomePanel(s,{origin,env})+'</details>':'<p class="meta">Enable this account to prepare its welcome email and password setup link.</p>');
-  let hqChat,hqError;
-  if(params.get('worker'))try{hqChat=await hqRequest(env,{action:'chat',worker:params.get('worker')},fetcher);}catch(e){hqError=e.message;}
-  return renderTeamPage({params,actor,staff,data,accessMarkup,createMarkup,hqChat,hqError});
+  let hqChat,hqError,workerSettings;
+  if(params.get('worker'))try{[hqChat,workerSettings]=await Promise.all([hqRequest(env,{action:'chat',worker:params.get('worker')},fetcher),hqRequest(env,{action:'worker-settings',worker:params.get('worker')},fetcher)]);}catch(e){hqError=e.message;}
+  return renderTeamPage({params,actor,staff,data,accessMarkup,createMarkup,hqChat,hqError,workerSettings});
 }
 
 function passwordResult(person,origin,env){
@@ -311,6 +311,11 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
           try{await saveAssignment(f,actor,staff,projects,api);}
           catch(e){if(!(e instanceof HttpError))throw e;return writePage(res,e.status,assignmentForm(person,projects,f,e.message),actor,'team');}
           res.statusCode=303;res.setHeader('Location',route+'&studio=team&person='+encodeURIComponent(f.staff)+'&saved=assignment');return res.end();
+        }
+        if(f.action==='worker-control'){
+          if(!['worker-prompt-save','worker-routine-save','worker-routine-toggle','worker-routine-run'].includes(f.operation))throw new HttpError(400,'Choose a worker setting.');
+          await hqRequest(env,{action:f.operation,worker:f.worker,instructions:f.instructions||'',routineId:f.routineId||'',version:Number(f.version),title:f.title||'',cadence:f.cadence||'daily',time:f.time||'09:00',weekday:Number(f.weekday||1),priority:f.priority||'Normal',enabled:f.enabled==='yes'},fetcher);
+          res.statusCode=303;res.setHeader('Location',route+'&studio=team&tab=workers&worker='+encodeURIComponent(f.worker));return res.end();
         }
         if(f.action==='team-profile-save'){const staff=await api(staffTable+'?select=id,name,email&order=name.asc',service);await saveTeamProfile(f,actor,staff,await teamWorkSnapshot(api),api);res.statusCode=303;res.setHeader('Location',route+'&studio=team&person='+encodeURIComponent(f.staff));return res.end();}
         if(!['create-user','issue-code','disable-user','save-access'].includes(f.action))throw new HttpError(400,'Choose a team action.');

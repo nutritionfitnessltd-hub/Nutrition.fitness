@@ -1,3 +1,4 @@
+import {workerControls} from './worker-controls.mjs';
 import {assignmentForm,assignmentProjectId} from './team-assignments.mjs';
 import {organisationMap} from './team-organisation.mjs';
 import {workers} from './studio-workers.mjs';
@@ -41,7 +42,7 @@ const personAvatar=name=>'<span class="team-person-avatar" aria-hidden="true">'+
 const workerAvatar=w=>'<img class="team-person-avatar team-worker-avatar" src="'+esc(w.portrait)+'" alt="" width="80" height="80">';
 const linkButton=(title,href)=>button(title,href).replace('<a ','<a data-team-load ');
 function profileHeader(avatar,name,role,summary){return '<header class="team-profile-heading">'+avatar+'<div><h1>'+esc(name)+'</h1><p>'+esc(role)+'</p><span class="team-card-state">'+esc(summary)+'</span></div></header>';}
-export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarkup,hqChat,hqError}){
+export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarkup,hqChat,hqError,workerSettings}){
   if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
   if(params.get('tab')==='organisation')return organisationMap(actor,staff,data);
   const personKey=params.get('person'),workerKey=params.get('worker');
@@ -57,7 +58,7 @@ export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarku
       '<section class="team-profile-section"><h2>Role & responsibilities</h2><p>'+esc(w.reason.split(' HQ directory')[0])+'</p><p class="meta">Reports to the workspace owner · Works through James HQ</p></section>'+
       (hqChat?.employee?.instructions?'<details class="team-profile-section"><summary>Role instructions in James HQ</summary><p class="prose">'+esc(String(hqChat.employee.instructions).slice(0,16000))+'</p></details>':'')+
       (hqError?'<p role="status" class="team-activity-note">'+esc(hqError)+'</p>':'')+
-      '<section class="team-profile-section"><h2>Current work</h2>'+list(work.projects.filter(p=>!finished(p.status)),p=>'<a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a>'+badge(p.status),'No active projects linked to this worker.')+list(work.tasks.filter(t=>!finished(t.status)),row,'No open project tasks recorded.')+'</section>'+
+      workerControls(workerKey,workerSettings)+'<section class="team-profile-section"><h2>Current work</h2>'+list(work.projects.filter(p=>!finished(p.status)),p=>'<a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a>'+badge(p.status),'No active projects linked to this worker.')+list(work.tasks.filter(t=>!finished(t.status)),row,'No open project tasks recorded.')+'</section>'+
       (workerKey==='morgan'?'<section class="team-profile-section"><h2>Ideas & proposed projects</h2>'+list(data.items.filter(r=>r.id.startsWith('studio:idea:')&&!data.projects.some(p=>p.studio?.ideaId===r.id)),r=>'<a href="'+url('shiny-things',{id:r.id})+'">'+esc(r.title)+'</a>'+badge(r.fields.state||'Saved'),'No ideas awaiting a project plan.')+'</section>':'')+
       '<section class="team-profile-section"><h2>Awaiting your review</h2>'+list(work.review,r=>'<a href="'+url('item',{id:r.id})+'">'+esc(r.title)+'</a>'+badge(r.status),'No content awaiting review.')+'</section>'+
       '<section class="team-profile-section"><h2>Recent results</h2>'+list(recent,m=>'<div><p class="prose">'+esc(String(m.body||'').slice(0,1600))+'</p><small>'+esc(m.createdAt||'')+'</small></div>','No HQ replies recorded yet.')+list(work.content.slice(0,5),r=>'<a href="'+url('item',{id:r.id})+'">'+esc(r.title)+'</a>'+badge(r.status),'No saved content linked yet.')+'</section>'+
