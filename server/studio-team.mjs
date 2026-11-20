@@ -40,7 +40,7 @@ const linkButton=(title,href)=>button(title,href).replace('<a ','<a data-team-lo
 function profileHeader(avatar,name,role,summary){return '<header class="team-profile-heading">'+avatar+'<div><h1>'+esc(name)+'</h1><p>'+esc(role)+'</p><span class="team-card-state">'+esc(summary)+'</span></div></header>';}
 export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarkup,hqChat,hqError}){
   if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
-  if(params.get('tab')==='organisation')return organisationMap(actor,staff,data);
+  if(params.get('tab')==='organisation')return organisationMap(actor,staff,data,params);
   const members=teamProfiles(actor,staff,data);
   const personKey=params.get('person'),workerKey=params.get('worker');
   if(personKey==='new')return '<div class="team-profile" data-team-profile>'+heading('Add a person','Create a team account and choose their access.')+createMarkup+'</div>';
