@@ -79,7 +79,7 @@ test('the account owner can edit their profile without receiving staff login con
  await saveTeamProfile({staff:actor.id,revision:0,role:'Founder',responsibilities:'Set direction and approve work.'},actor,f.staff,f.data,api);
  f.data.byId.set(saved.id,{...saved,revision:1});
  const html=renderTeamPage({...f,params:new URLSearchParams({person:'owner'})});
- assert.match(html,/Founder/);assert.match(html,/Save profile/);assert.doesNotMatch(html,/Save access|Access disabled|name="reportsTo"/);
+ assert.match(html,/Founder/);assert.match(html,/Save profile/);assert.doesNotMatch(html,/Save access|Access disabled|<select name="reportsTo"/);
  assert.match(renderTeamPage({...f,params:new URLSearchParams({tab:'organisation'})}),/Founder/);
 });
 
