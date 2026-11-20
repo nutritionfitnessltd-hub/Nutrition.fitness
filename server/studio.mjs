@@ -108,7 +108,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify(result||{saved:true}));
     }
     // Old connector links used the embedded reader and missed the review controls.
-    if(req.method==='GET'&&section==='item'&&canAccess(actor,'work')&&(!params.has('tab')||params.get('tab')==='preview')&&(data.byId.get(params.get('id'))?.kind==='article'||isNewsletterContent(data.byId.get(params.get('id'))))){
+    if(req.method==='GET'&&section==='item'&&canAccess(actor,'work')&&(!params.has('tab')||params.get('tab')==='preview')&&(data.byId.get(params.get('id'))?.kind==='article'||isNewsletterContent(data.byId.get(params.get('id')))||['lesson','course','marketing','programme','challenge','book'].includes(data.byId.get(params.get('id'))?.kind))){
       const r=readable(data,params.get('id'));
       res.statusCode=303;res.setHeader('Cache-Control','private, no-store');
       res.setHeader('Location',url('review-preview',{id:r.id}).replaceAll('&amp;','&'));return res.end();
@@ -133,7 +133,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       let status=200,retained={};
       if(req.method==='POST'){
         try{
-          if(!['review-decision','review-retry','review-schedule','review-publish','review-keep-draft'].includes(f.action))throw new HttpError(400,'Choose a review action.');
+          if(!['review-decision','review-retry','review-schedule','review-publish','review-keep-draft','review-assign'].includes(f.action))throw new HttpError(400,'Choose a review action.');
           const result=await reviewDecision(params,f,data,api,env,fetcher);
           data.byId.set(result.id,result.record);data.items=data.items.map(r=>r.id===result.id?result.record:r);params.set('reviewed',result.reviewed);
         }catch(e){status=e instanceof HttpError?e.status:503;retained={...f,message:e instanceof HttpError?e.message:'Could not save your review. Your feedback is still here.'};}
@@ -236,7 +236,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       let notifications=[],notificationError=false;
       try{notifications=workflowNotifications(params,f,data,env);}catch{notificationError=true;}
       const articlePreview=f.action==='content-save'&&f.intent==='preview'&&f.previewWindow==='yes';
-      if(articlePreview&&editable(data,params.get('id')).kind!=='article')throw new HttpError(400,'Choose an article to preview.');
+      if(articlePreview)editable(data,params.get('id'));
       const next=await (['publish-test','publish-live'].includes(f.action)?publishStudio(params,f,data,api):f.action==='content-save'&&f.imageUpload?saveArticleImage(params,f,data,api,env):changeStudio(params,f,data,api,{returnRecord:articlePreview}));
       if(articlePreview){res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify({record:next.record,previewUrl:url('review-preview',{id:next.id}).replaceAll('&amp;','&')}));}
       if(notificationError||await notifyWorkflow(notifications,{api,actor,env,fetcher}))next.notification='pending';
