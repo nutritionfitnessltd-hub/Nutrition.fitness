@@ -9,7 +9,11 @@ document.querySelector('[data-request-changes]')?.addEventListener('click',()=>{
  const panel=document.querySelector('[data-review-feedback]');panel.hidden=!panel.hidden;
  if(!panel.hidden){const schedule=document.querySelector('[data-review-schedule]');if(schedule)schedule.hidden=true;panel.querySelector('textarea').focus();}
 });
-document.querySelector('[data-open-schedule]')?.addEventListener('click',()=>{
- const panel=document.querySelector('[data-review-schedule]');panel.hidden=!panel.hidden;
- if(!panel.hidden){document.querySelector('[data-review-feedback]').hidden=true;panel.querySelector('input[type=date]').focus();}
-});
+const publication=document.querySelector('[data-publication-dialog]');
+if(publication){
+ document.querySelector('[data-open-publication]')?.addEventListener('click',()=>publication.showModal());
+ publication.querySelector('[data-show-publication-schedule]')?.addEventListener('click',()=>{
+  const schedule=publication.querySelector('[data-publication-schedule]');schedule.hidden=false;schedule.querySelector('input').focus();
+ });
+ if(publication.hasAttribute('data-open-on-load'))publication.showModal();
+}
