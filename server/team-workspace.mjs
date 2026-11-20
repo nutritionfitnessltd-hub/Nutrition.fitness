@@ -12,7 +12,7 @@ const card=(title,note,section,values={})=>'<a class="studio-card" href="'+url(s
 export function assetsPage(data){
   return heading('Assets','Create content and find the materials your team uses.')+'<div class="studio-cards">'+
     (canAccess(data.actor,'studio')?card('Content Studio','Create, edit and review content.','create'):'')+
-    (canAccess(data.actor,'library')?card('Content Library','Browse and reuse your content.','library')+card('Brand & Media','Brand guidance, images and supporting files.','brand-media'):'')+
+    (canAccess(data.actor,'library')?card('Content Library','Browse and reuse your content.','library')+card('Products','Supplements, physical products, ads and creative assets.','products')+card('Brand & Media','Brand guidance, images and supporting files.','brand-media'):'')+
     '</div>'+(canAccess(data.actor,'originals')?'<section class="panel"><h2>Originals</h2><p>Your source collections and reference materials.</p>'+button('Browse originals',url('archive'))+'</section>':'');
 }
 export function brandMediaPage(data){

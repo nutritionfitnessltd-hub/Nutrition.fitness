@@ -53,6 +53,9 @@ export async function studioData(api,actor,load){
     }
   }
   const data={index,items,byId:records,projects,tasks,people,releases,assigned,actor};
+  // Product assignment includes its assets, never the other products sharing an asset.
+  const assignedProducts=new Set(items.filter(r=>r.kind==='product'&&assigned.has(r.id)).map(r=>r.id));
+  for(const r of items)if(r.kind==='asset'&&r.fields.productAsset===true&&r.fields.productIds?.some(id=>assignedProducts.has(id)))assigned.add(r.id);
   data.reviewHistory=items.flatMap(r=>(r.reviewFeedback||[]).filter(f=>['approve','changes'].includes(f.decision)&&
     (actor.role==='admin'||f.authorId===actor.id&&reviewsKind(actor,r.kind))).map(f=>({
       ...f,recordId:r.id,title:f.reviewedTitle||r.title,kind:r.kind

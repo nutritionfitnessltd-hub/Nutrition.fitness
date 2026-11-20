@@ -16,3 +16,5 @@ supabase/.temp/
 __pycache__/
 *.py[cod]
 /server/generated/
+
+/public/product-upload.js
