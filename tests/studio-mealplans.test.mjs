@@ -125,7 +125,7 @@ test('save and mark checked recalculates the posted meal plan in the same revisi
  assert.equal(writes[0].document.fields.servings,2);
  assert.ok(writes[0].document.fields.shoppingList.length);
  const html=itemPage(new URLSearchParams({id:r.id,tab:'edit'}),d);
- assert.match(html,/value="review"/);assert.match(html,/Change the plan settings/);
+ assert.match(html,/value="approve"/);assert.match(html,/Change the plan settings/);
  assert.doesNotMatch(html,/<h2>Review<\/h2>/);
 });
 test('photo generation uses a natural recipe-specific brief and private checked image bytes',async()=>{
