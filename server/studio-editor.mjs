@@ -1,4 +1,5 @@
 import {isNewsletter,isNewsletterContent,newsletterPreview} from './studio-newsletters.mjs';
+import {isLaunchPack,launchPackPreview} from './studio-launch-pack.mjs';
 import { workerNames, contentWorker } from './studio-worker-content.mjs';
 import { blankFields } from './studio-model.mjs';
 import { articleImageEditor } from './studio-articles.mjs';
@@ -41,6 +42,7 @@ function messageEditorForm(r,data,{create,project,entry,unsaved}){
     '</details></form>';
 }
 export function contentPreview(r,data,readable){
+  if(isLaunchPack(r))return launchPackPreview(r,data);
   if(isNewsletter(r))return newsletterPreview(r);
   if(r.kind==='communication')return '<article class="studio-content-preview message-preview">'+
     (r.fields.subject?'<h2>'+esc(r.fields.subject)+'</h2>':'')+'<div class="prose">'+readable(r.fields.body,data)+'</div>'+
