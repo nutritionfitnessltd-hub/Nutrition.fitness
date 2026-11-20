@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import {courseProductionBrief} from './studio-courses.mjs';
 import { brandInstructions } from './studio-brand.mjs';
 import {reviewGuidance} from './worker-drafts.mjs';
 import { HttpError, uuid } from './platform.mjs';
@@ -29,8 +30,8 @@ export const outputs={
   programme:{label:'Training programme',worker:'marcus',brief:'Read the original programme and preserve its evidenced structure. Prepare the goal, audience, weekly schedule, workout sequence, exercise choices and progression. Specify sets, reps, rest, intensity, recovery and suitable alternatives where the sources support them. Identify missing goals, experience, equipment, training days, session length and limitations before prescribing details. Flag uncertain exercise or safety claims and keep the programme as a draft for James to review; never claim clinical suitability or professional approval.'},
   workout:{label:'Workout session',worker:'marcus',brief:'Read the original workout and exercise material. Prepare the warm-up, main exercises, sets and reps or duration, rest, intensity, coaching cues, alternatives and cool-down. Explain how the session fits the programme and its progression. Flag missing goals, experience, equipment, available time and limitations. Keep the workout as a draft for James to review; never claim clinical suitability or professional approval.'},
   challenge:{label:'Challenge structure',worker:'imogen',brief:'Prepare the challenge overview, source-supported sequence, activities and check-ins. Flag missing or unclear material.'},
-  course:{label:'Course & lesson plan',worker:'imogen',brief:'Preserve the evidenced module and lesson order. Prepare an overview and lesson plan. Identify missing lessons and supporting files.'},
-  branding:{label:'Brand & export course',worker:'imogen',brief:'Work on Canva copies in confirmed lesson order. Apply the approved nutrition.fitness colours, fonts and registered logo. Export the first lesson for James to check, then continue with the agreed treatment. Save exports to the team SharePoint folder and link each file to its course and lesson.'},
+  course:{label:'Course & launch content',worker:'imogen',brief:courseProductionBrief},
+  branding:{label:'Brand & export course',worker:'imogen',brief:courseProductionBrief+' Work on Canva copies in confirmed lesson order using the approved nutrition.fitness colours, fonts and registered logo. Save actual exports to the team SharePoint folder and link each file to its course and lesson.'},
   scripts:{label:'Lesson scripts',worker:'imogen',brief:'Prepare copyable narration for each evidenced lesson. Preserve the teaching points. Report measured video duration only when supplied; label spoken timing estimates separately.'},
   newsletter:{label:'Newsletter',worker:'nina',brief:'Prepare subject line, preview text, newsletter body and one clear call to action. Protect paid content; do not reproduce a whole paid book.'},
   emails:{label:'Welcome & follow-up emails',worker:'nina',brief:'Prepare the welcome and follow-up emails with subject lines, purpose and suggested timing.'},
@@ -48,7 +49,7 @@ export const courseProduction={
   folderUrl:'https://nutritionfitness.sharepoint.com/sites/Nutrition.fitness/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FNutrition%2Efitness%2FShared%20Documents%2FContent%20Library%2FCourses&viewid=9eacdd14%2Da4be%2D4567%2Dab01%2Dc0ab58557776',
   scope:'Change only the colours, fonts and approved nutrition.fitness registered logo on Canva copies. Preserve the original content and layout unless James requests a change.',
   folders:'Courses / [Course name] / [Module] / [Lesson number - Title] / For review or Checked',
-  checks:['Confirm source design and lesson order','Brand a copy of the first lesson','Export and check the actual files','Save the sample in the agreed team folder for James to review','Continue with the approved treatment; keep further files for review','Record Canva-copy and SharePoint-file links against the course and lesson'],
+  checks:['Check source index, scripts, complete lesson order and supporting files','Prepare the course structure for separate approval','Create the overview, marketing copy, introduction video script, hero image, welcome email and social copy as linked drafts','Brand Canva copies and check actual exports','Continue three course lessons daily plus other assigned content, even while drafts await review','Record Canva-copy and SharePoint-file links against the course and lesson; keep everything as drafts for review'],
   reviewRequired:true,folderVerifiedAt:'2026-11-18',dispatchState:'not_connected'
 };
 const originalLink=id=>'/content-library/?work=1&assets='+encodeURIComponent(id);

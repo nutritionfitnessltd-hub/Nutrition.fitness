@@ -528,3 +528,22 @@ body.team-profile-open{overflow:hidden}.team-profile-modal{width:min(800px,calc(
 
 /* Simple production tracking */
 .tracker-intro{font-size:1rem;margin:12px 0 20px}.tracker-counts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:20px 0 28px}.tracker-counts>div{background:white;border:1px solid var(--line);border-radius:10px;padding:18px}.tracker-counts strong{display:block;font-size:1.8rem}.tracker-counts span{font-size:.9rem}.tracker-group{background:white;border:1px solid var(--line);border-radius:12px;padding:20px;margin:18px 0}.tracker-group h2{font-size:1.2rem}.tracker-group ul{list-style:none;padding:0;margin:12px 0 0}.tracker-row{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;padding:15px 0;border-top:1px solid var(--line)}.tracker-row>div:first-child{min-width:0}.tracker-row strong{font-size:1rem}.tracker-row small{display:block;font-size:.875rem;margin-top:5px;color:#526973}.tracker-row p{font-size:.9rem;margin:8px 0 0}.tracker-position{color:#526973}.tracker-row-state{display:flex;align-items:flex-start;gap:12px;flex-shrink:0}.tracker-status{font-size:.875rem;white-space:nowrap}.tracker-status[data-stage="Awaiting review"]{background:#fff1d8;color:#735011}.tracker-status[data-stage="Approved"],.tracker-status[data-stage="Saved to SharePoint"]{background:#e4f1e7;color:#285a37}.tracker-update summary{font-size:.875rem;cursor:pointer;padding:6px}.tracker-update[open]{width:260px}.tracker-update form{margin-top:12px}.tracker-update label{font-size:.875rem}.deleted-tasks{margin-top:18px}.deleted-tasks>div{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:12px}[data-task-delete] button{background:white;color:#8c3030;border:1px solid #caabab}[data-task-delete]{margin-top:12px}@media(max-width:760px){.tracker-counts{grid-template-columns:repeat(2,minmax(0,1fr))}.tracker-row{flex-direction:column;gap:10px}.tracker-row-state{flex-wrap:wrap;width:100%}.tracker-update[open]{width:100%}.tracker-group{padding:16px}}
+/* Course plans stay readable before any production exports exist. */
+.course-overview figure{margin:0 0 1rem;max-width:50rem}
+.course-overview h2{margin:0 0 .75rem}.course-overview .studio-empty{padding:0;margin:0}
+.course-hero{width:100%;max-height:24rem;object-fit:cover;border-radius:.6rem}
+.course-overview figcaption{font-size:.8rem;color:var(--muted);margin-top:.35rem}
+.course-module{border-top:1px solid #dedbd3;padding:.8rem 0}
+.course-module summary{font-weight:650;cursor:pointer}
+.course-module summary span{font-weight:400;font-size:.85rem;margin-left:.5rem}
+.course-module ol{padding-left:1.5rem;margin:.65rem 0 0}
+.course-module li{padding:.4rem .3rem;border-bottom:1px solid #eee}
+.course-module li small{float:right;color:#526b79;font-size:.8rem;margin-left:.8rem}
+.course-review-form{border-top:1px solid #dedbd3;padding-top:1rem;margin-top:.6rem}
+.course-pack-checks{list-style:none;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.5rem 1.5rem}
+.course-pack-checks li{display:flex;justify-content:space-between;gap:1rem;border-bottom:1px solid #dedbd3;padding:.6rem 0}
+.course-pack-checks li span:last-child{font-size:.8rem;white-space:nowrap;color:#526b79}
+.course-pack details{margin-top:1rem}
+.course-pack .prose,.course-overview .prose{white-space:pre-wrap}
+.course-progress-link{display:flex;align-items:center;flex-wrap:wrap;gap:.8rem;font-size:.85rem}
+@media(max-width:760px){.course-pack-checks{grid-template-columns:1fr}.course-module li small{float:none;display:block;margin:0}.course-review-form .studio-actions{flex-wrap:wrap}}
