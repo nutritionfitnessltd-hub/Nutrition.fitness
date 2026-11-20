@@ -128,3 +128,16 @@ test('review handler dispatches the new schedule and keep-draft actions',async()
  const kept=await reviewDecision(params,{action:'review-keep-draft',revision:'2'},f.data,f.api);
  assert.equal(kept.record.publicationPlan,undefined);assert.equal(kept.record.status,'Approved');
 });
+
+
+test('Vercel destination publishes and schedules to the existing website without enabling nutrition.fitness live releases',async()=>{
+ const {publicationDestination}=await import('../server/studio-publishing.mjs');
+ const {publishFromReview,runScheduledPublications}=await import('../server/studio-review-publication.mjs');
+ const f=fixture();const r={...f.data.items[0],status:'Approved',approval:{by:'owner',revision:1}};
+ f.data.publicationDestination=publicationDestination({NUFI_STUDIO_PUBLISH_TARGET:'vercel'});f.data.livePublishingReady=false;
+ const calls=[];await publishFromReview({action:'review-publish',revision:'1'},r,f.data,async(path,o)=>{calls.push(o.payload.target);return [];});assert.deepEqual(calls,['test']);
+ const result=await publishFromReview({action:'review-schedule',revision:'1',scheduledAt:'2099-12-01T09:30'},r,f.data,f.api);assert.equal(result.record.publicationPlan.destination,'test');
+ const scheduled={...result.record,publicationPlan:{...result.record.publicationPlan,scheduledAt:'2026-01-01T09:00:00Z'}};
+ const published=[];const api=async(path,o)=>path.includes('nufi_studio_items')?[{id:scheduled.id,revision:2,payload:scheduled}]:o?.method==='POST'?(published.push(o.payload.target),[]):[];
+ assert.equal((await runScheduledPublications({api,env:{NUFI_STUDIO_PUBLISH_TARGET:'vercel'}})).published,1);assert.deepEqual(published,['test']);
+});

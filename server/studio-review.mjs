@@ -1,3 +1,4 @@
+import {releasePath} from './studio-publishing.mjs';
 import {publicationChoices,publishFromReview} from './studio-review-publication.mjs';
 import {randomUUID} from 'node:crypto';
 import {HttpError} from './platform.mjs';
@@ -29,8 +30,8 @@ const withoutVersion=r=>{const next=structuredClone(r);delete next.revision;dele
 export function reviewWindowDocument(params,data,retained={}){
  const r=readable(data,params.get('id')),preview=reviewPreview(params,data,retained);
  const footer=preview.includes('<footer class="review-popup-footer">')?preview.slice(preview.indexOf('<footer class="review-popup-footer">'),preview.lastIndexOf('</footer>')+9):canEditContent(data,r.id)?'<footer class="review-popup-footer">'+button('Edit',url('item',{id:r.id,tab:'edit'}))+'</footer>':'';
- const notice=!retained.message?({schedule:'Schedule saved to the content calendar.',scheduled:'Publication scheduled.',published:'Published on nutrition.fitness.',approve:data.actor.role==='admin'?'':'Approved. Nothing has been published.',changes:'Change request saved.'})[params.get('reviewed')]||'':'';
- const controls='<div class="review-window-controls">'+(notice?'<p role="status">'+esc(notice)+'</p>':'')+footer+'</div>';
+ const notice=!retained.message?({schedule:'Schedule saved to the content calendar.',scheduled:'Publication scheduled.',published:'Published on '+(data.publicationDestination?.label||'nutrition.fitness')+'.',approve:data.actor.role==='admin'?'':'Approved. Nothing has been published.',changes:'Change request saved.'})[params.get('reviewed')]||'':'';
+ const controls='<div class="review-window-controls">'+(notice?'<p role="status">'+esc(notice)+'</p>':'')+(params.get('reviewed')==='published'&&data.publicationDestination?.origin?button('View published article',data.publicationDestination.origin+releasePath(r.id)).replace('<a ','<a target="_blank" rel="noopener" '):'')+footer+'</div>';
  const page=r.kind==='article'?readerDocument(r,articleImage(r)):'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(r.title)+'</title><link rel="stylesheet" href="/studio.css"></head><body>'+itemPage(new URLSearchParams({id:r.id,tab:'preview'}),data)+'</body></html>';
  return page.replace('</head>','<link rel="stylesheet" href="/review-window.css"><script type="module" src="/studio-review.js"></script></head>').replace('<body class="kc-page">','<body class="kc-page article-review-window">').replace('</body>',controls+'</body>');
 }
