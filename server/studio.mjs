@@ -1,3 +1,4 @@
+import {loadNewsletterDraftLinks} from './newsletter-draft-links.mjs';
 import {saveNewsletterConnection} from './newsletter-sync.mjs';
 import {productsPage,productPage,creativesPage,productAssetPage,changeProducts,productErrorForm,isProductAsset} from './studio-products.mjs';
 import {productUploadToken,attachProductFile,sendProductFile} from './studio-product-files.mjs';
@@ -113,6 +114,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }
     meta=meta||{};
     if(['home','team-work'].includes(section)&&actor.role==='admin'&&env.NUFI_HQ_SITE_TOKEN)data.hqIdeas=await workerIdeaSummaries(env,fetcher);
+    if(['home','team-work','library'].includes(section))await loadNewsletterDraftLinks(data,api).catch(()=>{});
     data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');
     data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';
     if(section==='newsletter-preview'||section==='newsletter-html')return await sendNewsletter(req,res,readable(data,params.get('id')),section,env);
