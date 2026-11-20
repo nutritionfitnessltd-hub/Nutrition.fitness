@@ -1,3 +1,4 @@
+import {workerSettingsPanel} from './team-worker-settings.mjs';
 import {assignmentForm,assignmentProjectId} from './team-assignments.mjs';
 import {organisationMap} from './team-organisation.mjs';
 import {profileId,teamProfiles,teamAvatar,teamProfileEditor,teamReportingPanel,profileDestination,validProfilePhoto,validateReportingLine} from './team-profiles.mjs';
@@ -38,7 +39,7 @@ const row=t=>'<div><a href="'+t.href+'">'+esc(t.title)+'</a><small>'+esc([t.cont
 const card=(href,avatar,name,role,summary,current)=>'<a class="team-person-card" data-team-open href="'+href+'">'+avatar+'<h2>'+esc(name)+'</h2><p class="team-card-role">'+esc(role)+'</p><span class="team-card-state">'+esc(summary)+'</span><p class="team-card-current">'+esc(current)+'</p><span class="team-card-open">View profile</span></a>';
 const linkButton=(title,href)=>button(title,href).replace('<a ','<a data-team-load ');
 function profileHeader(avatar,name,role,summary){return '<header class="team-profile-heading">'+avatar+'<div><h1>'+esc(name)+'</h1><p>'+esc(role)+'</p><span class="team-card-state">'+esc(summary)+'</span></div></header>';}
-export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarkup,hqChat,hqError}){
+export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarkup,hqChat,hqError,hqSettings,hqSettingsError}){
   if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
   if(params.get('tab')==='organisation')return organisationMap(actor,staff,data,params);
   const members=teamProfiles(actor,staff,data);
@@ -52,9 +53,9 @@ export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarku
     const view=workerKey==='morgan'?url('shiny-things'):workerKey==='ellis'?url('software-releases'):url('library',{worker:workerKey,view:'all'});
     return '<div class="team-profile" data-team-profile>'+profileHeader(teamAvatar(w),w.name,w.role,'AI worker · '+state)+
       '<div class="studio-actions">'+linkButton('Message '+w.name,url('worker-chat',{worker:workerKey}))+linkButton('Assign work',url('worker-chat',{worker:workerKey,brief:'1'}))+button('View work',view)+'</div>'+
+      workerSettingsPanel(workerKey,hqSettings,hqSettingsError,hqChat?.employee?.instructions)+
       teamReportingPanel(w,members)+
-      '<section class="team-profile-section"><h2>Role & responsibilities</h2>'+teamProfileEditor(w,members)+'<p class="meta">This profile describes their role in the team. Instructions in James HQ are managed separately.</p></section>'+
-      (hqChat?.employee?.instructions?'<details class="team-profile-section"><summary>Role instructions in James HQ</summary><p class="prose">'+esc(String(hqChat.employee.instructions).slice(0,16000))+'</p></details>':'')+
+      '<section class="team-profile-section"><h2>Role & responsibilities</h2>'+teamProfileEditor(w,members)+'<p class="meta">This profile describes their role in the team. Edit their AI instructions in the AI prompt section above.</p></section>'+
       (hqError?'<p role="status" class="team-activity-note">'+esc(hqError)+'</p>':'')+
       '<section class="team-profile-section"><h2>Current work</h2>'+list(work.projects.filter(p=>!finished(p.status)),p=>'<a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a>'+badge(p.status),'No active projects linked to this worker.')+list(work.tasks.filter(t=>!finished(t.status)),row,'No open project tasks recorded.')+'</section>'+
       (workerKey==='morgan'?'<section class="team-profile-section"><h2>Ideas & proposed projects</h2>'+list(data.items.filter(r=>r.id.startsWith('studio:idea:')&&!data.projects.some(p=>p.studio?.ideaId===r.id)),r=>'<a href="'+url('shiny-things',{id:r.id})+'">'+esc(r.title)+'</a>'+badge(r.fields.state||'Saved'),'No ideas awaiting a project plan.')+'</section>':'')+
@@ -63,7 +64,7 @@ export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarku
       (work.plans.length?'<section class="team-profile-section"><h2>Prepared briefs</h2>'+list(work.plans,r=>'<a href="'+url('worker-requests',{id:r.id})+'">'+esc(r.title)+'</a><span>Saved brief</span>')+'</section>':'')+'</div>';
   }
   if(personKey){
-    if(personKey==='owner')return renderTeamPage({params:new URLSearchParams({person:actor.id}),actor,staff,data,accessMarkup,createMarkup,hqChat,hqError});
+    if(personKey==='owner')return renderTeamPage({params:new URLSearchParams({person:actor.id}),actor,staff,data,accessMarkup,createMarkup,hqChat,hqError,hqSettings,hqSettingsError});
     const person=staff.find(p=>p.id===personKey)||(personKey===actor.id?{id:actor.id,name:members.find(m=>m.owner).name,email:''}:null);if(!person)throw new HttpError(404,'This person is unavailable.');
     if(params.get('assign')==='1')return assignmentForm(person,data.projects);
     const member=members.find(m=>m.id===person.id),work=personWork(person,data);
