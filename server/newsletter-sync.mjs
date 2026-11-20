@@ -2,6 +2,7 @@ import {randomUUID,randomBytes,createCipheriv,createDecipheriv} from 'node:crypt
 import {HttpError} from './platform.mjs';
 import {ghlClient,ghlLocation,ghlCampaignUrl} from './ghl-newsletter-client.mjs';
 import {newsletterEligible,newsletterSource,newsletterPayload,digest} from './newsletter-sync-html.mjs';
+import {newsletterDraftDue} from './studio-newsletter-type.mjs';
 const configId='private:ghl-newsletter-sync',stateTable='/rest/v1/nufi_newsletter_sync';
 const privateRead={service:true};
 const write=payload=>({service:true,method:'POST',headers:{Prefer:'resolution=merge-duplicates,return=representation'},payload});
@@ -33,6 +34,7 @@ export function remoteFingerprint(r){
  return digest([r.name,r.editorType,canonicalGhlHtml(r.editorContent),r.subject||'',r.previewText||'',r.fromName||'',r.fromEmail||'']);
 }
 export async function syncNewsletter({record,revision,api,client,now=Date.now()}){
+ if(!newsletterDraftDue(record,revision,now))return {status:'not-requested'};
  const owner=randomUUID(),claimed=await api('/rest/v1/rpc/nufi_claim_newsletter',{service:true,method:'POST',payload:{item:record.id,owner}});
  if(!claimed?.length)return {status:'busy'};
  const state={...claimed[0].state},media={...state.media};state.media=media;
@@ -59,7 +61,7 @@ export async function syncNewsletter({record,revision,api,client,now=Date.now()}
   const payload=await newsletterPayload(source,media,client.upload,()=>persist());
   // Re-read before any external write so an old worker snapshot is never exported.
   const latest=(await api(sourcePath(record.id),privateRead))[0];
-  if(!latest||latest.revision!==revision||!newsletterEligible(latest.payload))throw new HttpError(409,'The newsletter changed during syncing. The next check will use the newest copy.');
+  if(!latest||latest.revision!==revision||!newsletterDraftDue(latest.payload,revision,now))throw new HttpError(409,'The newsletter changed during syncing. Approve the latest copy and choose when to save it to GHL.');
   if(!state.campaignId){
    if(state.pendingCreate&&now-Date.parse(state.pendingCreate.at)>23*3600000){state.hold=true;throw new HttpError(409,'An earlier create was not confirmed. Check GHL before reconnecting this draft to avoid a duplicate.');}
    if(!state.pendingCreate){state.initialHash=initialFingerprint(payload);state.pendingCreate={at:new Date(now).toISOString(),key:'nufi-newsletter-'+randomUUID(),payload};await persist();}
@@ -75,6 +77,8 @@ export async function syncNewsletter({record,revision,api,client,now=Date.now()}
    if(remote.status!=='draft'||initialFingerprint(remote)!==state.initialHash){state.hold=true;throw new HttpError(409,'The new GHL copy has changed. Automatic updates are paused.');}
    state.remoteHash=remoteFingerprint(remote);await persist();
   }
+  const beforeUpdate=(await api(sourcePath(record.id),privateRead))[0];
+  if(!beforeUpdate||beforeUpdate.revision!==revision||!newsletterDraftDue(beforeUpdate.payload,revision,now))throw new HttpError(409,'The newsletter changed before the GHL update. Approve the latest copy first.');
   state.pendingUpdate={hash:remoteFingerprint(payload)};await persist();
   await client.update(state.campaignId,payload);
   const confirmed=await client.get(state.campaignId);
@@ -90,9 +94,9 @@ export async function runNewsletterSync({api,env,fetcher=fetch,limit=2,now=Date.
  const config=await readNewsletterConnection(api);if(!config.enabled)return {status:'paused',processed:0};
  if(config.locationId!==ghlLocation)throw new HttpError(503,'Check the GHL account connection.');
  const client=ghlClient(openGhlToken(config.sealedToken,env),fetcher),rows=[];
- for(let offset=0;;offset+=100){const batch=await api('/rest/v1/nufi_studio_items?select=id,payload,revision&payload->>workerId=eq.nina&payload->>kind=eq.communication&order=updated_at.desc,id&limit=100&offset='+offset,privateRead);rows.push(...batch);if(batch.length<100)break;}
+ for(let offset=0;;offset+=100){const batch=await api('/rest/v1/nufi_studio_items?select=id,payload,revision&payload->>status=eq.Approved&payload->>kind=eq.communication&order=updated_at.desc,id&limit=100&offset='+offset,privateRead);rows.push(...batch);if(batch.length<100)break;}
  const states=await api(stateTable+'?select=item_id,state&order=updated_at.asc',privateRead),byId=new Map(states.map(r=>[r.item_id,r.state]));
- const candidates=rows.filter(row=>newsletterEligible(row.payload)).sort((a,b)=>(Date.parse(byId.get(a.id)?.checkedAt||'')||0)-(Date.parse(byId.get(b.id)?.checkedAt||'')||0));
+ const candidates=rows.filter(row=>newsletterEligible(row.payload)&&newsletterDraftDue(row.payload,row.revision,now)&&!(byId.get(row.id)?.status==='synced'&&byId.get(row.id)?.sourceRevision===row.revision)).sort((a,b)=>(Date.parse(byId.get(a.id)?.checkedAt||'')||0)-(Date.parse(byId.get(b.id)?.checkedAt||'')||0));
  const results=[];
  for(const row of candidates.slice(0,limit))results.push(await syncNewsletter({record:{...row.payload,id:row.id},revision:row.revision,api,client,now}));
  return {status:'checked',processed:results.length,results};

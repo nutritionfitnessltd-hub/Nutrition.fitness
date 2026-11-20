@@ -2,9 +2,9 @@ import {cleanNewsletterHtml} from './generated/newsletter-sanitize.mjs';
 import {displayEntry} from './library-display.mjs';
 import {HttpError} from './platform.mjs';
 import {esc, url, button} from './studio-ui.mjs';
+import {isNewsletter} from './studio-newsletter-type.mjs';
 
-export const isNewsletter = r => r?.kind==='communication' && typeof r.fields?.emailHtml==='string' && !!r.fields.emailHtml.trim();
-export const isNewsletterContent = r => isNewsletter(r)||r?.kind==='newsletter'||r?.kind==='communication'&&/\bnewsletter\b/i.test([r.fields?.channel,r.fields?.type,r.fields?.contentType,r.title].filter(Boolean).join(' '));
+export {isNewsletter,isNewsletterContent} from './studio-newsletter-type.mjs';
 const tokens=['GREETING_IMAGE_URL','HERO_IMAGE_URL','SIGNATURE_IMAGE_URL'];
 const raster=/^data:image\/(?:png|jpeg|webp);base64,[A-Za-z0-9+/]+={0,2}$/;
 export function newsletterDocument(r,assets){

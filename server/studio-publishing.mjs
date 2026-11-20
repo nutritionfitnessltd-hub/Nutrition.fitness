@@ -1,6 +1,7 @@
 import {HttpError} from './platform.mjs';
 import {editable} from './studio-store.mjs';
 import {issues} from './studio-model.mjs';
+import {isNewsletterContent} from './studio-newsletters.mjs';
 import {esc,url,form,hidden,button,heading} from './studio-ui.mjs';
 import {articleHtml} from './article-format.mjs';
 import {readerDocument,markdownArticle} from './article-reader.mjs';
@@ -17,7 +18,7 @@ export function releaseEnvironment(req){
  throw new HttpError(404,'This release is unavailable on this website.');
 }
 export function publicationPanel(r,data){
- if(data.actor.role!=='admin')return '';
+ if(data.actor.role!=='admin'||isNewsletterContent(r))return '';
  const releases=data.releases||[],test=releases.find(x=>x.item_id===r.id&&x.environment==='test'),live=releases.find(x=>x.item_id===r.id&&x.environment==='live');
  const approved=r.status==='Approved'&&r.approval?.revision===r.revision, currentTest=test?.source_revision===r.revision;
  return '<section class="panel studio-publishing"><h2>Publish this content</h2><p>Approve the draft, check it on the test website, then give final approval for nutrition.fitness.</p>'+
@@ -29,6 +30,7 @@ export function publicationPanel(r,data){
 export async function publishStudio(params,f,data,api){
  if(data.actor.role!=='admin')throw new HttpError(403,'Only the administrator can publish content.');
  const r=editable(data,params.get('id')),target=f.action==='publish-test'?'test':f.action==='publish-live'?'live':null;
+ if(isNewsletterContent(r))throw new HttpError(400,'Newsletters are approved for GHL, not published to the website.');
  if(!target)throw new HttpError(400,'Choose a publication action.');
  if(Number(f.revision)!==r.revision)throw new HttpError(409,'Content changed. Reopen the latest copy.');
  if(r.status!=='Approved'||r.approval?.revision!==r.revision)throw new HttpError(400,'Approve this saved version before publishing.');
