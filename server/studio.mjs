@@ -133,7 +133,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       let status=200,retained={};
       if(req.method==='POST'){
         try{
-          if(!['review-decision','review-retry','review-schedule','review-publish','review-keep-draft'].includes(f.action))throw new HttpError(400,'Choose a review action.');
+          if(!['review-decision','review-retry','review-schedule','review-publish','review-keep-draft','review-assign'].includes(f.action))throw new HttpError(400,'Choose a review action.');
           const result=await reviewDecision(params,f,data,api,env,fetcher);
           data.byId.set(result.id,result.record);data.items=data.items.map(r=>r.id===result.id?result.record:r);params.set('reviewed',result.reviewed);
         }catch(e){status=e instanceof HttpError?e.status:503;retained={...f,message:e instanceof HttpError?e.message:'Could not save your review. Your feedback is still here.'};}
