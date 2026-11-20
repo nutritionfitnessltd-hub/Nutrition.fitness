@@ -1,15 +1,15 @@
 import {assignmentForm,assignmentProjectId} from './team-assignments.mjs';
 import {organisationMap} from './team-organisation.mjs';
+import {profileId,teamProfiles,teamAvatar,teamProfileEditor,validProfilePhoto,validateReportingLine} from './team-profiles.mjs';
 import {workers} from './studio-workers.mjs';
 import {workerContent} from './studio-worker-content.mjs';
 import {allRows,saveRecord} from './studio-store.mjs';
 import {HttpError,uuid} from './platform.mjs';
-import {esc,url,heading,button,input,textarea,hidden,form,list,badge} from './studio-ui.mjs';
+import {esc,url,heading,button,list,badge} from './studio-ui.mjs';
 
 const taskCount=n=>n+' open '+(n===1?'task':'tasks');
 const finished=value=>['Done','Complete','Archived'].includes(value);
 const teamUrl=values=>url('team',values);
-const profileId=id=>'studio:team-profile:'+id;
 export async function teamWorkSnapshot(api){
   const results=await Promise.allSettled([
     allRows(api,'/rest/v1/nufi_library_projects?select=*&order=created_at.desc,id'),
@@ -34,27 +34,25 @@ function workerWork(key,data){
   const plans=data.items.filter(r=>r.kind==='worker-request'&&r.fields?.outputs?.some(o=>o.worker===key));
   return {content,projects,tasks,plans,review:content.filter(r=>r.status==='In review')};
 }
-const initials=name=>name.trim().split(/\s+/).slice(0,2).map(s=>s[0]||'').join('').toUpperCase();
 const row=t=>'<div><a href="'+t.href+'">'+esc(t.title)+'</a><small>'+esc([t.context,t.due||t.due_date].filter(Boolean).join(' · '))+'</small></div>'+badge(t.status);
 const card=(href,avatar,name,role,summary,current)=>'<a class="team-person-card" data-team-open href="'+href+'">'+avatar+'<h2>'+esc(name)+'</h2><p class="team-card-role">'+esc(role)+'</p><span class="team-card-state">'+esc(summary)+'</span><p class="team-card-current">'+esc(current)+'</p><span class="team-card-open">View profile</span></a>';
-const personAvatar=name=>'<span class="team-person-avatar" aria-hidden="true">'+esc(initials(name))+'</span>';
-const workerAvatar=w=>'<img class="team-person-avatar team-worker-avatar" src="'+esc(w.portrait)+'" alt="" width="80" height="80">';
 const linkButton=(title,href)=>button(title,href).replace('<a ','<a data-team-load ');
 function profileHeader(avatar,name,role,summary){return '<header class="team-profile-heading">'+avatar+'<div><h1>'+esc(name)+'</h1><p>'+esc(role)+'</p><span class="team-card-state">'+esc(summary)+'</span></div></header>';}
 export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarkup,hqChat,hqError}){
   if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
   if(params.get('tab')==='organisation')return organisationMap(actor,staff,data);
+  const members=teamProfiles(actor,staff,data);
   const personKey=params.get('person'),workerKey=params.get('worker');
   if(personKey==='new')return '<div class="team-profile" data-team-profile>'+heading('Add a person','Create a team account and choose their access.')+createMarkup+'</div>';
   if(workerKey){
-    const w=workers[workerKey];if(!w)throw new HttpError(404,'This worker is unavailable.');
+    const w=members.find(m=>m.worker===workerKey);if(!w)throw new HttpError(404,'This worker is unavailable.');
     const work=workerWork(workerKey,data),chatState=hqChat?.task?.status;
     const state=hqError?'HQ status unavailable':({queued:'Queued in James HQ',working:'Working in James HQ',ready:'Reply ready for you',needs_input:'Waiting for your reply',done:'Conversation ready'})[chatState]||'No active HQ conversation';
     const recent=(hqChat?.messages||[]).filter(m=>m.role==='assistant').slice(-3).reverse();
     const view=workerKey==='morgan'?url('shiny-things'):workerKey==='ellis'?url('software-releases'):url('library',{worker:workerKey,view:'all'});
-    return '<div class="team-profile" data-team-profile>'+profileHeader(workerAvatar(w),w.name,w.role,state)+
+    return '<div class="team-profile" data-team-profile>'+profileHeader(teamAvatar(w),w.name,w.role,'AI worker · '+state)+
       '<div class="studio-actions">'+linkButton('Message '+w.name,url('worker-chat',{worker:workerKey}))+linkButton('Assign work',url('worker-chat',{worker:workerKey,brief:'1'}))+button('View work',view)+'</div>'+
-      '<section class="team-profile-section"><h2>Role & responsibilities</h2><p>'+esc(w.reason.split(' HQ directory')[0])+'</p><p class="meta">Reports to the workspace owner · Works through James HQ</p></section>'+
+      '<section class="team-profile-section"><h2>Role & responsibilities</h2>'+teamProfileEditor(w,members)+'<p class="meta">This profile describes their role in the team. Instructions in James HQ are managed separately.</p></section>'+
       (hqChat?.employee?.instructions?'<details class="team-profile-section"><summary>Role instructions in James HQ</summary><p class="prose">'+esc(String(hqChat.employee.instructions).slice(0,16000))+'</p></details>':'')+
       (hqError?'<p role="status" class="team-activity-note">'+esc(hqError)+'</p>':'')+
       '<section class="team-profile-section"><h2>Current work</h2>'+list(work.projects.filter(p=>!finished(p.status)),p=>'<a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a>'+badge(p.status),'No active projects linked to this worker.')+list(work.tasks.filter(t=>!finished(t.status)),row,'No open project tasks recorded.')+'</section>'+
@@ -64,30 +62,36 @@ export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarku
       (work.plans.length?'<section class="team-profile-section"><h2>Prepared briefs</h2>'+list(work.plans,r=>'<a href="'+url('worker-requests',{id:r.id})+'">'+esc(r.title)+'</a><span>Saved brief</span>')+'</section>':'')+'</div>';
   }
   if(personKey){
-    if(personKey==='owner')return '<div class="team-profile" data-team-profile>'+profileHeader(personAvatar('Workspace owner'),'Workspace owner','Administrator','Approvals & team decisions')+'<section class="team-profile-section"><h2>Responsibilities</h2><p>Sets priorities, approves work and releases, and manages team access.</p></section><div class="studio-actions">'+button('Open projects',url('projects'))+button('Review work',url('review'))+'</div></div>';
-    const person=staff.find(p=>p.id===personKey);if(!person)throw new HttpError(404,'This person is unavailable.');
+    if(personKey==='owner')return renderTeamPage({params:new URLSearchParams({person:actor.id}),actor,staff,data,accessMarkup,createMarkup,hqChat,hqError});
+    const person=staff.find(p=>p.id===personKey)||(personKey===actor.id?{id:actor.id,name:members.find(m=>m.owner).name,email:''}:null);if(!person)throw new HttpError(404,'This person is unavailable.');
     if(params.get('assign')==='1')return assignmentForm(person,data.projects);
-    const profile=data.byId.get(profileId(person.id)),fields=profile?.fields||{},work=personWork(person,data);
-    return '<div class="team-profile" data-team-profile>'+profileHeader(personAvatar(person.name),person.name,fields.role||'Team member',person.code_hash?(work.open.length?taskCount(work.open.length):'No open tasks recorded'):'Access disabled')+
-      '<p class="team-profile-email">'+esc(person.email)+'</p><div class="studio-actions">'+button('Email '+person.name,'mailto:'+encodeURIComponent(person.email))+button('View work','/content-library/?work=1&assignments=1&staff='+encodeURIComponent(person.id))+linkButton('Assign work',teamUrl({person:person.id,assign:'1'}))+'</div>'+
-      '<section class="team-profile-section"><h2>Role & responsibilities</h2>'+form('team-profile-save',hidden('staff',person.id)+hidden('revision',profile?.revision||0)+input('role','Role',fields.role||'','text','maxlength="160"')+textarea('responsibilities','Responsibilities',fields.responsibilities||'',4)+input('reportsTo','Reports to',fields.reportsTo||'Workspace owner','text','maxlength="160"'),{section:'team',person:person.id},'Save profile')+'</section>'+
+    const member=members.find(m=>m.id===person.id),work=personWork(person,data);
+    return '<div class="team-profile" data-team-profile>'+profileHeader(teamAvatar(member),person.name,member.role,member.owner?'Administrator account':person.code_hash?(work.open.length?taskCount(work.open.length):'No open tasks recorded'):'Access disabled')+
+      (person.email?'<p class="team-profile-email">'+esc(person.email)+'</p>':'')+'<div class="studio-actions">'+(person.email?button('Email '+person.name,'mailto:'+encodeURIComponent(person.email)):'')+button('View work','/content-library/?work=1&assignments=1&staff='+encodeURIComponent(person.id))+linkButton('Assign work',teamUrl({person:person.id,assign:'1'}))+'</div>'+
+      '<section class="team-profile-section"><h2>Role & responsibilities</h2>'+teamProfileEditor(member,members)+'</section>'+
       '<section class="team-profile-section"><h2>Current work</h2>'+list(work.projects.filter(p=>!finished(p.status)),p=>'<a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a>'+badge(p.status),'No active projects assigned.')+list(work.open.slice(0,15),row,'No open tasks recorded.')+'</section>'+
       '<section class="team-profile-section"><h2>Recent completed work</h2>'+list(work.recent,row,'No completed work recorded.')+'</section>'+
-      '<details class="team-profile-section team-profile-access"><summary>Manage access & login</summary>'+accessMarkup(person)+'</details></div>';
+      (member.owner?'<div class="team-profile-section">'+button('My account',url('account'))+'</div>':'<details class="team-profile-section team-profile-access"><summary>Manage access & login</summary>'+accessMarkup(person)+'</details>')+'</div>';
   }
   const workerTab=params.get('tab')==='workers';
   return '<div class="team-directory">'+heading('Team','The people and workers behind your next good idea.',button('Organisation map',teamUrl({tab:'organisation'}))+button('Add a person',teamUrl({person:'new'})).replace('<a ','<a data-team-open '))+
     '<nav class="team-directory-tabs" aria-label="Team type"><a href="'+teamUrl()+'"'+(!workerTab?' aria-current="page"':'')+'>People <span>'+ (staff.length+(staff.some(p=>p.id===actor.id)?0:1))+'</span></a><a href="'+teamUrl({tab:'workers'})+'"'+(workerTab?' aria-current="page"':'')+'>AI Workers <span>'+Object.keys(workers).length+'</span></a></nav>'+
     (!data.activityAvailable?'<p class="team-activity-note" role="status">Some work summaries are unavailable. Profiles and access settings are still available.</p>':'')+
-    '<div class="team-directory-grid">'+(workerTab?Object.entries(workers).map(([key,w])=>{const work=workerWork(key,data),open=work.tasks.filter(t=>!finished(t.status));return card(teamUrl({tab:'workers',worker:key}),workerAvatar(w),w.name,w.role,!data.activityAvailable?'Activity unavailable':work.review.length?work.review.length+' awaiting review':open.length?taskCount(open.length):work.content.length?work.content.length+' saved items':'No linked work yet',open[0]?.title||work.projects.find(p=>!finished(p.status))?.name||w.reason.split(' HQ directory')[0]);}).join(''):
-      (staff.some(p=>p.id===actor.id)?'':card(teamUrl({person:'owner'}),personAvatar('James Calam'),'James Calam','Administrator','Approvals & team decisions','Sets direction and helps the team move forward.'))+staff.map(person=>{const fields=data.byId.get(profileId(person.id))?.fields||{},work=personWork(person,data);return card(teamUrl({person:person.id}),personAvatar(person.name),person.name,fields.role||'Team member',person.id===actor.id?'Administrator account':!person.code_hash?'Access disabled':!data.activityAvailable?'Activity unavailable':work.open.length?taskCount(work.open.length):'No open tasks recorded',work.open[0]?.title||fields.responsibilities||'Open profile for work and access.');}).join(''))+'</div>'+
+    '<div class="team-directory-grid">'+(workerTab?members.filter(m=>m.worker).map(w=>{const work=workerWork(w.worker,data),open=work.tasks.filter(t=>!finished(t.status));return card(w.href,teamAvatar(w),w.name,w.role,!data.activityAvailable?'Activity unavailable':work.review.length?work.review.length+' awaiting review':open.length?taskCount(open.length):work.content.length?work.content.length+' saved items':'No linked work yet',open[0]?.title||work.projects.find(p=>!finished(p.status))?.name||w.responsibilities);}).join(''):
+      members.filter(m=>!m.worker).map(m=>{const person=staff.find(p=>p.id===m.id)||{id:m.id},work=personWork(person,data);return card(m.href,teamAvatar(m),m.name,m.role,m.owner?'Administrator account':!person.code_hash?'Access disabled':!data.activityAvailable?'Activity unavailable':work.open.length?taskCount(work.open.length):'No open tasks recorded',work.open[0]?.title||m.responsibilities||'Open profile for work and access.');}).join(''))+'</div>'+
     '<div class="team-directory-footer">'+button('Confidentiality agreements',url('nda'))+button('Connections',url('connections'))+'</div></div>';
 }
 export async function saveTeamProfile(f,actor,staff,data,api){
   if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
-  const id=uuid(f.staff);if(!staff.some(person=>person.id===id))throw new HttpError(404,'This person is unavailable.');
+  if(f.worker&&f.staff)throw new HttpError(400,'Choose one team profile.');
+  const id=f.worker?'worker:'+f.worker:uuid(f.staff);
+  if(f.worker?!Object.hasOwn(workers,f.worker):id!==actor.id&&!staff.some(person=>person.id===id))throw new HttpError(404,'This team member is unavailable.');
   const revision=Number(f.revision),old=data.byId.get(profileId(id));
   if(!Number.isSafeInteger(revision)||revision<0||(old?.revision||0)!==revision)throw new HttpError(409,'This profile changed. Reopen it before saving.');
   const text=(value,max)=>{if(typeof value!=='string'||value.length>max)throw new HttpError(400,'Check the profile text and length.');return value.trim();};
-  await saveRecord(api,actor,{id:profileId(id),kind:'settings',title:'Team profile',status:'Draft',fields:{role:text(f.role||'',160),responsibilities:text(f.responsibilities||'',4000),reportsTo:text(f.reportsTo||'',160)}},revision);
+  const members=teamProfiles(actor,staff,data),member=members.find(m=>m.id===id);
+  const portrait=f.portrait??old?.fields?.portrait??'';
+  if(portrait!==''&&!validProfilePhoto(portrait))throw new HttpError(400,'Choose a photo using Change photo. The saved image must be smaller than 120 KB.');
+  const reportsTo=validateReportingLine(member,text(f.reportsTo??member.manager,160),members);
+  await saveRecord(api,actor,{id:profileId(id),kind:'settings',title:'Team profile',status:'Draft',fields:{...old?.fields,role:text(f.role||'',160),responsibilities:text(f.responsibilities||'',4000),reportsTo,portrait}},revision);
 }
