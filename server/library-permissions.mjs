@@ -52,7 +52,7 @@ export function accessFromForm(fields) {
 
 const routes = {
   products: ['library'], product: ['library'], 'product-creatives': ['library'], 'product-asset': ['library'], 'product-file': ['library'], 'product-upload': ['library'],
-  home: [], 'team-work': [], assets: [], 'brand-media': ['library'], 'workspace-archive': [], library: ['library'], exercises: ['library'], item: ['library'], history: ['library'], 'review-history': ['work','library'],
+  'shiny-things': ['library'], home: [], 'team-work': [], assets: [], 'brand-media': ['library'], 'workspace-archive': [], library: ['library'], exercises: ['library'], item: ['library'], history: ['library'], 'review-history': ['work','library'],
   'book-file': ['library'], 'article-image': ['library'], 'article-preview': ['library'], 'newsletter-preview': ['library'], 'newsletter-html': ['library'], 'mealplan-image': ['library'],
   archive: ['originals'], create: ['studio'], new: ['studio'], import: ['studio', 'originals'],
   builder: ['studio'], 'worker-requests': ['studio'], projects: ['work'], project: ['work'],
@@ -60,6 +60,7 @@ const routes = {
   release: ['work', 'library'], export: ['work', 'library']
 };
 const actions = {
+  'idea-save': ['library','edit'], 'idea-discussion': ['library','edit'],
   'course-structure-review': ['work','library'],
   'product-save': ['library','edit'], 'product-asset-save': ['library','edit'], 'product-asset-link': ['library','edit'], 'product-asset-status': ['library','edit'], 'product-file-save': ['library','edit'],
   'review-decision': ['work', 'library'], 'review-retry': ['work', 'library'],

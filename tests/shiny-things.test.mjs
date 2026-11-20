@@ -61,11 +61,12 @@ test('failed project creation can retry the frozen plan without duplicate projec
  await assert.rejects(changeShinyThing(new URLSearchParams(),{...f,revision:2,action:'idea-save'},x.data(),x.api,{}),e=>e.status===409);
  await changeShinyThing(new URLSearchParams(),{...f,revision:2},x.data(),x.api,{});assert.equal(x.projects.length,1);
 });
-test('staff cannot read or mutate the private ideas board',async()=>{
- const x=fixture(),staff={role:'staff',id:person.id};
- assert.throws(()=>shinyThingsPage(new URLSearchParams(),{...x.data(),actor:staff}),e=>e.status===403);
- assert.throws(()=>authorizeStudioRequest(staff,'shiny-things','GET'),e=>e.status===403);
- await assert.rejects(changeShinyThing(new URLSearchParams(),{}, {...x.data(),actor:staff},x.api,{}),e=>e.status===403);
+test('staff can open their board without seeing legacy administrator ideas',async()=>{
+ const x=fixture(),staff={role:'staff',id:person.id},legacyId='studio:idea:'+randomUUID();
+ x.rows.set(legacyId,{id:legacyId,kind:'settings',title:'Private admin thought',fields:{}});
+ assert.doesNotMatch(shinyThingsPage(new URLSearchParams(),{...x.data(),actor:staff}),/Private admin thought/);
+ assert.doesNotThrow(()=>authorizeStudioRequest(staff,'shiny-things','GET'));
+ await assert.rejects(changeShinyThing(new URLSearchParams(),{id:legacyId,revision:1,action:'idea-save'}, {...x.data(),actor:staff},x.api,{}),e=>e.status===404);
 });
 
  test('urgency survives reload, orders the notes, and a colour change keeps a reviewed plan',async()=>{

@@ -1,4 +1,6 @@
 import {DraftError} from './worker-drafts.mjs';
+// This service connector has no signed-in team member identity. Never return owned private/team ideas.
+const connectorVisible=row=>!row.payload?.fields?.ownerId||row.payload.fields.visibility==='company';
 export const ideaPrefix='studio:idea:';
 export const ideaPriorities=['urgent','soon','normal','someday'];
 export const ideaStatuses=['Saved','Parked','With Morgan','Ready to review','Converting','Project created'];
@@ -34,14 +36,15 @@ export async function shinyAction(input,connection,api,website){
   if(!Number.isSafeInteger(offset)||offset<0||!Number.isSafeInteger(limit)||limit<1||limit>50)throw new DraftError(400,'Use a limit between 1 and 50 and a nonnegative offset.');
   if(input.status!==undefined&&!ideaStatuses.includes(input.status)||input.priority!==undefined&&!ideaPriorities.includes(input.priority))throw new DraftError(400,'Choose a valid status or priority.');
   if(input.category!==undefined)text(input.category,100);
-  const rows=[];for(let page=0;;page+=500){const batch=await api('/rest/v1/nufi_studio_items?select=*&id=like.studio:idea:*&order=id&limit=500&offset='+page);rows.push(...batch.filter(r=>r.payload?.kind==='settings'));if(batch.length<500)break;}
+  const rows=[];for(let page=0;;page+=500){const batch=await api('/rest/v1/nufi_studio_items?select=*&id=like.studio:idea:*&order=id&limit=500&offset='+page);rows.push(...batch.filter(r=>r.payload?.kind==='settings'&&connectorVisible(r)));if(batch.length<500)break;}
   const projects=[];for(let page=0;;page+=500){const batch=await api('/rest/v1/nufi_library_projects?select=id,studio&studio->>ideaId=not.is.null&order=id&limit=500&offset='+page);projects.push(...batch);if(batch.length<500)break;}
   const items=rows.map(r=>ideaResult(r,website,projects.find(p=>p.studio?.ideaId===r.id))).filter(r=>(!input.status||r.status===input.status)&&(!input.priority||r.priority===input.priority)&&(!input.category||r.category===input.category)&&(!query||[r.title,r.description,r.category].join(' ').toLowerCase().includes(query)));
   return {items:items.slice(offset,offset+limit),total:items.length,nextOffset:offset+limit<items.length?offset+limit:null};
  }
- if(input.action==='idea-get'){const row=await rowFor(input.id);if(!row||row.payload?.kind!=='settings')throw new DraftError(404,'Idea not found.');return ideaResult(row,website,await projectFor(row.id));}
+ if(input.action==='idea-get'){const row=await rowFor(input.id);if(!row||row.payload?.kind!=='settings'||!connectorVisible(row))throw new DraftError(404,'Idea not found.');return ideaResult(row,website,await projectFor(row.id));}
  if(!['idea-create','idea-update'].includes(input.action))throw new DraftError(400,'Choose an available idea action.');
  const current=await rowFor(input.id);
+ if(current&&current.payload?.fields?.ownerId)throw new DraftError(404,'Idea not found.');
  if(input.action==='idea-create'&&current)throw new DraftError(409,'This idea ID already exists. Retrieve it before deciding whether to update.');
  if(input.action==='idea-update'&&!current)throw new DraftError(404,'Idea not found.');
  if(await projectFor(input.id))throw new DraftError(409,'This idea is already linked to a project and is read only.');
