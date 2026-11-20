@@ -1,5 +1,6 @@
 import {newsletterDraftButton} from './newsletter-draft-links.mjs';
 import {staffTaskPanel,createReviewTask} from './review-staff-task.mjs';
+import {courseApprovalRecord} from './studio-courses.mjs';
 import {releasePath} from './studio-publishing.mjs';
 import {publicationChoices,publishFromReview} from './studio-review-publication.mjs';
 import {randomUUID} from 'node:crypto';
@@ -89,8 +90,9 @@ export async function reviewDecision(params,f,data,api,env={},fetcher=fetch){
   if(!['approve','changes','submit'].includes(f.decision))throw new HttpError(400,'Choose Approve, Submit for review or Request changes.');
   const changes=cleanText(f.feedback||'',4000),guidance=cleanText(f.guidance||'',2000),workerId=contentWorker(r,data.byId);
   if(f.decision==='changes'&&!changes.trim())throw new HttpError(400,'Describe what needs changing.');
-  if(f.decision==='approve'){const missing=issues(r,data.items);if(missing.length)throw new HttpError(400,missing.join(' '));}
-  next=withoutVersion(r);next.status=f.decision==='approve'?'Approved':f.decision==='submit'?'In review':'Changes requested';delete next.approval;delete next.ghlDraftPlan;
+  const reviewed=f.decision==='approve'&&r.kind==='course'?courseApprovalRecord(r,data):r;
+  if(f.decision==='approve'){const missing=issues(reviewed,data.items);if(missing.length)throw new HttpError(400,missing.join(' '));}
+  next=withoutVersion(reviewed);next.status=f.decision==='approve'?'Approved':f.decision==='submit'?'In review':'Changes requested';delete next.approval;delete next.ghlDraftPlan;
   const at=new Date().toISOString(),entry={id:f.reviewId,decision:f.decision,reviewedRevision:r.revision,workerId,changes,guidance,author:data.actor.name||'James',authorId:data.actor.id,reviewedTitle:r.title,at,delivery:f.decision==='changes'&&workerId?'pending':'not-required'};
   next.reviewFeedback=[...(r.reviewFeedback||[]),entry];
   next.comments=[...(r.comments||[]),{id:entry.id,body:f.decision==='approve'?'Approved saved version '+r.revision+'.':f.decision==='submit'?'Submitted saved version '+r.revision+' for review.':changes+(guidance?'\n\nRemember for future work: '+guidance:''),author:entry.author,at}];

@@ -5,6 +5,17 @@ import {itemPage} from '../server/studio-pages.mjs';
 import {authorizeStudioRequest} from '../server/library-permissions.mjs';
 import {attachProductionLesson} from '../server/course-production-manifest.mjs';
 import {handleStudio} from '../server/studio.mjs';
+import {reviewDecision} from '../server/studio-review.mjs';
+import {randomUUID} from 'node:crypto';
+
+test('course approval validates and saves the linked content shown in preview without approving child drafts',async()=>{
+ const {course,data,params}=courseFixture();
+ const pack={id:'pack',kind:'marketing',revision:4,status:'Draft',fields:{coursePack:true,courseId:course.id,introduction:'Hello',outcome:'Understand energy balance',audience:'Members'},comments:[]};
+ data.items.push(pack);data.byId.set(pack.id,pack);let saved;
+ const result=await reviewDecision(params,{action:'review-decision',decision:'approve',revision:course.revision,reviewId:randomUUID()},data,async(path,options)=>{saved=options.payload.document;return [{revision:3}];});
+ assert.equal(result.record.status,'Approved');assert.equal(saved.fields.outcome,'Understand energy balance');assert.equal(saved.approval.revision,3);assert.deepEqual(saved.courseApprovalSources,[{id:'pack',revision:4}]);assert.equal(course.fields.outcome,'');assert.equal(pack.status,'Draft');
+ pack.status='Approved';pack.approval={revision:4};assert.match(coursePreview(course,data,String),/>Approved<\/span>/);
+});
 
 export function courseFixture(){
  const course={id:'course',kind:'course',title:'Fat Loss Course',revision:2,status:'Draft',fields:{introduction:'',outcome:'',lessonIds:['lesson1'],production:{collection:'Fat Loss Course'}},comments:[]};
@@ -20,7 +31,7 @@ test('course preview includes the complete ordered structure, empty overview and
  assert.match(html,/2 modules · 3 lessons/);assert.match(html,/Second lesson/);assert.match(html,/Third lesson/);
  assert.match(html,/Approve course structure/);assert.match(html,/Imogen still needs to add/);
  assert.doesNotMatch(html,/<article class="studio-content-preview"><\/article>/);
- assert.match(html,/0 \/ 6 drafts ready/);assert.equal(coursePlan(course,data).approved,false);
+ assert.match(html,/0 \/ 6 saved/);assert.equal(coursePlan(course,data).approved,false);
 });
 test('structure approval is versioned, preserves Draft and does not approve content',async()=>{
  const {course,data,params,review}=courseFixture();let payload;
