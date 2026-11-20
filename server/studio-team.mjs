@@ -1,4 +1,5 @@
 import {assignmentForm,assignmentProjectId} from './team-assignments.mjs';
+import {organisationMap} from './team-organisation.mjs';
 import {workers} from './studio-workers.mjs';
 import {workerContent} from './studio-worker-content.mjs';
 import {allRows,saveRecord} from './studio-store.mjs';
@@ -42,6 +43,7 @@ const linkButton=(title,href)=>button(title,href).replace('<a ','<a data-team-lo
 function profileHeader(avatar,name,role,summary){return '<header class="team-profile-heading">'+avatar+'<div><h1>'+esc(name)+'</h1><p>'+esc(role)+'</p><span class="team-card-state">'+esc(summary)+'</span></div></header>';}
 export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarkup,hqChat,hqError}){
   if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
+  if(params.get('tab')==='organisation')return organisationMap(actor,staff,data);
   const personKey=params.get('person'),workerKey=params.get('worker');
   if(personKey==='new')return '<div class="team-profile" data-team-profile>'+heading('Add a person','Create a team account and choose their access.')+createMarkup+'</div>';
   if(workerKey){
@@ -74,11 +76,11 @@ export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarku
       '<details class="team-profile-section team-profile-access"><summary>Manage access & login</summary>'+accessMarkup(person)+'</details></div>';
   }
   const workerTab=params.get('tab')==='workers';
-  return '<div class="team-directory">'+heading('Team','The people and workers behind your next good idea.',button('Add a person',teamUrl({person:'new'})).replace('<a ','<a data-team-open '))+
-    '<nav class="team-directory-tabs" aria-label="Team type"><a href="'+teamUrl()+'"'+(!workerTab?' aria-current="page"':'')+'>People <span>'+ (staff.length+1)+'</span></a><a href="'+teamUrl({tab:'workers'})+'"'+(workerTab?' aria-current="page"':'')+'>AI Workers <span>'+Object.keys(workers).length+'</span></a></nav>'+
+  return '<div class="team-directory">'+heading('Team','The people and workers behind your next good idea.',button('Organisation map',teamUrl({tab:'organisation'}))+button('Add a person',teamUrl({person:'new'})).replace('<a ','<a data-team-open '))+
+    '<nav class="team-directory-tabs" aria-label="Team type"><a href="'+teamUrl()+'"'+(!workerTab?' aria-current="page"':'')+'>People <span>'+ (staff.length+(staff.some(p=>p.id===actor.id)?0:1))+'</span></a><a href="'+teamUrl({tab:'workers'})+'"'+(workerTab?' aria-current="page"':'')+'>AI Workers <span>'+Object.keys(workers).length+'</span></a></nav>'+
     (!data.activityAvailable?'<p class="team-activity-note" role="status">Some work summaries are unavailable. Profiles and access settings are still available.</p>':'')+
     '<div class="team-directory-grid">'+(workerTab?Object.entries(workers).map(([key,w])=>{const work=workerWork(key,data),open=work.tasks.filter(t=>!finished(t.status));return card(teamUrl({tab:'workers',worker:key}),workerAvatar(w),w.name,w.role,!data.activityAvailable?'Activity unavailable':work.review.length?work.review.length+' awaiting review':open.length?taskCount(open.length):work.content.length?work.content.length+' saved items':'No linked work yet',open[0]?.title||work.projects.find(p=>!finished(p.status))?.name||w.reason.split(' HQ directory')[0]);}).join(''):
-      card(teamUrl({person:'owner'}),personAvatar('Workspace owner'),'Workspace owner','Administrator','Approvals & team decisions','Sets direction and helps the team move forward.')+staff.map(person=>{const fields=data.byId.get(profileId(person.id))?.fields||{},work=personWork(person,data);return card(teamUrl({person:person.id}),personAvatar(person.name),person.name,fields.role||'Team member',!person.code_hash?'Access disabled':!data.activityAvailable?'Activity unavailable':work.open.length?taskCount(work.open.length):'No open tasks recorded',work.open[0]?.title||fields.responsibilities||'Open profile for work and access.');}).join(''))+'</div>'+
+      (staff.some(p=>p.id===actor.id)?'':card(teamUrl({person:'owner'}),personAvatar('James Calam'),'James Calam','Administrator','Approvals & team decisions','Sets direction and helps the team move forward.'))+staff.map(person=>{const fields=data.byId.get(profileId(person.id))?.fields||{},work=personWork(person,data);return card(teamUrl({person:person.id}),personAvatar(person.name),person.name,fields.role||'Team member',person.id===actor.id?'Administrator account':!person.code_hash?'Access disabled':!data.activityAvailable?'Activity unavailable':work.open.length?taskCount(work.open.length):'No open tasks recorded',work.open[0]?.title||fields.responsibilities||'Open profile for work and access.');}).join(''))+'</div>'+
     '<div class="team-directory-footer">'+button('Confidentiality agreements',url('nda'))+button('Connections',url('connections'))+'</div></div>';
 }
 export async function saveTeamProfile(f,actor,staff,data,api){
