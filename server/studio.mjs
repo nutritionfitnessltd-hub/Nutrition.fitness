@@ -7,6 +7,7 @@ import {generateIdeaSummary} from './studio-idea-ai.mjs';
 import {hqRequest} from './studio-hq.mjs';
 import { shinyThingsPage, changeShinyThing, ideaProjectPage } from './studio-shiny-things.mjs';
 import {loadProjectProductionDates} from './studio-project-progress.mjs';
+import {isProductionTracker} from './studio-production-tracker.mjs';
 import {workerIdeaSummaries} from './studio-ideas.mjs';
 import {workerChatPage,changeHq} from './studio-hq.mjs';
 import { assetsPage, brandMediaPage, workspaceArchive, softwareReleases, saveSoftwareRelease } from './team-workspace.mjs';
@@ -100,6 +101,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       res.setHeader('Location',url('review-preview',{id:r.id}).replaceAll('&amp;','&'));return res.end();
     }
     meta=meta||{};
+    data.trackingMeta=meta;
     if(['home','team-work'].includes(section)&&actor.role==='admin'&&env.NUFI_HQ_SITE_TOKEN)data.hqIdeas=await workerIdeaSummaries(env,fetcher);
     if(['home','team-work','library'].includes(section))await loadNewsletterDraftLinks(data,api).catch(()=>{});
     data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');
@@ -242,7 +244,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       case 'project':{
         const project=data.projects.find(p=>p.id===params.get('project'));
         await loadProjectProductionDates(api,project,data);
-        body=project?.studio?.ideaId&&!project.assignmentOnly?ideaProjectPage(params,data,meta||{}):projectPage(params,data);break;
+        body=(project?.studio?.ideaId||isProductionTracker(project))&&!project.assignmentOnly?ideaProjectPage(params,data,meta||{}):projectPage(params,data);break;
       }
       case 'item':body=itemPage(params,data);if(data.byId.has(params.get('id')))body+=publicationPanel(data.byId.get(params.get('id')),data);break;
       case 'new':body=newItem(params,data);break;

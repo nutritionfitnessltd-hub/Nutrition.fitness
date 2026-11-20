@@ -1,6 +1,7 @@
 import {canAccess,canReadContent} from './library-permissions.mjs';
 import {contentWorker,workerNames} from './studio-worker-content.mjs';
 import {esc,url} from './studio-ui.mjs';
+import {isProductionTracker,productionTracking} from './studio-production-tracker.mjs';
 
 const sourceId=r=>r.sourceId||r.fields?.production?.sourceId||r.source?.id||r.id;
 const day=value=>{const d=new Date(value);return Number.isFinite(d.getTime())?new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London',year:'numeric',month:'2-digit',day:'2-digit'}).format(d):'';};
@@ -17,7 +18,7 @@ function recordsFor(p,data){
 // The first persisted version is stable when a draft is edited or approved later.
 // Query only records that this viewer is allowed to read; never load draft bodies.
 export async function loadProjectProductionDates(api,p,data){
- if(!tracked(p))return;
+ if(!tracked(p)||isProductionTracker(p))return;
  const records=recordsFor(p,data),dates=new Map();
  try{
   for(let i=0;i<records.length;i+=100){
@@ -85,6 +86,10 @@ export function projectProductionPanel(p,data,meta={},now=new Date()){
 }
 
 export function projectProductionSummary(p,data){
+ if(isProductionTracker(p)){
+  const tracking=productionTracking(p,data,data.trackingMeta||{});if(!tracking)return '';
+  return '<span class="project-list-progress">'+tracking.rows.length+' '+(tracking.scope==='courses'?'lessons':'assigned items')+' · '+tracking.approved+' approved'+bar(tracking.approved,Math.max(tracking.rows.length,1),'Approved items')+'</span>';
+ }
  const m=projectProduction(p,data);if(!m)return '';
  return '<span class="project-list-progress">'+m.items.length+' saved · '+m.approved+' approved'+bar(m.approved,Math.max(m.items.length,1),'Approved saved items')+'</span>';
 }
