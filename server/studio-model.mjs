@@ -1,4 +1,5 @@
 import { HttpError } from './platform.mjs';
+import {isNewsletterContent} from './studio-newsletter-type.mjs';
 
 export const kinds = {
   programme:'Training programme', stage:'Training stage', structure:'Weekly schedule', session:'Workout',
@@ -105,7 +106,9 @@ export function issues(record,records){
     communication:['channel','trigger','timing','body'],campaign:['body'],workflow:['trigger','steps'],asset:['brief']
   };
   const productAsset=record.kind==='asset'&&d.productAsset===true;
-  for(const key of productAsset?[]:required[record.kind]||[])if(!present(d[key]))out.push('Add '+key.replace(/([A-Z])/g,' $1').toLowerCase()+'.');
+  const newsletter=isNewsletterContent(record);
+  for(const key of productAsset?[]:newsletter?['subject']:required[record.kind]||[])if(!present(d[key]))out.push('Add '+key.replace(/([A-Z])/g,' $1').toLowerCase()+'.');
+  if(newsletter&&![d.emailHtml,d.body,d.plainText].some(present))out.push('Add email content.');
   if(productAsset&&!present(record.productFiles)&&![d.body,d.url,d.sourceUrl].some(present))out.push('Add the creative copy, a file or a source link before review.');
   if(record.kind==='programme'&&!((record.id==='training:nufi365'&&d.weeks===52)||[4,6,8,12].includes(d.weeks)))out.push('Choose a programme length of 4, 6, 8 or 12 weeks. NUFI365 remains 52 weeks.');
   if(record.kind==='exercise'&&!d.media?.videoUrl)out.push('Add a demonstration video.');

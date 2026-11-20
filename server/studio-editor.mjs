@@ -1,4 +1,4 @@
-import {isNewsletter,newsletterPreview} from './studio-newsletters.mjs';
+import {isNewsletter,isNewsletterContent,newsletterPreview} from './studio-newsletters.mjs';
 import { workerNames, contentWorker } from './studio-worker-content.mjs';
 import { blankFields } from './studio-model.mjs';
 import { articleImageEditor } from './studio-articles.mjs';
@@ -34,10 +34,10 @@ function messageEditorForm(r,data,{create,project,entry,unsaved}){
     (create?hidden('kind',r.kind)+hidden('entry',entry):'')+(isNewsletter(r)?'<p>'+button('Back to design',url('item',{id:r.id}))+'</p><p class="meta">Edit the HTML layout below. Save &amp; preview to check the design.</p>':'')+editorFields(r)+workerAssignment(r,data)+
     (r.source?.needsChecking?'<label class="check"><input type="checkbox" name="sourceChecked" value="yes"> Checked against the original</label>':'')+
     '<div class="studio-save-bar"><span data-editor-status'+(unsaved?' data-unsaved="true"':'')+' role="status">'+(unsaved?'Unsaved changes':create?'New message':'Saved')+'</span><div class="studio-actions">'+
-      '<button type="submit" name="intent" value="preview">Save &amp; preview</button><button class="primary" type="submit" name="intent" value="draft">Save</button></div></div>'+
+      '<button type="submit" name="intent" value="preview">Save &amp; preview</button><button class="primary" type="submit" name="intent" value="draft">Save</button>'+(!create&&isNewsletterContent(r)?'<button type="submit" name="intent" value="review">Submit for Approval</button>':'')+'</div></div>'+
     '<details class="message-options"><summary>Options</summary><div id="studio-message-options"></div>'+
     (create?'<label>Project<select name="project">'+(data.actor.role==='admin'?'<option value="">None</option>':'')+data.projects.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===project?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></label>':
-      '<div class="studio-actions"><button type="submit" name="intent" value="review">Submit for Approval</button>'+(data.actor.role==='admin'&&r.status==='In review'?'<button type="submit" name="intent" value="approve">Approve content</button>':'')+button('History',url('history',{id:r.id}))+'</div>')+
+      '<div class="studio-actions">'+(!isNewsletterContent(r)?'<button type="submit" name="intent" value="review">Submit for Approval</button>'+(data.actor.role==='admin'&&r.status==='In review'?'<button type="submit" name="intent" value="approve">Approve content</button>':''):'')+button('History',url('history',{id:r.id}))+'</div>')+
     '</details></form>';
 }
 export function contentPreview(r,data,readable){

@@ -6,6 +6,7 @@ import {readable,saveRecord} from './studio-store.mjs';
 import {issues,cleanText} from './studio-model.mjs';
 import {contentWorker,workerNames} from './studio-worker-content.mjs';
 import {itemPage} from './studio-pages.mjs';
+import {isNewsletterContent} from './studio-newsletters.mjs';
 import {isProductAsset,productAssetPage} from './studio-products.mjs';
 const reviewBody=(params,data)=>isProductAsset(data.byId.get(params.get('id')))?'<div class="product-space">'+productAssetPage(new URLSearchParams({id:params.get('id'),tab:'review'}),data)+'</div>':itemPage(params,data);
 import {readerDocument} from './article-reader.mjs';
@@ -13,16 +14,23 @@ import {articleImage} from './studio-articles.mjs';
 import {canEditContent,canReviewContent} from './library-permissions.mjs';
 import {esc,url,hidden,form,button} from './studio-ui.mjs';
 
+function newsletterApprovalHistory(r,data){
+ if(!isNewsletterContent(r))return '';
+ const feedback=r.reviewFeedback||[],approval=r.approval;
+ const entries=feedback.length?feedback:approval?[{decision:'approve',author:data.people?.find(p=>p.id===approval.by)?.name||approval.by,at:approval.at,reviewedRevision:approval.revision}]:[];
+ return '<details class="panel newsletter-approval-history"><summary>Approval history'+(entries.length?' ('+entries.length+')':'')+'</summary>'+(entries.length?entries.map(f=>'<article><h3>'+esc(f.decision==='approve'?'Approved for GHL':f.decision==='submit'?'Submitted for review':'Changes requested')+'</h3><p>'+esc(f.author)+' · '+esc(f.at)+' · Version '+esc(f.reviewedRevision)+'</p>'+(f.changes?'<p class="prose">'+esc(f.changes)+'</p>':'')+(f.guidance?'<p><strong>Remember for future work:</strong> '+esc(f.guidance)+'</p>':'')+'</article>').join(''):'<p>No approval has been recorded for this newsletter.</p>')+'</details>';
+}
+
 export function reviewPreview(params,data,retained={}){
  const r=readable(data,params.get('id')),worker=contentWorker(r,data.byId),name=workerNames[worker]||'the assigned person';
- const preview=new URLSearchParams({id:r.id,tab:'preview'}),admin=data.actor.role==='admin',reviewer=canReviewContent(data,r);
+ const preview=new URLSearchParams({id:r.id,tab:'preview'}),admin=data.actor.role==='admin',reviewer=canReviewContent(data,r),newsletter=isNewsletterContent(r);
  const feedback=r.reviewFeedback||[],latest=feedback.at(-1),pending=latest?.decision==='changes'&&latest.delivery==='pending';
  return '<section data-review-content><header class="review-popup-header"><div><p class="kicker">Review saved version '+esc(r.revision)+'</p><h2 id="review-popup-title">'+esc(r.title)+'</h2><p>'+esc(workerNames[worker]||'No worker assigned')+' · '+esc(r.status)+'</p></div><button type="button" data-review-close aria-label="Close preview">×</button></header>'+
- '<div class="review-popup-body">'+reviewBody(preview,data)+
- (feedback.length?'<details class="panel"><summary>Review feedback ('+feedback.length+')</summary>'+feedback.map(f=>'<article><h3>'+esc(f.decision==='approve'?'Approved':f.decision==='submit'?'Submitted for review':'Changes requested')+'</h3><p class="prose">'+esc(f.changes||'')+'</p>'+(f.guidance?'<p><strong>Remember for future work:</strong> '+esc(f.guidance)+'</p>':'')+'<small>'+esc(f.author)+' · '+esc(f.at)+'</small></article>').join('')+'</details>':'')+'</div>'+
+ '<div class="review-popup-body">'+reviewBody(preview,data)+(newsletter?newsletterApprovalHistory(r,data):'')+
+ (!newsletter&&feedback.length?'<details class="panel"><summary>Review feedback ('+feedback.length+')</summary>'+feedback.map(f=>'<article><h3>'+esc(f.decision==='approve'?'Approved':f.decision==='submit'?'Submitted for review':'Changes requested')+'</h3><p class="prose">'+esc(f.changes||'')+'</p>'+(f.guidance?'<p><strong>Remember for future work:</strong> '+esc(f.guidance)+'</p>':'')+'<small>'+esc(f.author)+' · '+esc(f.at)+'</small></article>').join('')+'</details>':'')+'</div>'+
  (reviewer?'<footer class="review-popup-footer"><p role="status" tabindex="-1" data-review-status>'+(retained.message?esc(retained.message):params.get('reviewed')==='submit'?'Submitted for review.':pending?'Feedback saved for '+esc(name)+'’s next worker check.':params.get('reviewed')==='approve'?'Approved.':params.get('reviewed')==='changes'?'Change request saved for '+esc(name)+'.':'')+'</p><div class="studio-actions">'+
- (r.status!=='Approved'?form('review-decision',hidden('revision',r.revision)+hidden('decision','approve')+hidden('reviewId',randomUUID()),{section:'review-preview',id:r.id},'Approve','data-review-form'):'<span class="studio-status">Approved</span>')+
- (admin?button('Edit',url('item',{id:r.id,tab:'edit'})):'')+'<button type="button" data-request-changes>Request changes</button></div>'+
+ (r.status!=='Approved'?form('review-decision',hidden('revision',r.revision)+hidden('decision','approve')+hidden('reviewId',randomUUID()),{section:'review-preview',id:r.id},newsletter?'Approve for GHL':'Approve','data-review-form'):'<span class="studio-status">'+(newsletter?'Approved for GHL':'Approved')+'</span>')+
+ (canEditContent(data,r.id)?button('Edit',url('item',{id:r.id,tab:'edit'})):'')+'<button type="button" data-request-changes>Request changes</button></div>'+(newsletter?'<p class="meta">Approval is for the GHL handoff. It does not send this email.</p>':'')+
  (admin&&r.status==='Approved'&&r.kind==='article'?'<button type="button" data-open-publication>Publishing options</button>':'')+publicationChoices(r,data,params,retained)+
  '<section data-review-feedback'+(retained.decision==='changes'?'':' hidden')+'><h3>Request changes from '+esc(name)+'</h3>'+form('review-decision',hidden('revision',r.revision)+hidden('decision','changes')+hidden('reviewId',retained.reviewId||randomUUID())+
  '<label>What needs changing?<textarea name="feedback" rows="4" maxlength="4000" required>'+esc(retained.feedback||'')+'</textarea></label><label>Remember for future work (optional)<textarea name="guidance" rows="3" maxlength="2000" placeholder="For example: use shorter introductions and explain technical terms.">'+esc(retained.guidance||'')+'</textarea></label><p class="meta">Your feedback is saved against this version for '+esc(name)+'’s next worker check. Future guidance stays available for later drafts.</p>',{section:'review-preview',id:r.id},'Send change request','data-review-form')+'</section></footer>':'')+'</section>';
@@ -32,9 +40,9 @@ const withoutVersion=r=>{const next=structuredClone(r);delete next.revision;dele
 export function reviewWindowDocument(params,data,retained={}){
  const r=readable(data,params.get('id')),preview=reviewPreview(params,data,retained);
  const footer=preview.includes('<footer class="review-popup-footer">')?preview.slice(preview.indexOf('<footer class="review-popup-footer">'),preview.lastIndexOf('</footer>')+9):canEditContent(data,r.id)?'<footer class="review-popup-footer">'+button('Edit',url('item',{id:r.id,tab:'edit'}))+'</footer>':'';
- const notice=!retained.message?({schedule:'Schedule saved to the content calendar.',scheduled:'Publication scheduled.',published:'Published on '+(data.publicationDestination?.label||'nutrition.fitness')+'.',approve:data.actor.role==='admin'?'':'Approved. Nothing has been published.',changes:'Change request saved.'})[params.get('reviewed')]||'':'';
+ const notice=!retained.message?({schedule:'Schedule saved to the content calendar.',scheduled:'Publication scheduled.',published:'Published on '+(data.publicationDestination?.label||'nutrition.fitness')+'.',approve:isNewsletterContent(r)?'Approved for GHL. No email has been sent.':data.actor.role==='admin'?'':'Approved. Nothing has been published.',changes:'Change request saved.'})[params.get('reviewed')]||'':'';
  const controls='<div class="review-window-controls">'+(notice?'<p role="status">'+esc(notice)+'</p>':'')+(params.get('reviewed')==='published'&&data.publicationDestination?.origin?button('View published article',data.publicationDestination.origin+releasePath(r.id)).replace('<a ','<a target="_blank" rel="noopener" '):'')+footer+'</div>';
- const page=r.kind==='article'?readerDocument(r,articleImage(r)):'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(r.title)+'</title><link rel="stylesheet" href="/studio.css"></head><body>'+reviewBody(new URLSearchParams({id:r.id,tab:'preview'}),data)+'</body></html>';
+ const page=r.kind==='article'?readerDocument(r,articleImage(r)):'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(r.title)+'</title>'+(isNewsletterContent(r)?'<link rel="stylesheet" href="/library-reader.css">':'')+'<link rel="stylesheet" href="/studio.css"></head><body'+(isNewsletterContent(r)?' class="newsletter-review-window"':'')+'>'+reviewBody(new URLSearchParams({id:r.id,tab:'preview'}),data)+newsletterApprovalHistory(r,data)+'</body></html>';
  return page.replace('</head>','<link rel="stylesheet" href="/product-workspace.css"><link rel="stylesheet" href="/review-window.css"><script type="module" src="/studio-review.js"></script></head>').replace('<body class="kc-page">','<body class="kc-page article-review-window">').replace('</body>',controls+'</body>');
 }
 async function sendFeedback(r,entry,data,api,env,fetcher){

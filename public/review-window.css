@@ -1,4 +1,8 @@
 body.article-review-window{padding-bottom:190px;background:#fffdf8}
+body.newsletter-review-window{max-width:1200px;margin:0 auto;padding:28px 24px 210px;background:#fffdf8;box-sizing:border-box}
+.newsletter-review-window .newsletter-approval-history{margin-top:24px}
+.newsletter-review-window .newsletter-approval-history article+article{border-top:1px solid #d8d4cb;margin-top:16px;padding-top:16px}
+@media(max-width:600px){body.newsletter-review-window{padding:20px 12px 230px}}
 .article-review-window .kc-back{display:none}
 .article-review-window .kc-article{max-width:1200px}
 .article-review-window .kc-article-aside{align-self:start;position:sticky;top:24px;max-height:calc(100dvh - 220px);overflow:auto}

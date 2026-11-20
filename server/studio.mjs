@@ -2,7 +2,7 @@ import {loadNewsletterDraftLinks} from './newsletter-draft-links.mjs';
 import {saveNewsletterConnection} from './newsletter-sync.mjs';
 import {productsPage,productPage,creativesPage,productAssetPage,changeProducts,productErrorForm,isProductAsset} from './studio-products.mjs';
 import {productUploadToken,attachProductFile,sendProductFile} from './studio-product-files.mjs';
-import {sendNewsletter} from './studio-newsletters.mjs';
+import {sendNewsletter,isNewsletterContent} from './studio-newsletters.mjs';
 import {changeSoftwareRelease,softwareReleaseErrorForm} from './software-releases.mjs';
 import {projectCreatePage} from './studio-project-create.mjs';
 import {generateIdeaSummary} from './studio-idea-ai.mjs';
@@ -108,7 +108,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify(result||{saved:true}));
     }
     // Old connector links used the embedded reader and missed the review controls.
-    if(req.method==='GET'&&section==='item'&&canAccess(actor,'work')&&(!params.has('tab')||params.get('tab')==='preview')&&data.byId.get(params.get('id'))?.kind==='article'){
+    if(req.method==='GET'&&section==='item'&&canAccess(actor,'work')&&(!params.has('tab')||params.get('tab')==='preview')&&(data.byId.get(params.get('id'))?.kind==='article'||isNewsletterContent(data.byId.get(params.get('id'))))){
       const r=readable(data,params.get('id'));
       res.statusCode=303;res.setHeader('Cache-Control','private, no-store');
       res.setHeader('Location',url('review-preview',{id:r.id}).replaceAll('&amp;','&'));return res.end();
