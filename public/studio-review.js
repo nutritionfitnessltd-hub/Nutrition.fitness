@@ -11,6 +11,8 @@ document.querySelector('[data-request-changes]')?.addEventListener('click',()=>{
 });
 const publication=document.querySelector('[data-publication-dialog]');
 if(publication){
+ publication.querySelector('[data-assign-approved]')?.addEventListener('click',()=>{publication.close();const panel=document.querySelector('[data-staff-task]');if(panel){panel.hidden=false;panel.querySelector('select')?.focus();}});
+ publication.querySelector('[data-keep-approved]')?.addEventListener('click',()=>publication.close());
  document.querySelector('[data-open-publication]')?.addEventListener('click',()=>publication.showModal());
  publication.querySelector('[data-show-publication-schedule]')?.addEventListener('click',()=>{
   const schedule=publication.querySelector('[data-publication-schedule]');schedule.hidden=false;schedule.querySelector('input').focus();

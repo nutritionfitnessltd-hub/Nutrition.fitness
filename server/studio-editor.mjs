@@ -19,14 +19,14 @@ export function editorForm(r,data,{create=false,project='',entry='',feedback='',
   return '<form method="post" action="'+url(create?'new':'item',create?{kind:r.kind}:{id:r.id,tab:'edit'})+'" class="studio-form content-editor" id="studio-editor-form">'+
     hidden('action',create?'content-create':'content-save')+hidden(create?'id':'revision',create?r.id:r.revision)+
     (create?hidden('kind',r.kind)+hidden('entry',entry):'')+
-    (!create&&r.kind==='article'?'<div class="studio-editor-preview-top"><a class="btn primary" data-review-preview target="_blank" rel="noopener" href="'+url('review-preview',{id:r.id})+'">Preview article</a></div>':'')+editorFields(r)+workerAssignment(r,data)+
+    (!create?'<div class="studio-editor-preview-top"><a class="btn primary" data-review-preview target="_blank" rel="noopener" href="'+url('review-preview',{id:r.id})+'">Preview for approval</a></div>':'')+editorFields(r)+workerAssignment(r,data)+
     (!create&&r.kind==='article'?articleImageEditor(r):'')+
     (r.source?.needsChecking?'<label class="check"><input type="checkbox" name="sourceChecked" value="yes"> I checked this content against the original</label>':'')+
     (create?'<details class="editor-details"><summary>Assign to a project (optional)</summary><label>Project<select name="project">'+(data.actor.role==='admin'?'<option value="">No project</option>':'')+data.projects.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===project?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></label></details>':
       '<details class="editor-details"><summary>Add a review note (optional)</summary>'+textarea('feedback','Review note',feedback,3)+'</details>')+
     '<div class="studio-save-bar"><span data-editor-status'+(unsaved?' data-unsaved="true"':'')+' role="status">'+(unsaved?'Unsaved changes':create?'New draft':'All changes saved')+'</span><div class="studio-actions">'+
       '<button type="submit" name="intent" value="draft">Save draft</button><button type="submit" name="intent" value="preview">Save &amp; preview</button>'+
-      (!create?'<button class="primary" type="submit" name="intent" value="review">Submit for Approval</button>'+(data.actor.role==='admin'&&r.status==='In review'?'<button type="submit" name="intent" value="approve">Approve content</button>':''):'')+'</div></div></form>';
+      (!create&&data.actor.role!=='admin'?'<button class="primary" type="submit" name="intent" value="review">Submit for review</button>':'')+'</div></div></form>';
 }
 function messageEditorForm(r,data,{create,project,entry,unsaved}){
   return '<form method="post" action="'+url(create?'new':'item',create?{kind:r.kind}:{id:r.id,tab:'edit'})+'" class="studio-form content-editor message-editor" id="studio-editor-form">'+
