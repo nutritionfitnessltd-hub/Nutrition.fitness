@@ -50,6 +50,15 @@ export function teamWorkRows(data){
   }
   rows.push(...[...recordRows.values()].filter(r=>!linked.has(r.recordId)));
   if(admin){
+    const production=data.hqProduction;
+    if(production?.jobId||data.hqProductionUnavailable){
+      const status=production?.status,ready=production?.progress?.readyItems||[],blockers=production?.progress?.blockers||[];
+      rows.push({id:'production:'+(production?.jobId||'imogen'),title:'Course and content production',...worker('imogen'),project:'',projectName:'Existing production job',
+        state:status==='working'?'progress':status==='needs_input'?'attention':status==='done'?'completed':'requested',
+        status:({working:'Production claim active',queued:'Queued for production',needs_input:'Production needs input',ready:'Production check ended',done:'Job closed'})[status]||'Production status unavailable',
+        updated:date(production?.updatedAt),note:ready.length?ready.map(item=>item.title).join(' · '):blockers.length?blockers[0].detail:production?.result||'Open Imogen’s production panel for the latest verified state.',
+        href:url('team',{tab:'workers',worker:'imogen'}),action:'Open production'});
+    }
     for(const r of data.byId.values())if(r.kind==='worker-request'&&r.status!=='Archived')for(const [i,o] of (r.fields?.outputs||[]).entries()){
       if(!o.title?.trim()||!workerNames[o.worker])continue;
       rows.push({id:'request:'+r.id+':'+i,title:o.title,...worker(o.worker),project:'',projectName:r.title,state:'requested',status:'Saved plan',updated:date(r.updatedAt||r.fields.createdAt),note:'Not started · '+(o.brief||''),href:url('worker-requests',{id:r.id}),action:'Open plan'});

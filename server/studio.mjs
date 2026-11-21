@@ -115,7 +115,10 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }
     meta=meta||{};
     data.trackingMeta=meta;
-    if(['home','team-work'].includes(section)&&actor.role==='admin'&&env.NUFI_HQ_SITE_TOKEN)data.hqIdeas=await workerIdeaSummaries(env,fetcher);
+    if(['home','team-work'].includes(section)&&actor.role==='admin'&&env.NUFI_HQ_SITE_TOKEN)await Promise.all([
+      workerIdeaSummaries(env,fetcher).then(value=>{data.hqIdeas=value;}),
+      hqRequest(env,{action:'worker-production-state',worker:'imogen'},fetcher).then(value=>{data.hqProduction=value.production;}).catch(()=>{data.hqProductionUnavailable=true;})
+    ]);
     if(['home','team-work','library','review-preview'].includes(section))await loadNewsletterDraftLinks(data,api).catch(()=>{});
     data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');
     data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';

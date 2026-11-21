@@ -6,6 +6,16 @@ import {handleStudio} from '../server/studio.mjs';
 import {teamWorkRows,teamWorkPage,teamWorkDashboard} from '../server/studio-team-work.mjs';
 import {accessFor,accessFromForm} from '../server/library-permissions.mjs';
 const reviewer={role:'staff',id:'reviewer',name:'Article reviewer',access:{library:true,work:true,review_articles:true}};
+test('Team work shows the real production claim separately from saved content and conversation',async()=>{
+ const d=await fixture().data({role:'admin',id:'admin'});
+ d.hqProduction={jobId:'existing-production',status:'working',updatedAt:'2026-11-21T17:06:49Z',progress:{readyItems:[{itemId:'catalogue:C00546',title:'Lesson 02 native branding preview in preparation'}]}};
+ let row=teamWorkRows(d).find(r=>r.id==='production:existing-production');
+ assert.equal(row.status,'Production claim active');assert.equal(row.state,'progress');assert.equal(row.ownerName,'Imogen');assert.match(row.note,/Lesson 02/);assert.match(row.href,/worker=imogen/);
+ assert.match(teamWorkDashboard(d),/Production claim active/);
+ d.hqProduction.status='queued';row=teamWorkRows(d).find(r=>r.id==='production:existing-production');assert.equal(row.state,'requested');assert.equal(row.status,'Queued for production');
+ d.hqProduction.status='needs_input';assert.equal(teamWorkRows(d).find(r=>r.id==='production:existing-production').state,'attention');
+ d.actor=reviewer;assert.ok(!teamWorkRows(d).some(r=>r.id.startsWith('production:')));
+});
 test('current publication replaces review action and survives linked task status',async()=>{
  const d=await fixture().data({role:'admin',id:'admin'});
  d.publicationDestination={environment:'test',origin:'https://nutrition-fitness-website-2.vercel.app'};
