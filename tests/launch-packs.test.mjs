@@ -22,6 +22,14 @@ test('a child remains visible when its parent is missing or outside the assignee
  assert.equal(launchPackParent(child,data),null);assert.equal(teamWorkRows(data).some(r=>r.recordId===child.id),true);
  data.byId.delete('pack');assert.equal(launchPackParent(child,data),null);
 });
+test('a new child revision brings its parent back into active Team work without creating a second job',()=>{
+ const {pack,child,data}=fixture();pack.status='Approved';pack.updatedAt='2026-11-20T10:00:00Z';
+ child.title='Introduction script';child.revision=2;child.updatedAt='2026-11-21T15:28:28Z';
+ const rows=teamWorkRows(data);assert.equal(rows.length,1);assert.equal(rows[0].recordId,pack.id);
+ assert.equal(rows[0].state,'progress');assert.equal(rows[0].status,'Supporting drafts in progress');
+ assert.equal(rows[0].updated,'2026-11-21T15:28:28.000Z');assert.match(rows[0].note,/Introduction script.*revision 2/);assert.match(rows[0].related.href,/id=social/);
+ assert.equal(pack.status,'Approved','saved parent approval is not changed');
+});
 test('separate copy deliverables feed course readiness and future production specifies branded generation',()=>{
  const {pack,data}=fixture();const course={id:'course',kind:'course',title:'Course',fields:{}};
  const copy={id:'landing',kind:'marketing',status:'Draft',fields:{launchPackId:pack.id,launchPackPart:'landingPage',body:'Approved wording for checking'}};

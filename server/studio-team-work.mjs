@@ -1,4 +1,4 @@
-import {launchPackParent} from './launch-packs.mjs';
+import {launchPackParent,launchPackChildren} from './launch-packs.mjs';
 import {releasePath,publicationDestination} from './studio-publishing.mjs';
 import {newsletterDraftButton} from './newsletter-draft-links.mjs';
 import {isNewsletterContent} from './studio-newsletters.mjs';
@@ -57,11 +57,17 @@ export function teamWorkRows(data){
     for(const [id,idea] of Object.entries(data.hqIdeas||{}))if(idea?.title?.trim()&&!['rejected','superseded'].includes(idea.state))rows.push({id:'idea:'+id,title:idea.title,...worker(id),project:'',projectName:'Daily ideas',state:stateFor(idea.state),status:({pending:'Awaiting your approval',scoped:'Scope ready',scoping:'Preparing scope',active:'Plan in progress',done:'Completed'})[idea.state]||'Requested',updated:date(idea.updatedAt||idea.createdAt),note:'Idea & plan update',href:url('worker-chat',{worker:id}),action:'Open idea'});
   }
   for(const f of data.reviewHistory||[])rows.push({id:'review:'+f.id,title:f.title,...person(f.authorId||data.actor.id),ownerName:f.author||person(f.authorId||data.actor.id).ownerName,project:'',projectName:'Review history',state:'completed',status:f.decision==='approve'?'Approved':'Changes requested',updated:date(f.at),note:'Reviewed version '+f.reviewedRevision,href:url('review-history',{id:f.recordId,review:f.id}),action:'Read review'});
-  return rows.filter(row=>{const id=row.recordId||tasks.find(t=>'task:'+t.id===row.id)?.record_id;return !launchPackParent(data.byId.get(id),data);}).sort((a,b)=>b.updated.localeCompare(a.updated)||a.title.localeCompare(b.title));
+  return rows.filter(row=>{const id=row.recordId||tasks.find(t=>'task:'+t.id===row.id)?.record_id;return !launchPackParent(data.byId.get(id),data);}).map(row=>{
+    const parent=data.byId.get(row.recordId);if(parent?.fields?.coursePack!==true)return row;
+    const children=launchPackChildren(parent,data).sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||'')),latest=children[0];
+    if(!latest)return row;
+    const attention=children.some(c=>['In review','Changes requested'].includes(c.status)),drafts=children.some(c=>c.status==='Draft');
+    return {...row,updated:[row.updated,date(latest.updatedAt)].sort().at(-1),...(attention?{state:'attention',status:'Supporting drafts need review'}:drafts?{state:'progress',status:'Supporting drafts in progress'}:{}),note:'Latest supporting update: '+latest.title+' · '+latest.status+' · revision '+latest.revision,related:{href:url('item',{id:latest.id}),label:'Open latest supporting draft'}};
+  }).sort((a,b)=>b.updated.localeCompare(a.updated)||a.title.localeCompare(b.title));
 }
 function workList(rows){
   if(!rows.length)return '<p class="studio-empty">No work matches this view.</p>';
-  return '<ul class="team-work-list">'+rows.map(r=>'<li class="team-work-row" data-work-id="'+esc(r.id)+'"><div class="team-work-owner"><span class="team-work-avatar" aria-hidden="true">'+esc((r.ownerName||'?').slice(0,1))+'</span><div><strong>'+esc(r.ownerName)+'</strong><small>'+esc(r.type==='ai'?'AI worker':'Team member')+'</small></div></div><div class="team-work-detail"><a '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.title)+'</a><small>'+esc(r.projectName)+'</small>'+(r.note?'<p>'+esc(r.note.length>180?r.note.slice(0,177)+'…':r.note)+'</p>':'')+(r.ghlAction?'<div class="studio-actions">'+r.ghlAction+'</div>':'')+'</div><div class="team-work-status">'+badge(r.status)+(r.due?'<small>Due '+esc(stamp(date(r.due)))+'</small>':'')+(r.updated?'<small>Updated '+esc(stamp(r.updated))+'</small>':'')+'</div><a class="btn" '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.action)+'</a></li>').join('')+'</ul>';
+  return '<ul class="team-work-list">'+rows.map(r=>'<li class="team-work-row" data-work-id="'+esc(r.id)+'"><div class="team-work-owner"><span class="team-work-avatar" aria-hidden="true">'+esc((r.ownerName||'?').slice(0,1))+'</span><div><strong>'+esc(r.ownerName)+'</strong><small>'+esc(r.type==='ai'?'AI worker':'Team member')+'</small></div></div><div class="team-work-detail"><a '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.title)+'</a><small>'+esc(r.projectName)+'</small>'+(r.note?'<p>'+esc(r.note.length>180?r.note.slice(0,177)+'…':r.note)+'</p>':'')+(r.related?'<p><a href="'+r.related.href+'">'+esc(r.related.label)+'</a></p>':'')+(r.ghlAction?'<div class="studio-actions">'+r.ghlAction+'</div>':'')+'</div><div class="team-work-status">'+badge(r.status)+(r.due?'<small>Due '+esc(stamp(date(r.due)))+'</small>':'')+(r.updated?'<small>Updated '+esc(stamp(r.updated))+'</small>':'')+'</div><a class="btn" '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.action)+'</a></li>').join('')+'</ul>';
 }
 export function teamWorkDashboard(data){
   const rows=teamWorkRows(data),recent=Date.now()-7*86400000;

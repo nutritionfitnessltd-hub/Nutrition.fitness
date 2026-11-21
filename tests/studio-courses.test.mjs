@@ -26,6 +26,15 @@ export function courseFixture(){
  const review={revision:2,fingerprint:coursePlan(course,data).fingerprint,decision:'approve',note:''};
  return {course,lesson,data,params,review};
 }
+test('a linked saved preview appears under its exact lesson without creating or approving a lesson draft',()=>{
+ const {course,data}=courseFixture();
+ const preview={id:'preview03',kind:'asset',title:'Branding preview',status:'Draft',fields:{previewOnly:true,courseId:course.id,lessonSourceId:'catalogue:second',assetUrls:['https://nutritionfitness.sharepoint.com/example.png']}};
+ data.items.push(preview);data.byId.set(preview.id,preview);
+ let html=coursePreview(course,data,String);assert.match(html,/View branding preview/);assert.match(html,/Preview saved · lesson draft not yet created/);assert.match(html,/id=preview03/);
+ assert.equal(data.items.filter(r=>r.kind==='lesson').length,1);
+ preview.fields.courseId='another-course';assert.doesNotMatch(coursePreview(course,data,String),/View branding preview/);
+ preview.fields.courseId=course.id;preview.status='Archived';assert.doesNotMatch(coursePreview(course,data,String),/View branding preview/);
+});
 test('course preview includes the complete ordered structure, empty overview and a separate approval action',()=>{
  const {course,data,params}=courseFixture(),html=itemPage(params,data);
  assert.match(html,/2 modules · 3 lessons/);assert.match(html,/Second lesson/);assert.match(html,/Third lesson/);

@@ -20,7 +20,7 @@ export async function productionAction(req,input,{env,api,index}){
   const records=rows.filter(r=>r.payload).map(r=>({...r.payload,id:r.id,revision:r.revision,updatedAt:r.updated_at}));
   const byId=new Map(records.map(r=>[r.id,r])),sources=new Map(index.records.map(r=>[r.id,r]));
   const items=input.scope==='courses'?index.records.filter(r=>r.group==='Courses').map(source=>({sourceId:source.id,title:source.title,source,draft:records.find(r=>r.id===productionDraftId(source.id))||null})):
-   records.filter(r=>!['settings','worker-request','notification'].includes(r.kind)&&r.status!=='Archived'&&contentWorker(r,byId)==='imogen'&&!['course','lesson'].includes(r.kind)&&sources.get(r.sourceId)?.group!=='Courses').map(record=>({itemId:record.id,title:record.title,record,source:sources.get(record.sourceId)||null}));
+   records.filter(r=>!['settings','worker-request','notification'].includes(r.kind)&&r.status!=='Archived'&&contentWorker(r,byId)==='imogen'&&!['course','lesson'].includes(r.kind)&&sources.get(r.sourceId||r.workerSource?.sourceId)?.group!=='Courses').map(record=>({itemId:record.id,title:record.title,record,source:sources.get(record.sourceId)||null}));
   const offset=input.offset??0,limit=input.limit??10;
   return {scope:input.scope,items:items.slice(offset,offset+limit),total:items.length,nextOffset:offset+limit<items.length?offset+limit:null};
  }
