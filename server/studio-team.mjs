@@ -51,7 +51,7 @@ export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarku
   if(workerKey){
     const w=members.find(m=>m.worker===workerKey);if(!w)throw new HttpError(404,'This worker is unavailable.');
     const work=workerWork(workerKey,data),chatState=hqChat?.task?.status;
-    const state=hqError?'HQ status unavailable':({queued:'Queued in James HQ',working:'Working in James HQ',ready:'Reply ready for you',needs_input:'Waiting for your reply',done:'Conversation ready'})[chatState]||'No active HQ conversation';
+    const state=workerKey==='imogen'&&hqSettings?.production?({queued:'Production queued',working:'Production claim active',needs_input:'Production needs input',ready:'Production check ended',done:'Production job closed'})[hqSettings.production.status]||'Production status unavailable':hqError?'HQ status unavailable':({queued:'Queued in James HQ',working:'Working in James HQ',ready:'Reply ready for you',needs_input:'Waiting for your reply',done:'Conversation ready'})[chatState]||'No active HQ conversation';
     const recent=(hqChat?.messages||[]).filter(m=>m.role==='assistant').slice(-3).reverse();
     const view=workerKey==='morgan'?url('shiny-things'):workerKey==='ellis'?url('software-releases'):url('library',{worker:workerKey,view:'all'});
     return '<div class="team-profile" data-team-profile>'+profileHeader(teamAvatar(w),w.name,w.role,'AI worker · '+state)+

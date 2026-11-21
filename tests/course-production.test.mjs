@@ -7,6 +7,14 @@ const env={NUFI_COURSE_PRODUCTION_TOKEN:'test-production-secret'};
 const req={headers:{authorization:'Bearer test-production-secret'}};
 const source={id:'C00579',title:'BMR',group:'Courses'};
 const input={action:'save-draft',sourceId:source.id,expectedRevision:0,durationSeconds:236.82,body:'Source-supported lesson.',canvaUrl:'https://www.canva.com/design/COPY/edit',files:[{name:'lesson.mp4',url:'https://nutritionfitness.sharepoint.com/sites/Nutrition.fitness/Shared%20Documents/Content%20Library/Courses/Fat%20Loss/lesson.mp4',bytes:4567,sha256:'a'.repeat(64)}]};
+test('production queue exposes assigned sources without another worker’s or unassigned content',async()=>{
+ const records=[{id:'mine',kind:'marketing',title:'Assigned work',workerId:'imogen',status:'Draft'},{id:'nina',kind:'article',title:'Private Nina work',workerId:'nina',status:'Draft'},{id:'unassigned',kind:'marketing',title:'Unassigned',status:'Draft'},{id:'config',kind:'settings',workerId:'imogen',fields:{private:'not content'}}];
+ const ctx={env,index:{records:[source]},api:async()=>records.map(payload=>({id:payload.id,payload,revision:1}))};
+ const other=await productionAction(req,{action:'queue',scope:'other'},ctx);assert.deepEqual(other.items.map(i=>i.itemId),['mine']);assert.equal(other.nextOffset,null);
+ const courses=await productionAction(req,{action:'queue',scope:'courses'},ctx);assert.equal(courses.items[0].sourceId,source.id);
+ for(const change of [{scope:'all'},{scope:'other',offset:-1},{scope:'courses',limit:11}])await assert.rejects(productionAction(req,{action:'queue',...change},ctx),e=>e.status===400);
+ await assert.rejects(productionAction({headers:{}},{action:'queue',scope:'other'},ctx),e=>e.status===401);
+});
 function fixture(){const rows=new Map();const manifest={order:'confirmed',sections:[{title:'Module 1',entries:[{id:source.id,title:source.title,position:1},{id:'next',title:'Next lesson',position:2}]}]};return {rows,manifest,index:{records:[source]},env,api:async(path,options={})=>{
  if(path.includes('nufi_library_display'))return [{payload:{courses:{'Fat Loss Course':manifest}}}];
  if(options.method==='POST'){const old=rows.get(options.payload.item);assert.equal(options.payload.editor_name,'staff:imogen-course-production');assert.equal(options.payload.expected,old?.revision||0);const row={id:options.payload.item,payload:options.payload.document,revision:(old?.revision||0)+1};rows.set(row.id,row);return [row];}

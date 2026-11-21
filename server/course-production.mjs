@@ -1,4 +1,6 @@
 import {launchPackParts} from './launch-packs.mjs';
+import {allRows} from './studio-store.mjs';
+import {contentWorker} from './studio-worker-content.mjs';
 import {createHash} from 'node:crypto';
 import {courseProductionBrief,coursePackFields,coursePlan} from './studio-courses.mjs';
 import {HttpError,requireSecret} from './platform.mjs';
@@ -12,6 +14,16 @@ export async function productionAction(req,input,{env,api,index}){
  requireSecret(req,env.NUFI_COURSE_PRODUCTION_TOKEN);
  if(!input||typeof input!=='object'||Array.isArray(input))throw new HttpError(400,'Supply a production action.');
  if(input.action==='status')return {connected:true,store:'Nutrition.Fitness Studio',publishing:false};
+ if(input.action==='queue'){
+  if(!['courses','other'].includes(input.scope)||!Number.isInteger(input.offset??0)||(input.offset??0)<0||!Number.isInteger(input.limit??10)||(input.limit??10)<1||(input.limit??10)>10)throw new HttpError(400,'Choose courses or other and a page of at most ten items.');
+  const rows=await allRows(api,itemTable+'?select=id,payload,revision,updated_at&order=id');
+  const records=rows.filter(r=>r.payload).map(r=>({...r.payload,id:r.id,revision:r.revision,updatedAt:r.updated_at}));
+  const byId=new Map(records.map(r=>[r.id,r])),sources=new Map(index.records.map(r=>[r.id,r]));
+  const items=input.scope==='courses'?index.records.filter(r=>r.group==='Courses').map(source=>({sourceId:source.id,title:source.title,source,draft:records.find(r=>r.id===productionDraftId(source.id))||null})):
+   records.filter(r=>!['settings','worker-request','notification'].includes(r.kind)&&r.status!=='Archived'&&contentWorker(r,byId)==='imogen'&&!['course','lesson'].includes(r.kind)&&sources.get(r.sourceId)?.group!=='Courses').map(record=>({itemId:record.id,title:record.title,record,source:sources.get(record.sourceId)||null}));
+  const offset=input.offset??0,limit=input.limit??10;
+  return {scope:input.scope,items:items.slice(offset,offset+limit),total:items.length,nextOffset:offset+limit<items.length?offset+limit:null};
+ }
  if(!['source','save-draft','read-draft'].includes(input.action))throw new HttpError(400,'Unsupported production action.');
  const source=index.records.find(r=>r.id===input.sourceId&&r.group==='Courses');if(!source)throw new HttpError(404,'Choose an existing course source.');
  const id=productionDraftId(source.id),read=async()=>{const rows=await api(itemTable+'?id=eq.'+encodeURIComponent(id)+'&select=id,payload,revision&limit=1',{service:true});return rows[0]||null;};
