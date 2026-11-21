@@ -1,3 +1,4 @@
+import {productionFileLinks} from './production-file-links.mjs';
 import {newsletterDraftButton} from './newsletter-draft-links.mjs';
 import {isLaunchPack} from './studio-launch-pack.mjs';
 import {coursePreview,courseEditorRecord} from './studio-courses.mjs';
@@ -269,6 +270,7 @@ export function itemPage(params,data){
     if(checks.length&&r.kind!=='communication')out+='<details class="editor-checks"><summary>'+checks.length+' '+(checks.length===1?'thing':'things')+' to complete before checking</summary><ul>'+checks.map(c=>'<li>'+esc(c)+'</li>').join('')+'</ul></details>';
     out+=videoTools(r)+editorForm(r.kind==='course'&&!data.unsaved?courseEditorRecord(r,data):r,data,{feedback:data.unsavedFeedback||'',unsaved:data.unsaved===true})+referenceData(data);
   }
+  out+=productionFileLinks(r);
   if(r.kind==='communication')return out;
   if(canEdit){
     out+='<details class="panel"><summary>History, feedback & other actions</summary><div class="studio-actions">'+button('Version history',url('history',{id:r.id}))+
