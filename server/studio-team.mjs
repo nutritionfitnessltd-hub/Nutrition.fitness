@@ -43,7 +43,7 @@ function profileHeader(avatar,name,role,summary){return '<header class="team-pro
 export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarkup,hqChat,hqError,hqSettings,hqSettingsError}){
   if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
   if(params.get('tab')==='organisation')return organisationMap(actor,staff,data,params);
-  const teams=ideaTeams(data.items),items=data.items.filter(r=>!isIdea(r)||canSeeIdea(actor,r,teams));
+  const teams=ideaTeams(data.items||[]),items=(data.items||[]).filter(r=>!isIdea(r)||canSeeIdea(actor,r,teams));
   data={...data,items,byId:new Map([...(data.byId||new Map(items.map(r=>[r.id,r])))].filter(([,r])=>!isIdea(r)||canSeeIdea(actor,r,teams)))};
   const members=teamProfiles(actor,staff,data);
   const personKey=params.get('person'),workerKey=params.get('worker');
