@@ -1,3 +1,4 @@
+import {isIdea,ideaTeams,canSeeIdea} from './idea-visibility.mjs';
 import {ownsTask} from './studio-project-tasks.mjs';
 import {includeAdministrator} from './team-owner.mjs';
 import {projectTrackingSummaries} from './studio-production-tracker.mjs';
@@ -29,10 +30,12 @@ export async function studioData(api,actor,load){
     load(),allRows(api,itemTable+'?select=id,payload,revision,updated_at&order=id&id=not.like.studio:notification:*'),
     allRows(api,projectTable+'?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&or=(creator_id.eq.'+actor.id+',entries.cs.'+encodeURIComponent(JSON.stringify([{assignee:actor.id}]))+')')),
     allRows(api,'/rest/v1/nufi_library_tasks?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&staff_id=eq.'+actor.id)),
-    actor.role==='admin'?api('/rest/v1/nufi_library_staff?select=id,name,email&order=name',service):Promise.resolve([{id:actor.id,name:actor.name}]),
+    api('/rest/v1/nufi_library_staff?select=id,name'+(actor.role==='admin'?',email':'')+'&order=name',service),
     actor.role==='admin'?allRows(api,'/rest/v1/nufi_studio_releases?select=item_id,environment,source_revision,published_at&order=item_id'):Promise.resolve([])
   ]);
   if(actor.role==='admin')people=await includeAdministrator(api,actor,people);
+  const ideaPeople=people;
+  if(actor.role!=='admin')people=[{id:actor.id,name:actor.name}];
   if(actor.role!=='admin'){
     const linked=new Set(tasks.map(assignmentProjectId).filter(Boolean));
     const missing=[...linked].filter(id=>!projects.some(p=>p.id===id));
@@ -43,6 +46,8 @@ export async function studioData(api,actor,load){
   }
   const records=new Map(index.records.filter(r=>r.id.startsWith('training:')||r.fields?.recipeText).map(r=>[r.id,canonical(r)]));
   for(const row of overlays.filter(row=>row.payload.kind!=='account-preview'&&(actor.role==='admin'||row.payload.kind!=='worker-request')))records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
+  const teams=ideaTeams([...records.values()]);
+  for(const [id,r] of records)if(isIdea(r)&&!canSeeIdea(actor,r,teams))records.delete(id);
   const items=[...records.values()].filter(r=>r.kind!=='worker-request');
   const assigned=actor.role==='admin'?new Set(items.map(r=>r.id)):descendants([
     ...tasks.map(t=>t.record_id),
@@ -55,7 +60,7 @@ export async function studioData(api,actor,load){
       }
     }
   }
-  const data={index,items,byId:records,projects,tasks,people,releases,assigned,actor};
+  const data={index,items,byId:records,projects,tasks,people,releases,assigned,actor,ideaTeams:teams,ideaPeople};
   // Project owners can track their worker's progress without gaining draft-body access.
   data.trackingByProject=projectTrackingSummaries(data);
   // Product assignment includes its assets, never the other products sharing an asset.
@@ -78,7 +83,7 @@ export async function studioData(api,actor,load){
         }
       }
     }
-    data.items=items.filter(r=>canReadContent(data,r));
+    data.items=items.filter(r=>isIdea(r)?canSeeIdea(actor,r,teams):canReadContent(data,r));
     data.byId=new Map(data.items.map(r=>[r.id,r]));
   }
   return data;

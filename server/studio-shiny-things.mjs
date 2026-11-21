@@ -1,3 +1,4 @@
+import {ideaScope,ideaTeams,canSeeIdea,canManageIdea} from './idea-visibility.mjs';
 import {randomUUID} from 'node:crypto';
 import {HttpError,uuid} from './platform.mjs';
 import {cleanText} from './studio-model.mjs';
@@ -13,7 +14,9 @@ const prefix='studio:idea:';
 export const ideaUrgencies={urgent:'Urgent',soon:'Soon',normal:'Normal',someday:'Someday'};
 const urgencyOf=r=>Object.hasOwn(ideaUrgencies,r.fields.urgency)?r.fields.urgency:'normal';
 const admin=data=>{if(data.actor.role!=='admin')throw new HttpError(403,'Only the administrator can manage Shiny Things.');};
-const ideas=data=>data.items.filter(r=>r.kind==='settings'&&r.id.startsWith(prefix));
+const teamsFor=data=>data.ideaTeams||ideaTeams(data.items);
+const ideas=data=>data.items.filter(r=>r.kind==='settings'&&r.id.startsWith(prefix)&&canSeeIdea(data.actor,r,teamsFor(data)));
+const scopes={personal:'Personal',team:'Team',company:'Company'};
 const projectFor=(data,id)=>data.projects.find(p=>p.studio?.ideaId===id);
 const projectId=id=>uuid(id.slice(prefix.length));
 const planText=plan=>(plan?.tasks||[]).map(t=>[t.title,t.notes||'',t.week||0,t.due||'',t.worker||'',t.milestone?'yes':''].map(v=>String(v).replace(/[|\r\n]/g,' ')).join(' | ')).join('\n');
@@ -41,18 +44,19 @@ export function parseMorganPlan(messages,idea){
   throw new HttpError(409,'Morgan has not returned a matching plan yet. Check the HQ conversation, then try again.');
 }
 export function shinyThingsPage(params,data,retained={},env={}){
-  admin(data);
+  if(!['admin','staff'].includes(data.actor.role)||!canAccess(data.actor,'library'))throw new HttpError(403,'Idea access is unavailable.');
   const id=params.get('id')||retained.id;
   const idea=id?ideas(data).find(r=>r.id===id):null;
   if(id&&!idea&&params.get('new')!=='1')throw new HttpError(404,'This idea is unavailable.');
   if(!idea&&params.get('new')!=='1'){
-    const parked=params.get('view')==='parked';
+    const parked=params.get('view')==='parked',meeting=params.get('view')==='meeting',dismissed=params.get('view')==='dismissed',scope=params.get('scope')||'',team=params.get('team')||'';
     const ranks={urgent:0,soon:1,normal:2,someday:3};
-    const rows=ideas(data).filter(r=>parked?r.fields.state==='Parked':r.fields.state!=='Parked').sort((a,b)=>ranks[urgencyOf(a)]-ranks[urgencyOf(b)]||(b.updatedAt||'').localeCompare(a.updatedAt||''));
+    const rows=ideas(data).filter(r=>(meeting?ideaScope(r)!=='personal'&&r.fields.forDiscussion===true:dismissed?r.fields.decision==='Dismiss':parked?r.fields.state==='Parked':r.fields.state!=='Parked'&&r.fields.decision!=='Dismiss')&&(!scope||ideaScope(r)===scope)&&(!team||r.fields.team===team)).sort((a,b)=>ranks[urgencyOf(a)]-ranks[urgencyOf(b)]||(b.updatedAt||'').localeCompare(a.updatedAt||''));
     return '<div class="shiny-notice-workspace">'+heading('Shiny Things','Catch the spark. Give it a little room to grow.',button('Pin a new idea',url('shiny-things',{new:'1'}),true))+
-      '<div class="shiny-board-tools"><nav class="shiny-board-tabs" aria-label="Ideas"><a href="'+url('shiny-things')+'"'+(!parked?' aria-current="page"':'')+'>On the board <span>'+ideas(data).filter(r=>r.fields.state!=='Parked').length+'</span></a><a href="'+url('shiny-things',{view:'parked'})+'"'+(parked?' aria-current="page"':'')+'>Parked for later <span>'+ideas(data).filter(r=>r.fields.state==='Parked').length+'</span></a></nav><div class="shiny-legend" aria-label="Note colours by urgency">'+Object.entries(ideaUrgencies).map(([key,label])=>'<span><i class="shiny-swatch shiny-'+key+'" aria-hidden="true"></i>'+label+'</span>').join('')+'</div></div>'+
+      '<form method="get" class="panel">'+hidden('work','1')+hidden('studio','shiny-things')+hidden('view',params.get('view')||'')+select('scope','Visibility',{'':'All visible ideas',...scopes},scope)+select('team','Team',{'':'All my teams',...Object.fromEntries([...new Set(teamsFor(data).values())].filter(t=>t.toLowerCase()===teamsFor(data).get(data.actor.id)?.toLowerCase()).map(t=>[t,t]))},team)+'<button type="submit">Filter ideas</button></form>'+button('Weekly discussion',url('shiny-things',{view:'meeting'}))+button('Dismissed ideas',url('shiny-things',{view:'dismissed'}))+(meeting?'<h2>Weekly discussion</h2><p>Shared ideas marked for discussion. Open an idea to record the decision and follow-up.</p>':'')+
+      '<div class="shiny-board-tools"><nav class="shiny-board-tabs" aria-label="Ideas"><a href="'+url('shiny-things')+'"'+(!parked&&!meeting&&!dismissed?' aria-current="page"':'')+'>On the board <span>'+ideas(data).filter(r=>r.fields.state!=='Parked'&&r.fields.decision!=='Dismiss').length+'</span></a><a href="'+url('shiny-things',{view:'parked'})+'"'+(parked?' aria-current="page"':'')+'>Parked for later <span>'+ideas(data).filter(r=>r.fields.state==='Parked').length+'</span></a></nav><div class="shiny-legend" aria-label="Note colours by urgency">'+Object.entries(ideaUrgencies).map(([key,label])=>'<span><i class="shiny-swatch shiny-'+key+'" aria-hidden="true"></i>'+label+'</span>').join('')+'</div></div>'+
       '<section class="shiny-board" aria-label="'+(parked?'Parked ideas':'Idea notice board')+'"><div class="shiny-board-caption"><span>'+(parked?'A little later, not forgotten.':'Big plans start as little notes.')+'</span><span>'+rows.length+' '+(rows.length===1?'idea':'ideas')+'</span></div><div class="shiny-note-grid">'+
-      rows.map(r=>{const urgency=urgencyOf(r),state=projectFor(data,r.id)?'Project created':r.fields.state||'Saved';return '<a class="shiny-note shiny-'+urgency+'" href="'+url('shiny-things',{id:r.id})+'"><span class="shiny-note-tape" aria-hidden="true"></span><span class="shiny-note-urgency">'+ideaUrgencies[urgency]+'</span><h2>'+esc(r.title)+'</h2><p>'+esc(r.fields.summary||'A spark worth coming back to.')+'</p><span class="shiny-note-footer"><span>'+esc(state)+'</span><span>Open note</span></span></a>';}).join('')+
+      rows.map(r=>{const urgency=urgencyOf(r),state=projectFor(data,r.id)?'Project created':r.fields.decision||r.fields.state||'Saved';return '<a class="shiny-note shiny-'+urgency+'" href="'+url('shiny-things',{id:r.id})+'"><span class="shiny-note-tape" aria-hidden="true"></span><span class="shiny-note-urgency">'+ideaUrgencies[urgency]+'</span><h2>'+esc(r.title)+'</h2><p>'+esc(r.fields.summary||'A spark worth coming back to.')+'</p><span class="shiny-note-footer"><span>'+esc(state)+'</span><span>'+esc(scopes[ideaScope(r)]||'Private')+(r.fields.team?' &middot; '+esc(r.fields.team):'')+(r.fields.forDiscussion?' &middot; For discussion':'')+'</span></span></a>';}).join('')+
       '<a class="shiny-add-note" href="'+url('shiny-things',{new:'1'})+'"><span aria-hidden="true">+</span><h2>'+(rows.length?'Another bright idea?':'Your first bright idea…')+'</h2><p>'+(rows.length?'There’s always room for one more.':'A thought, a what-if, a thing to try. Pin it here before it disappears.')+'</p><strong>Pin an idea</strong></a></div></section>'+
       '<aside class="shiny-morgan"><div><strong>Morgan can help it grow.</strong><p>Ask your project manager in James HQ to turn a note into a plan. You decide when it becomes a project.</p></div>'+button('Chat with Morgan',url('worker-chat',{worker:'morgan'}))+'</aside></div>';
 
@@ -60,11 +64,15 @@ export function shinyThingsPage(params,data,retained={},env={}){
   const f={...(idea?.fields||{}),...retained},p=idea&&projectFor(data,idea.id),locked=Boolean(p||idea?.fields.state==='Converting');
   const base=hidden('id',idea?.id||retained.id||prefix+randomUUID())+hidden('revision',idea?.revision||0),state={section:'shiny-things',...(idea?{id:idea.id}:{new:'1'})};
   let body=heading(idea?.title||'New shiny thing','Keep the idea here until it is worth an active project.',button('All ideas',url('shiny-things')));
+  if(idea&&!canManageIdea(data.actor,idea))return body+'<section class="panel"><p>'+esc(scopes[ideaScope(idea)])+' &middot; '+esc(idea.fields.team||'')+'</p><p class="prose">'+esc(idea.fields.summary||'')+'</p>'+discussionForm(idea,data,base,state)+'</section>';
   if(p)return body+'<section class="panel"><h2>Project created</h2><p>The original idea remains here for reference.</p>'+button('Open project',url('project',{project:p.id}),true)+'</section><p class="prose">'+esc(idea.fields.summary)+'</p>';
-  if(!locked)body+=form('idea-save',base+input('title','Idea',retained.title??idea?.title??'','text','required maxlength="160"')+textarea('summary','What is the idea, and why might it matter?',f.summary||'',5)+
-    '<div class="studio-actions"><button type="button" data-idea-ai'+(!env.OPENAI_API_KEY?' disabled':'')+'>Generate with AI</button><span role="status" aria-live="polite" data-idea-ai-status>'+(env.OPENAI_API_KEY?'Draft an explanation from your title and any notes.':'AI generation is not connected.')+'</span></div><section data-idea-ai-suggestion hidden><h3>Suggested explanation</h3><p class="prose" data-idea-ai-text></p><div class="studio-actions"><button type="button" data-idea-ai-use>Use this text</button><button type="button" data-idea-ai-dismiss>Keep my text</button></div></section>'+
+  if(!locked&&canAccess(data.actor,'edit'))body+=form('idea-save',base+input('title','Idea',retained.title??idea?.title??'','text','required maxlength="160"')+textarea('summary','What is the idea, and why might it matter?',f.summary||'',5)+
+    '<div class="studio-actions"><button type="button" data-idea-ai'+(!env.OPENAI_API_KEY||data.actor.role!=='admin'?' disabled':'')+'>Generate with AI</button><span role="status" aria-live="polite" data-idea-ai-status>'+(env.OPENAI_API_KEY?'Draft an explanation from your title and any notes.':'AI generation is not connected.')+'</span></div><section data-idea-ai-suggestion hidden><h3>Suggested explanation</h3><p class="prose" data-idea-ai-text></p><div class="studio-actions"><button type="button" data-idea-ai-use>Use this text</button><button type="button" data-idea-ai-dismiss>Keep my text</button></div></section>'+
+    select('visibility','Who can see this?',scopes,f.visibility||'personal')+select('team','Team (for Team visibility)',{'':'Choose a team',...Object.fromEntries([...new Set(teamsFor(data).values())].filter(t=>t===teamsFor(data).get(data.actor.id)).map(t=>[t,t]))},f.team||'')+'<p class="meta">Personal: only you. Team: members of your selected team. Company: everyone in this workspace.</p>'+
     input('category','Category',f.category||'','text','maxlength="100"')+select('urgency','How soon does this need attention?',ideaUrgencies,Object.hasOwn(ideaUrgencies,f.urgency)?f.urgency:'normal')+'<div class="studio-columns">'+input('weeks','Indicative duration in weeks',f.weeks||4,'number','min="1" max="52" required')+select('state','Keep it as',{Saved:'An idea',Parked:'Parked for later'},f.state==='Parked'?'Parked':'Saved')+'</div>',state,'Save idea');
   if(!idea)return body;
+  body+=discussionForm(idea,data,base,state);
+  if(data.actor.role!=='admin')return body;
   if(!locked)body+='<section class="panel"><h2>Ask Morgan to scope it</h2><p>Morgan checks overlap with existing projects and proposes an outcome, tasks, milestones, workers and open questions. The request runs in James HQ.</p>'+
     form('idea-scope',base,state,'Ask Morgan for a plan')+button('Open Morgan’s HQ conversation',url('worker-chat',{worker:'morgan'}))+
     (idea.fields.requestRevision?'<p>Plan requested for saved idea version '+idea.fields.requestRevision+'. HQ replies when its worker processes the queue.</p>'+form('idea-fetch',base,state,'Check for Morgan’s plan'):'')+'</section>';
@@ -80,9 +88,14 @@ export function shinyThingsPage(params,data,retained={},env={}){
   return body;
 }
 export async function changeShinyThing(params,f,data,api,env,fetcher=fetch){
-  admin(data);const id=f.id;
+  if(!['admin','staff'].includes(data.actor.role)||!canAccess(data.actor,'library')||!canAccess(data.actor,'edit'))throw new HttpError(403,'Idea editing is unavailable.');
+  const id=f.id;
   if(typeof id!=='string'||!id.startsWith(prefix))throw new HttpError(400,'Reopen the idea and try again.');
   const pid=projectId(id),idea=ideas(data).find(r=>r.id===id),revision=Number(f.revision),existing=projectFor(data,id);
+  const raw=data.items.find(r=>r.id===id);
+  if(raw&&!idea||!idea&&revision!==0)throw new HttpError(404,'This idea is unavailable.');
+  if(idea&&f.action!=='idea-discussion'&&!canManageIdea(data.actor,idea))throw new HttpError(403,'Only the idea owner can edit or share it.');
+  if(!['idea-save','idea-discussion'].includes(f.action))admin(data);
   if(f.action==='idea-promote'&&existing)return {section:'project',project:existing.id};
   if(!Number.isInteger(revision)||revision<0||(idea?.revision||0)!==revision)throw new HttpError(409,'This idea changed. Reopen the latest version.');
   const next={id,kind:'settings',title:idea?.title||'',status:'Draft',fields:{...idea?.fields}};
@@ -94,10 +107,21 @@ export async function changeShinyThing(params,f,data,api,env,fetcher=fetch){
     if(!next.title||!Number.isInteger(weeks)||weeks<1||weeks>52)throw new HttpError(400,'Add a name and a duration between 1 and 52 weeks.');
     if(f.urgency!==undefined&&!Object.hasOwn(ideaUrgencies,f.urgency))throw new HttpError(400,'Choose an available urgency.');
     const summary=cleanText(f.summary||'',6000),unchanged=idea&&idea.title===next.title&&idea.fields.summary===summary&&idea.fields.weeks===weeks;
-    next.fields={...(unchanged?idea.fields:{}),category:cleanText(f.category??idea?.fields.category??'',100),summary,weeks,urgency:f.urgency||idea?.fields.urgency||'normal',state:f.state==='Parked'?'Parked':unchanged&&idea.fields.state!=='Parked'?idea.fields.state:'Saved'};
+    const visibility=f.visibility??idea?.fields.visibility??'personal',team=visibility==='team'?cleanText(f.team??idea?.fields.team??'',80):'';
+    if(!Object.hasOwn(scopes,visibility))throw new HttpError(400,'Choose Personal, Team or Company.');
+    if(visibility==='team'&&(!team||teamsFor(data).get(data.actor.id)?.toLowerCase()!==team.toLowerCase()))throw new HttpError(400,'Choose your current team. Ask the administrator to update your team profile if needed.');
+    next.fields={...(unchanged?idea.fields:{}),ownerId:idea?.fields.ownerId||data.actor.id,visibility,team,forDiscussion:visibility==='personal'?false:idea?.fields.forDiscussion||false,decision:idea?.fields.decision||'',decisionNote:idea?.fields.decisionNote||'',followUpOwner:idea?.fields.followUpOwner||'',followUpDue:idea?.fields.followUpDue||'',category:cleanText(f.category??idea?.fields.category??'',100),summary,weeks,urgency:f.urgency||idea?.fields.urgency||'normal',state:f.state==='Parked'?'Parked':unchanged&&idea.fields.state!=='Parked'?idea.fields.state:'Saved'};
   }else{
     if(!idea)throw new HttpError(400,'Save the idea first.');
-    if(f.action==='idea-scope'){
+    if(f.action==='idea-discussion'){
+      if(ideaScope(idea)==='personal')throw new HttpError(400,'Share the idea with your team or company before adding it to a meeting.');
+      if(!['','Explore','Park','Dismiss'].includes(f.decision||''))throw new HttpError(400,'Choose an available decision.');
+      const owner=String(f.followUpOwner||''),due=String(f.followUpDue||'');
+      const eligible=eligibleOwners(data,idea);
+      if(owner&&!eligible.some(p=>p.id===owner)||!validDate(due))throw new HttpError(400,'Choose an eligible follow-up owner and valid date.');
+      if(f.decision==='Explore'&&!owner)throw new HttpError(400,'Choose an owner to explore this idea.');
+      next.fields={...idea.fields,forDiscussion:f.decision?false:f.forDiscussion==='yes',decision:f.decision||'',decisionNote:cleanText(f.decisionNote||'',2400),followUpOwner:owner,followUpDue:due,discussedBy:data.actor.id,discussedAt:new Date().toISOString(),state:f.decision==='Park'?'Parked':f.decision==='Explore'&&idea.fields.state==='Parked'?'Saved':idea.fields.state};
+    }else if(f.action==='idea-scope'){
       if(!idea.fields.summary)throw new HttpError(400,'Describe the idea before asking Morgan to scope it.');
       const requestRevision=idea.fields.requestRevision||revision;
       const ideaInput={ideaId:id,ideaRevision:requestRevision,title:idea.title,summary:idea.fields.summary,weeks:idea.fields.weeks};
@@ -141,4 +165,13 @@ export function ideaProjectPage(params,data,meta={}){
       (canEdit?form('task-save',base+hidden('entry',e.id)+input('title','Task',e.title)+textarea('notes','Brief and progress notes',e.notes||'',3)+'<div class="project-task-fields">'+input('week','Week',e.week,'number','min="0" max="'+p.weeks+'"')+input('due','Due date',e.due||'','date')+select('status','Progress',Object.fromEntries((isAdmin?['To do','In progress','Ready for review','Changes requested','Done']:['To do','In progress','Ready for review','Changes requested']).map(s=>[s,s])),e.status)+'</div>',state,'Update task'):'')+deleteTaskControl(p,e,data)+'</details>').join('')+'</section>':'')+deletedTasksPanel(p,data)+
     (canEdit?'<div class="project-settings"><details class="panel"><summary>Add task or milestone</summary>'+form('task-add',base+input('title','What needs doing?','','text','required maxlength="160"')+select('kind','Type',{'Project task':'Task',Milestone:'Milestone'})+textarea('notes','Brief and acceptance criteria'),state,'Add work')+'</details>'+
     '<details class="panel"><summary>Project settings</summary>'+form('project-save',base+(isAdmin?input('name','Project name',p.name)+select('creator','Owner',Object.fromEntries(data.people.map(person=>[person.id,person.name])),p.creator_id):'')+textarea('brief','Outcome and scope',p.brief)+input('launch','Target date',p.studio.launchDate||'','date')+select('status','Status',Object.fromEntries((isAdmin?['Planning','In progress','Ready for review','Complete']:['Planning','In progress','Ready for review']).map(s=>[s,s])),p.status),state,'Save project')+'</details></div>':'')+'</div>';
+}
+
+function eligibleOwners(data,idea){return (data.ideaPeople||data.people||[]).filter(p=>ideaScope(idea)==='company'||teamsFor(data).get(p.id)?.toLowerCase()===idea.fields.team?.toLowerCase());}
+function discussionForm(idea,data,base,state){
+ if(ideaScope(idea)==='personal')return '<p class="meta">Share this idea with your team or company when you are ready to discuss it.</p>';
+ const f=idea.fields;
+ const info='<p>Decision: '+esc(f.decision||'Awaiting discussion')+'</p><p class="prose">'+esc(f.decisionNote||'')+'</p>';
+ if(!canAccess(data.actor,'edit'))return info;
+ return '<section class="panel"><h2>Weekly discussion & follow-up</h2>'+form('idea-discussion',base+select('forDiscussion','Meeting agenda',{'':'Keep off the agenda',yes:'For discussion'},f.forDiscussion?'yes':'')+select('decision','Decision',{'':'Awaiting discussion',Explore:'Explore',Park:'Park',Dismiss:'Dismiss'},f.decision||'')+textarea('decisionNote','Meeting notes',f.decisionNote||'',3)+select('followUpOwner','Follow-up owner',{'':'Choose an owner',...Object.fromEntries(eligibleOwners(data,idea).map(p=>[p.id,p.name]))},f.followUpOwner||'')+input('followUpDue','Optional due date',f.followUpDue||'','date'),state,'Save discussion')+'</section>';
 }
