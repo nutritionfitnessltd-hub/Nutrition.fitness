@@ -58,3 +58,25 @@ test('existing pilot gets its parent without losing content, timing or source id
  const saved=await productionAction(req,{...input,expectedRevision:2},ctx);
  assert.ok(saved.record.parent);assert.equal(saved.record.fields.script,'Keep this script');assert.equal(saved.record.fields.activity,'Keep this action');assert.equal(saved.record.fields.production.durationSeconds,236.82);assert.equal(saved.record.sourceId,source.id);
 });
+
+test('planned draft can join a reviewed course without revising its approval',async()=>{
+ const ctx=fixture(),pilot=await productionAction(req,input,ctx),parent=ctx.rows.get(pilot.record.parent);
+ parent.payload.status='Approved';parent.payload.approval={revision:parent.revision};
+ parent.payload.courseStructureReview={decision:'approve',fingerprint:coursePlan(parent.payload,{byId:new Map(),trackingMeta:{courses:{'Fat Loss Course':ctx.manifest}}}).fingerprint};
+ ctx.index.records.push({id:'next',title:'Next lesson',group:'Courses'});
+ const before=structuredClone(parent),saved=await productionAction(req,{...input,sourceId:'next'},ctx);
+ assert.equal(saved.record.status,'Draft');assert.equal(saved.record.parent,parent.id);assert.equal(saved.record.approval,undefined);
+ assert.deepEqual(ctx.rows.get(parent.id),before);
+});
+
+test('archived or changed reviewed course cannot accept a new draft',async()=>{
+ for(const archived of [false,true]){
+  const ctx=fixture(),pilot=await productionAction(req,input,ctx),parent=ctx.rows.get(pilot.record.parent);
+  parent.payload.status=archived?'Archived':'Approved';
+  parent.payload.courseStructureReview={decision:'approve',fingerprint:coursePlan(parent.payload,{byId:new Map(),trackingMeta:{courses:{'Fat Loss Course':ctx.manifest}}}).fingerprint};
+  if(!archived)ctx.manifest.sections[0].entries.reverse();
+  ctx.index.records.push({id:'next',title:'Next lesson',group:'Courses'});
+  await assert.rejects(productionAction(req,{...input,sourceId:'next'},ctx),e=>e.status===409);
+  assert.equal(ctx.rows.has(productionDraftId('next')),false);
+ }
+});

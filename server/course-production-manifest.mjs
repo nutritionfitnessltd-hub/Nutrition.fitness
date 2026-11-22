@@ -1,6 +1,13 @@
 import {createHash} from 'node:crypto';
 import {HttpError} from './platform.mjs';
 import {saveRecord,itemTable} from './studio-store.mjs';
+import {coursePlan} from './studio-courses.mjs';
+
+export function allowsProductionLesson(course,manifest){
+ if(course.payload.status==='Archived')return false;
+ if(course.payload.status==='Draft')return true;
+ return coursePlan(course.payload,{byId:new Map(),trackingMeta:{courses:{[manifest.name]:manifest}}}).approved;
+}
 
 export const productionCourseId=name=>'studio:course:'+createHash('sha256').update(name).digest('hex').slice(0,24);
 export async function sourceCourseManifest(api,sourceId){
@@ -31,7 +38,9 @@ export async function attachProductionLesson(api,actor,manifest,lessonId){
  for(let attempt=0;attempt<3;attempt++){
   const course=await ensureProductionCourse(api,actor,manifest),ids=course.payload.fields.lessonIds||[];
   if(ids.includes(lessonId))return;
-  if(course.payload.status!=='Draft')throw new HttpError(409,'The course has entered review. Return it to Draft before adding lessons.');
+  if(!allowsProductionLesson(course,manifest))throw new HttpError(409,'The course needs a current approved structure before adding lesson drafts.');
+  // A planned draft links through its parent/source; do not revise a reviewed course.
+  if(course.payload.status!=='Draft')return;
   const ordered=new Map(manifest.lessons.map((e,i)=>['studio:imogen:'+createHash('sha256').update(e.sourceId).digest('hex').slice(0,24),i]));
   const record={...course.payload,fields:{...course.payload.fields,lessonIds:[...ids,lessonId].sort((a,b)=>(ordered.get(a)??Infinity)-(ordered.get(b)??Infinity))}};
   try{await saveRecord(api,actor,record,course.revision);return;}catch(error){if(error.status!==409||attempt===2)throw error;}

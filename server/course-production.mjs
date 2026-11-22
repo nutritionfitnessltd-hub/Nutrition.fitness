@@ -6,7 +6,7 @@ import {courseProductionBrief,coursePackFields,coursePlan} from './studio-course
 import {HttpError,requireSecret} from './platform.mjs';
 import {blankFields,cleanText} from './studio-model.mjs';
 import {saveRecord,itemTable} from './studio-store.mjs';
-import {sourceCourseManifest,ensureProductionCourse,attachProductionLesson} from './course-production-manifest.mjs';
+import {sourceCourseManifest,ensureProductionCourse,attachProductionLesson,allowsProductionLesson} from './course-production-manifest.mjs';
 export const productionDraftId=id=>'studio:imogen:'+createHash('sha256').update(id).digest('hex').slice(0,24);
 const actor={id:'imogen-course-production',role:'staff',name:'Imogen',access:{library:true,edit:true}};
 function link(raw,host,prefix){let u;try{u=new URL(raw);}catch{throw new HttpError(400,'Invalid production link.');}if(u.protocol!=='https:'||u.hostname!==host||u.username||u.password||!decodeURIComponent(u.pathname).startsWith(prefix))throw new HttpError(400,'Link is outside the production destination.');return u.href;}
@@ -53,7 +53,7 @@ export async function productionAction(req,input,{env,api,index}){
  if(!manifest.ready)throw new HttpError(409,manifest.reason);
  const parent=await ensureProductionCourse(api,actor,manifest);
  if(current?.payload.parent&&current.payload.parent!==parent.id)throw new HttpError(409,'The saved lesson belongs to another course. Check its association before changing it.');
- if(parent.payload.status!=='Draft'&&!(parent.payload.fields.lessonIds||[]).includes(id))throw new HttpError(409,'The course has entered review. Return it to Draft before adding lessons.');
+ if(!allowsProductionLesson(parent,manifest))throw new HttpError(409,'The course needs a current approved structure before adding lesson drafts.');
  const record={...current?.payload,id,kind:'lesson',title,status:'Draft',parent:current?.payload.parent||null,sourceId:source.id,comments:current?.payload.comments||[],source:{...current?.payload.source,id:source.id,needsChecking:true},fields:{...blankFields('lesson'),...previous,body,...Object.fromEntries(['introduction','script','takeaway','activity'].map(k=>[k,cleanText(Object.hasOwn(input,k)?input[k]||'':previous[k]||'',100000)])),videoUrl:video?.url||previous.videoUrl||'',durationSeconds:video?Math.max(1,Math.round(measured)):previous.durationSeconds||0,production:{...previous.production,worker:'Imogen',sourceId:source.id,canvaUrl,files,...(video?{durationSeconds:measured}:{}),checkedAt:new Date().toISOString(),reviewRequired:true}}};
  delete record.approval;
  record.parent=parent.id;record.workerId='imogen';
