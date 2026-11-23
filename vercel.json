@@ -65,11 +65,6 @@
       "permanent": false
     },
     {
-      "source": "/membership",
-      "destination": "/nufi/#pricing",
-      "permanent": false
-    },
-    {
       "source": "/shop/high-protein-smoothies/",
       "destination": "/shop/blend-and-go/",
       "permanent": true

@@ -26,3 +26,8 @@ body:not([data-page="home"]) .plum{color:var(--accent)}
 @media print{.site-header,.new-footer,.finder-actions,.finder-claim,.launch-widget{display:none!important}}
 
 .finder-progress-row>span:first-child{white-space:nowrap;flex:none}.finder-head.is-in-progress h1{font-size:24px;margin-bottom:23px}.finder-head.is-in-progress h1>span,.finder-head.is-in-progress .lead,.finder-head.is-in-progress .finder-perks{display:none}body.kc-page{--accent:var(--ochre)}
+
+/* Accommodate Membership in the shared desktop navigation. */
+@media(min-width:1101px){.site-header{gap:18px;padding-inline:36px}.desktop-nav{gap:17px;font-size:12px}.header-actions{gap:3px}.header-cta{padding-inline:16px}}
+
+@media(min-width:1101px) and (max-width:1380px){.site-header .header-cta{display:none}.desktop-nav{gap:13px;font-size:12px}.site-header{padding-inline:25px;gap:16px}}

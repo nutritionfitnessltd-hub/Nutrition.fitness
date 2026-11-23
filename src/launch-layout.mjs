@@ -16,6 +16,7 @@ export function compileLaunchLayout(html,route,now=Date.now()){
  html=html.replace('</head>','<script type="module" src="/managed-content.mjs"></script></head>');
  // Load the new highlights only on the homepage; other page styling is untouched.
  if(route==='/')html=html.replace('</head>','<link rel="stylesheet" href="/home-highlights.css" data-page-style="home"><link rel="stylesheet" href="/home-feature-panels.css" data-page-style="home"></head>');
+ if(route==='/membership/')html=html.replace('</head>','<link rel="stylesheet" href="/membership.css" data-page-style="membership"><script type="module" src="/membership-preview.mjs"></script></head>');
  html=html.replace(/<body([^>]*)>/,`<body$1 data-accent="${accentFor(route)}">`);
  html=html.replace('href="/get-started/">Get started','href="/get-started/">Find my programme');
  // Shared across every page; Knowledge Centre pages inherit this same shell.
