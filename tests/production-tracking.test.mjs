@@ -157,3 +157,13 @@ test('video approval asks for a source check only when the saved source requires
  pilot.source={id:'original',needsChecking:true};const html=productionTrackerPanel(p,data,meta);
  assert.match(html,/name="sourceChecked" value="yes" data-video-source-check required/);assert.match(html,/I have checked this video against the original source/);
 });
+
+
+test('cloud and PC checkpoints render separately without granting approval or hiding approved records',()=>{
+ const {p,data,meta,pilot}=fixture();pilot.status='Approved';
+ data.backgroundControls=new Map([[p.id,{fields:{backgroundJob:{projectId:p.id,itemProgress:{s1:{stage:'editing',worker:'pc',updatedAt:new Date().toISOString(),note:'Font pass'},s2:{stage:'preparing',worker:'cloud',updatedAt:new Date().toISOString(),note:'Narration mapping'}}}}}]]);
+ const model=productionTracking(p,data,meta),html=productionTrackerPanel(p,data,meta);
+ assert.equal(model.rows[0].status,'Approved');assert.equal(model.rows[1].status,'To do');assert.equal(model.approved,1);
+ assert.match(html,/PC editor finishing/);assert.match(html,/Cloud worker/);assert.match(html,/Narration mapping/);assert.match(html,/Latest worker progress/);
+ assert.doesNotMatch(html,/name="action" value="review-decision"/);
+});
