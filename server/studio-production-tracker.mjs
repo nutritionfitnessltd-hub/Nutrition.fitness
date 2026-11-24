@@ -18,7 +18,7 @@ export function projectTrackingSummaries(data){
   const config=p.studio.productionTracking;
   summaries.set(p.id,data.items.filter(r=>!excludedKinds.has(r.kind)&&r.status!=='Archived'&&contentWorker(r,data.byId)===config.worker&&(config.scope==='courses')===courseRecord(r,sources)).map(r=>({
    id:r.id,kind:r.kind,title:r.title,status:r.status,sourceId:originalId(r),workerId:config.worker,revision:r.revision,updatedAt:r.updatedAt,
-   fields:{collection:r.fields?.collection,production:{files:(r.fields?.production?.files||[]).map(f=>({name:f.name,url:f.url,bytes:f.bytes,sha256:f.sha256}))},
+   fields:{collection:r.fields?.collection,production:{checkedAt:r.fields?.production?.checkedAt,files:(r.fields?.production?.files||[]).map(f=>({name:f.name,url:f.url,bytes:f.bytes,sha256:f.sha256}))},
     ...(r.fields?.courseProductionIndex?{courseProductionIndex:true,runner:r.fields.runner?Object.fromEntries(['status','currentSourceId','stage','updatedAt','completedSourceIds','projectId'].map(key=>[key,r.fields.runner[key]])):null}:{})}
   })));
  }
@@ -74,11 +74,14 @@ export function productionTracking(p,data,meta={}){
  const checkpoint=productionRunnerCheckpoint(p,data),current=currentProductionSource(checkpoint);
  const row=(key,title,group,record,extra={})=>{
   const update=manual[key],derived=actualStage(record,config);
+  const checkedAt=checkedExport(record)?record.fields?.production?.checkedAt:null,completedTime=Date.parse(checkedAt||''),updateTime=Date.parse(update?.at||'');
+  const supersededUpdate=Boolean(update)&&Number.isFinite(completedTime)&&Number.isFinite(updateTime)&&completedTime>updateTime;
+  const effectiveUpdate=supersededUpdate?null:update;
   // Tracking can describe work, but cannot grant approval or assert file delivery.
-  const working=Boolean(current)&&productionSourceKey(extra.sourceId)===productionSourceKey(current);
+  const working=Boolean(current)&&productionSourceKey(extra.sourceId)===productionSourceKey(current)&&(!Number.isFinite(completedTime)||Date.parse(checkpoint.updatedAt)>completedTime);
   const status=['Approved','Saved to SharePoint','Changes requested'].includes(derived)?derived:working?'Imogen working':
-   update&&['To do','Imogen working','Awaiting review','Changes requested'].includes(update.status)?update.status:derived;
-  const result={key,title,group,record,status,note:update?.note||'',working,...extra};return {...result,update:update||{},work:productionWorkState(result,checkpoint,update||{})};
+   effectiveUpdate&&['To do','Imogen working','Awaiting review','Changes requested'].includes(effectiveUpdate.status)?effectiveUpdate.status:derived;
+  const result={key,title,group,record,status,note:update?.note||'',working,completedAt:checkedAt,supersededUpdate,...extra};return {...result,update:update||{},work:productionWorkState(result,checkpoint,effectiveUpdate||{})};
  };
  const rows=[],groups=[];
  if(config.scope==='courses'){
@@ -125,7 +128,7 @@ export function productionTracking(p,data,meta={}){
 function workUpdate(r,checkpoint){
  const u=r.update||{},time=Date.parse(r.work.at||u.at||'');
  const when=Number.isFinite(time)?new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/London'}).format(new Date(time))+' London time':'No update time recorded';
- return '<details class="tracker-work-update"><summary>Updates</summary><div><p class="tracker-update-time">'+esc(when)+'</p><p>'+esc(r.work.source)+'</p>'+(r.working?'<p><b>Current step:</b> '+esc(checkpoint.stage||'Production running')+'</p>':'')+(r.note?'<p><b>Latest update:</b> '+esc(r.note)+'</p>':'<p>No written update yet.</p>')+(u.nextStep?'<p><b>Next step:</b> '+esc(u.nextStep)+'</p>':'')+(u.blocker?'<p class="work-blocker"><b>Blocker:</b> '+esc(u.blocker)+'</p>':'')+'</div></details>';
+ return '<details class="tracker-work-update"><summary>Updates</summary><div><p class="tracker-update-time">'+esc(when)+'</p><p>'+esc(r.work.source)+'</p>'+(r.working?'<p><b>Current step:</b> '+esc(checkpoint.stage||'Production running')+'</p>':'')+(r.note?'<p><b>'+(r.supersededUpdate?'Earlier update (before checked export)':'Latest update')+':</b> '+esc(r.note)+'</p>':'<p>No written update yet.</p>')+(!r.supersededUpdate&&u.nextStep?'<p><b>Next step:</b> '+esc(u.nextStep)+'</p>':'')+(!r.supersededUpdate&&u.blocker?'<p class="work-blocker"><b>Blocker:</b> '+esc(u.blocker)+'</p>':'')+'</div></details>';
 
 }
 export function productionTrackerPanel(p,data,meta={}){
