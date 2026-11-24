@@ -7,6 +7,7 @@ export async function loadPlanner(data,api){
    allRows(api,'/rest/v1/nufi_studio_items?select=id,payload&order=id&id=like.studio:team-profile:*')
   ]);
   const fields=Object.fromEntries(profiles.map(r=>[r.id.slice('studio:team-profile:'.length),r.payload?.fields||{}]));
-  data.planner={rows:portfolioSchedule(projects,fields)};
+  const visible=new Set([data.actor?.id,...(data.people||[]).map(p=>p.id),...(data.projects||[]).flatMap(p=>[p.creator_id,...(p.entries||[]).map(e=>e.assignee)])]);
+  data.planner={rows:portfolioSchedule(projects,fields),directorIds:Object.keys(fields).filter(id=>visible.has(id)&&fields[id].engagementType==='owner_director')};
  }catch{data.planner={unavailable:true};}
 }

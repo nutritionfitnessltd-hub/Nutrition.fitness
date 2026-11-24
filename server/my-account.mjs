@@ -1,3 +1,4 @@
+import {teamOnboardingProfile} from './team-welcome.mjs';
 import {hashTeamPassword,verifyTeamPassword} from './team-passwords.mjs';
 import {HttpError,email,password,text,uuid,verifiedUser} from './platform.mjs';
 import {signInProvisioned,consumePasswordAttempt} from './provisioned-login.mjs';
@@ -14,6 +15,7 @@ async function ownProfile(actor,api){
 }
 export async function myAccountScreen(actor,api,params,env,{copy=false}={}){
  const person=await ownProfile(actor,api),saved=params.get('saved');
+ const ownerDirector=(await teamOnboardingProfile(actor,api))?.engagementType==='owner_director';
  const security='<label>Current password<input type="password" name="currentPassword" autocomplete="current-password" maxlength="128" required></label><label>New password<input type="password" name="newPassword" autocomplete="new-password" minlength="12" maxlength="128" required></label><label>Confirm new password<input type="password" name="confirmPassword" autocomplete="new-password" minlength="12" maxlength="128" required></label>';
  const captcha=actor.role==='admin'&&env.TURNSTILE_SITE_KEY?'<div class="cf-turnstile" data-sitekey="'+esc(env.TURNSTILE_SITE_KEY)+'" data-response-field-name="botToken"></div><script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>':'';
  return heading('My account','Your profile, sign-in security and signed agreement.')+
@@ -22,7 +24,7 @@ export async function myAccountScreen(actor,api,params,env,{copy=false}={}){
   (copy?'<p><strong>Display name</strong><br>'+esc(person.name)+'</p>':form('account-profile',input('name','Display name',person.name,'text','maxlength="100" autocomplete="name" required'),{section:'account'},'Save profile'))+
   '<p class="meta">Contact your administrator if your sign-in email needs to change.</p></section>'+
   '<section class="panel"><h2>Security</h2>'+(copy?'<p>Open your own My account page to change your password.</p>':form('account-password',security+'<p class="meta">Use 12 to 128 characters. A long, unique passphrase works well.</p>'+captcha,{section:'account'},'Change password'))+'</section></div>'+
-  '<section class="panel"><h2>My confidentiality agreement</h2><p>Read or download the agreement signed by your account.</p><div class="studio-actions">'+button('Read signed agreement',url('account',{nda:'record'}))+button('Download signed agreement',url('account',{nda:'copy'}))+'</div></section>'+
+  (ownerDirector?'<section class="panel"><h2>Owner / Director</h2><p>A welcome letter and NDA are not required for your ownership role.</p></section>':'<section class="panel"><h2>My confidentiality agreement</h2><p>Read or download the agreement signed by your account.</p><div class="studio-actions">'+button('Read signed agreement',url('account',{nda:'record'}))+button('Download signed agreement',url('account',{nda:'copy'}))+'</div></section>')+
   '<section class="panel"><h2>Sign out</h2>'+form('work-logout','',{},'Sign out of this workspace')+'</section>';
 }
 export async function changeMyAccount(fields,{actor,api,env,res}){

@@ -72,18 +72,19 @@ export function validateReportingLine(member,value,members){
   return manager.key;
 }
 
-export const engagementTypes={'':'Choose engagement type',freelance:'Freelance',contractor:'Contractor',fte:'Full-time employee (FTE)',part_time:'Part-time employee',volunteer:'Volunteer',intern:'Intern'};
+export const engagementTypes={'':'Choose engagement type',owner_director:'Owner / Director',freelance:'Freelance',contractor:'Contractor',fte:'Full-time employee (FTE)',part_time:'Part-time employee',volunteer:'Volunteer',intern:'Intern'};
 export function engagementEditor(f){
-  return '<fieldset><legend>Working arrangement</legend>'+select('engagementType','Engagement type',engagementTypes,f.engagementType||'')+
+  return '<fieldset data-engagement-editor><legend>Working arrangement</legend>'+select('engagementType','Engagement type',engagementTypes,f.engagementType||'')+'<p data-owner-arrangement'+(f.engagementType==='owner_director'?'':' hidden')+'>No contracted rate or hours. Welcome letter and NDA are not required. Task deadlines are managed directly.</p><div data-contract-terms'+(f.engagementType==='owner_director'?' hidden':'')+'>'+
     input('rate','Agreed rate',f.rate||'','number','min="0" step="0.01"')+input('currency','Currency',f.currency||'GBP','text','maxlength="3"')+
     select('rateBasis','Rate basis',{hour:'Per hour',day:'Per day',month:'Per month',year:'Per year',project:'Per project'},f.rateBasis||'hour')+
     input('agreedHours','Agreed hours',f.agreedHours||'','number','min="0" max="744" step="0.25"')+
     select('hoursPeriod','Hours period',{week:'Per week',month:'Per month'},f.hoursPeriod||'week')+
     input('startDate','Start date',f.startDate||'','date')+textarea('availability','Agreed availability / flexible working',f.availability||'',3)+
-    '<p class="meta">Employee arrangements require a separate employment contract. Contract preparation is deferred and is not completed by this welcome letter.</p></fieldset>';
+    '<p class="meta">Employee arrangements require a separate employment contract. Contract preparation is deferred and is not completed by this welcome letter.</p></div></fieldset>';
 }
 export function engagementFields(post,old={}){
  const fields={};
+ if((post.engagementType??old.engagementType)==='owner_director')return {engagementType:'owner_director',rate:'',currency:'',rateBasis:'',agreedHours:'',hoursPeriod:'',startDate:'',availability:''};
  for(const [key,max] of Object.entries({engagementType:30,rate:20,currency:3,rateBasis:20,agreedHours:20,hoursPeriod:10,startDate:10,availability:2000})){
   const value=post[key]??old[key]??'';
   if(typeof value!=='string'||value.length>max)throw new HttpError(400,'Check the working arrangement details.');

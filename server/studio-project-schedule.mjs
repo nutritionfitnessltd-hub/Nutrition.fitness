@@ -87,7 +87,8 @@ export function portfolioSchedule(projects,profiles={},today=todayLondon()){
     const hours=Number.isFinite(e.remainingHours)&&e.remainingHours>0?e.remainingHours:Number.isFinite(e.estimatedHours)&&e.estimatedHours>0?e.estimatedHours:capacity&&e.duration?e.duration*capacity:null;
     if(e.milestone||e.kind==='Milestone'){
      const finish=deps.length?deps.map(d=>d.row.finish).sort().at(-1):workStart(today);set(t,{start:finish,finish,hours:0});
-    }else if(capacity===null){set(t,{missingCapacity:true,error:'Set weekly hours in the assigned person’s profile.'});}
+    }else if(profiles[person]?.engagementType==='owner_director'){const ready=deps.map(d=>workStart(next(d.row.finish))).sort().at(-1)||today;const usable=validDate(e.due)&&e.due>=today&&e.due>=ready;set(t,{manual:true,finish:usable?e.due:'',error:usable?'':validDate(e.due)?'Update the owner / director deadline to plan dependent tasks.':'Deadline managed by the owner / director.'});}
+    else if(capacity===null){set(t,{missingCapacity:true,error:'Set weekly hours in the assigned person’s profile.'});}
     else if(!hours){set(t,{error:'Add estimated hours to plan this task.'});}
     else{
      let start=workStart(validDate(e.start)&&e.start>today?e.start:today);
@@ -114,21 +115,24 @@ export function plannedRows(p,data={}){
  return p.entries.map(e=>plan.get(taskKey(p,e))||{entry:e,error:p.status==='Complete'?'Project complete':'Planning details unavailable'});
 }
 export function schedulingInputs(p,e={},data={}){
- const person=e.assignee||p.creator_id,f=data.byId?.get('studio:team-profile:'+person)?.fields||{},hours=weeklyHours(f);
+ const person=e.id?(e.assignee||p.creator_id):(data.actor?.role==='staff'?data.actor.id:p.creator_id),f=data.byId?.get('studio:team-profile:'+person)?.fields||{},hours=weeklyHours(f);
+ const directors=[...new Set([...(data.planner?.directorIds||[]),...[...(data.byId||new Map())].filter(([id,r])=>id.startsWith('studio:team-profile:')&&r.fields?.engagementType==='owner_director').map(([id])=>id.slice('studio:team-profile:'.length))])];
+ const manual=directors.includes(person);
  const estimate=e.estimatedHours??(e.duration&&hours?Math.round(e.duration*hours/5*100)/100:'');
- return '<fieldset class="task-scheduling simple-task-planning"><legend>Plan the work</legend>'+hidden('schedulePresent','1')+hidden('plannerVersion','2')+hidden('dependencySelection','1')+
+ return '<fieldset class="task-scheduling simple-task-planning" data-director-ids="'+esc(JSON.stringify(directors))+'" data-project-owner="'+esc(p.creator_id)+'" data-task-person="'+esc(person)+'"><legend>Plan the work</legend>'+hidden('schedulePresent','1')+hidden('plannerVersion','2')+hidden('dependencySelection','1')+
+  '<p data-owner-task'+(manual?'':' hidden')+'>Owner / Director: manage this task by its deadline. Hours are not required.</p><div data-task-effort-fields'+(manual?' hidden':'')+'>'+
   ((e.milestone||e.kind==='Milestone')?'<p class="meta">A milestone marks a result; its date follows its prerequisites.</p>':input('estimatedHours','Estimated hours',estimate,'number','min="0.01" max="5000" step="0.01" placeholder="How many hours of work?"')+
-  (['In progress','Changes requested'].includes(e.status)?input('remainingHours','Hours left',e.remainingHours??estimate,'number','min="0.01" max="5000" step="0.01"'):hidden('remainingHours',e.remainingHours??'')))+
+  (['In progress','Changes requested'].includes(e.status)?input('remainingHours','Hours left',e.remainingHours??estimate,'number','min="0.01" max="5000" step="0.01"'):hidden('remainingHours',e.remainingHours??'')))+'</div>'+
   '<details class="schedule-dependencies"><summary>Must finish first (<span data-dependency-count>'+(e.dependsOn||[]).length+'</span>)</summary><div class="task-prerequisites">'+
   (p.entries.filter(t=>t.id!==e.id).map(t=>'<label><input type="checkbox" name="dependency.'+esc(t.id)+'" value="1" data-task-prerequisite'+((e.dependsOn||[]).includes(t.id)?' checked':'')+'><span>'+esc(t.title)+'</span></label>').join('')||'<p class="meta">No other tasks yet.</p>')+'</div></details><p class="meta">Expected dates update when you save. Deadlines stay fixed.</p></fieldset>';
 }
 export function taskScheduleSummary(p,e,data={}){
  const r=plannedRows(p,data).find(r=>r.entry.id===e.id);
- return '<div class="task-schedule-summary">'+(r.hours?'<span>'+esc(r.hours)+' hours'+(e.remainingHours?' left':' estimated')+'</span>':'')+(r.finish?'<span>Expected '+esc(r.finish)+'</span>':'')+(r.overdue?'<strong class="schedule-late">Deadline missed</strong>':r.atRisk?'<strong class="schedule-late">At risk of missing deadline</strong>':'')+(r.blocked?'<strong class="schedule-blocked">Waiting for prerequisites</strong>':'')+(r.error?'<span class="planner-question">'+esc(r.error)+'</span>':'')+(r.missingCapacity&&data.actor?.role==='admin'?'<a href="/content-library/?work=1&amp;studio=team&amp;person='+encodeURIComponent(e.assignee||p.creator_id)+'">Set working hours</a>':'')+'</div>';
+ return '<div class="task-schedule-summary">'+(r.hours?'<span>'+esc(r.hours)+' hours'+(e.remainingHours?' left':' estimated')+'</span>':'')+(r.finish?'<span>'+(r.manual?'Deadline ':'Expected ')+esc(r.finish)+'</span>':'')+(r.overdue?'<strong class="schedule-late">Deadline missed</strong>':r.atRisk?'<strong class="schedule-late">At risk of missing deadline</strong>':'')+(r.blocked?'<strong class="schedule-blocked">Waiting for prerequisites</strong>':'')+(r.error?'<span class="planner-question">'+esc(r.error)+'</span>':'')+(r.missingCapacity&&data.actor?.role==='admin'?'<a href="/content-library/?work=1&amp;studio=team&amp;person='+encodeURIComponent(e.assignee||p.creator_id)+'">Set working hours</a>':'')+'</div>';
 }
 export function taskForecastLabel(p,e,data={}){
  const r=plannedRows(p,data).find(r=>r.entry.id===e.id);
- return r.finish?'Expected '+r.finish+(r.overdue?' · Deadline missed':r.atRisk?' · At risk':'')+(r.blocked?' · Waiting for prerequisites':''):r.error||'Add planning details';
+ return r.finish?(r.manual?'Deadline ':'Expected ')+r.finish+(r.overdue?' · Deadline missed':r.atRisk?' · At risk':'')+(r.blocked?' · Waiting for prerequisites':''):r.error||'Add planning details';
 }
 export function ganttPanel(p,data={}){
  const rows=plannedRows(p,data),today=todayLondon(),dates=rows.flatMap(r=>[r.start,r.finish,validDate(r.entry.due)?r.entry.due:'']).filter(Boolean);

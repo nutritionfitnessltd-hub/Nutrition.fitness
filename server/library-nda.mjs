@@ -1,4 +1,4 @@
-import {requireTeamWelcome} from './team-welcome.mjs';
+import {requireTeamWelcome,teamOnboardingProfile} from './team-welcome.mjs';
 import { signedDetails, detailsForm, signatureMarkup, identityImage } from './library-nda-details.mjs';
 import { createHash } from 'node:crypto';
 import { esc, link } from './library-shelves.mjs';
@@ -50,7 +50,13 @@ async function accountEmail(api,actor){
 export async function requireLibraryNda(req,res,{actor,api,params}){
   // Called only after authentication; never trust posted actor IDs, times or document text.
   try{
-    if(await requireTeamWelcome(req,res,{actor,api,params,render}))return true;
+    const profile=await teamOnboardingProfile(actor,api);
+    if(profile?.engagementType==='owner_director'){
+      const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
+      if(params.has('nda')||req.method==='POST'&&['accept-nda','acknowledge-welcome'].includes(f.action)){res.statusCode=303;res.setHeader('Location','/content-library/?work=1&studio=home');res.end();return true;}
+      return false;
+    }
+    if(await requireTeamWelcome(req,res,{actor,api,params,render,profile}))return true;
     const {version:ndaVersion,document_text:ndaText,document_hash:ndaHash,requires_identity:requiresIdentity}=await currentAgreement(api);
     const found=await accepted(api,actor,ndaHash);
     const record=found&&(!requiresIdentity||found.signed_details)?found:null;
