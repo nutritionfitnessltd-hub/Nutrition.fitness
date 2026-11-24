@@ -87,6 +87,7 @@ function exportPackage(params,data,res){
 }
 export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fetch,imageStore,taskFileStore}){
   const section=params.get('studio')||'home';
+  const live=params.get('live')==='1';params.delete('live');
   let data,meta;
   const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
   try{
@@ -131,9 +132,11 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       res.statusCode=303;res.setHeader('Cache-Control','private, no-store');
       res.setHeader('Location',url('review-preview',{id:r.id}).replaceAll('&amp;','&'));return res.end();
     }
-    meta=meta||{};
+    meta={...(meta||{})};
     data.trackingMeta=meta;
-    if(['home','team-work'].includes(section)&&actor.role==='admin'&&env.NUFI_HQ_SITE_TOKEN)await Promise.all([
+    const deferred=['home','team-work'].includes(section)&&actor.role==='admin'&&Boolean(env.NUFI_HQ_SITE_TOKEN)&&req.method==='GET'&&!live;
+    meta.workerDeferred=deferred;
+    if(['home','team-work'].includes(section)&&actor.role==='admin'&&env.NUFI_HQ_SITE_TOKEN&&!deferred)await Promise.all([
       workerIdeaSummaries(env,fetcher).then(value=>{data.hqIdeas=value;}),
       hqRequest(env,{action:'worker-production-state',worker:'imogen'},fetcher).then(value=>{data.hqProduction=value.production;}).catch(()=>{data.hqProductionUnavailable=true;})
     ]);

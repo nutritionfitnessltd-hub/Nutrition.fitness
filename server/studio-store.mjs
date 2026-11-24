@@ -28,7 +28,7 @@ export async function allRows(api,url){
 }
 export async function studioData(api,actor,load){
   let [index,overlays,projects,tasks,people,releases]=await Promise.all([
-    load(),allRows(api,itemTable+'?select=id,payload,revision,updated_at&order=id&id=not.like.studio:notification:*&and=(id.not.like.studio:task-thread:*)'),
+    load(),allRows(api,itemTable+'?select=id,payload,revision,updated_at&order=id&id=not.like.studio:notification:*&and=(id.not.like.studio:task-thread:*,id.not.like.studio:account-preview:*)'),
     allRows(api,projectTable+'?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&or=(creator_id.eq.'+actor.id+',entries.cs.'+encodeURIComponent(JSON.stringify([{assignee:actor.id}]))+')')),
     allRows(api,'/rest/v1/nufi_library_tasks?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&staff_id=eq.'+actor.id)),
     api('/rest/v1/nufi_library_staff?select=id,name'+(actor.role==='admin'?',email':'')+'&order=name',service),
@@ -45,6 +45,7 @@ export async function studioData(api,actor,load){
       projects.push(...shared.filter(p=>linked.has(p.id)&&!projects.some(old=>old.id===p.id)).map(p=>({...p,assignmentOnly:true})));
     }
   }
+  const sourceById=new Map(index.records.map(r=>[r.id,r]));
   const records=new Map(index.records.filter(r=>r.id.startsWith('training:')||r.fields?.recipeText).map(r=>[r.id,canonical(r)]));
   for(const row of overlays.filter(row=>row.payload.kind!=='task-thread'&&row.payload.kind!=='account-preview'&&(actor.role==='admin'||row.payload.kind!=='worker-request')))records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
   applyProgrammeResets(records);
@@ -52,7 +53,7 @@ export async function studioData(api,actor,load){
   const courseNames=new Set([...records.values()].filter(r=>r.kind==='course'&&r.status!=='Archived').flatMap(r=>[r.title,r.fields?.production?.collection].filter(Boolean).map(n=>n.trim().toLowerCase())));
   for(const source of index.records.filter(r=>r.kind==='Course outline'&&r.id.startsWith('course:'))){
     if(courseNames.has(source.title.trim().toLowerCase())||records.has(source.id))continue;
-    records.set(source.id,{id:source.id,title:source.title,kind:'course',status:'Original material',sourceOnly:true,shared:true,revision:0,fields:{modules:(source.fields?.modules||[]).map(m=>({title:m.title,lessons:(m.lessons||[]).map(id=>index.records.find(r=>r.id===id)?.title||id)}))}});
+    records.set(source.id,{id:source.id,title:source.title,kind:'course',status:'Original material',sourceOnly:true,shared:true,revision:0,fields:{modules:(source.fields?.modules||[]).map(m=>({title:m.title,lessons:(m.lessons||[]).map(id=>sourceById.get(id)?.title||id)}))}});
   }
   const teams=ideaTeams([...records.values()]);
   for(const [id,r] of records)if(isIdea(r)&&!canSeeIdea(actor,r,teams))records.delete(id);
