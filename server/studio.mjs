@@ -1,5 +1,5 @@
 import {peopleTaskModal,peopleTaskAction,linkedPeopleTasks} from './people-tasks.mjs';
-import {taskUploadToken,attachTaskFile,sendTaskFile} from './task-files.mjs';
+import {taskUploadToken,attachTaskFile,sendTaskFile,uploadSmallTaskFile,taskTransportData,sendUploadedAsset} from './task-files.mjs';
 import {taskPage,changeTaskPage} from './task-messages.mjs';
 import {notifyProjectTasks,notifyAssignment} from './task-notifications.mjs';
 import {suppliersPage,supplierPage,saveSupplier} from './studio-suppliers.mjs';
@@ -84,13 +84,13 @@ function exportPackage(params,data,res){
   res.setHeader('Content-Disposition','attachment; filename="nutrition-fitness-'+(approved?'release':'review')+'.json"');
   res.statusCode=200;res.end(JSON.stringify(payload,null,2));
 }
-export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fetch,imageStore}){
+export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fetch,imageStore,taskFileStore}){
   const section=params.get('studio')||'home';
   let data,meta;
   const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
   try{
     authorizeStudioRequest(actor,section,req.method,f,params);
-    if(Buffer.byteLength(JSON.stringify(f))>1200000)throw new HttpError(413,'Import a smaller section of this document.');
+    if(Buffer.byteLength(JSON.stringify(f))>(section==='task'&&f.action==='task-file-upload'?2900000:1200000))throw new HttpError(413,'Import a smaller section of this document.');
     if(req.method==='POST'&&f.action==='idea-generate-summary'){
       if(section!=='shiny-things')throw new HttpError(403,'Open Shiny Things to generate an idea explanation.');
       const summary=await generateIdeaSummary({actor,title:f.title,summary:f.summary,env,fetcher});
@@ -103,6 +103,10 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       const file=/^(?:[a-f0-9]{32}|brand-font)$/.test(id)&&await displayEntry(env,id);
       if(!file?.data||!['image/webp','image/png','image/jpeg','font/woff2'].includes(file.type))throw new HttpError(404,'Preview unavailable.');
       res.setHeader('Content-Type',file.type);res.statusCode=200;return res.end(Buffer.from(file.data,'base64'));
+    }
+    if(section==='task'&&req.method==='POST'&&(f.type==='blob.generate-client-token'||f.action==='task-file-upload')){
+      try{const scoped=await taskTransportData(params,actor,api);const result=f.action==='task-file-upload'?await uploadSmallTaskFile(params,f,scoped,api,env,taskFileStore?.put):await taskUploadToken({...req,body:f},params,scoped,api,env);res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify(result));}
+      catch(e){res.statusCode=e instanceof HttpError?e.status:503;res.setHeader('Content-Type','application/json; charset=utf-8');return res.end(JSON.stringify({error:e instanceof HttpError?e.message:'The upload service did not respond. Please retry.'}));}
     }
     [data,meta]=await Promise.all([studioData(api,actor,load),displayEntry(env,'shelves').catch(()=>({}))]);
     if(req.method==='POST'&&['people-task-create','people-task-edit','role-task-save','role-task-toggle'].includes(f.action)){
@@ -143,11 +147,12 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       return res.end('<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Edit '+esc(r.title)+'</title><link rel="stylesheet" href="/studio.css"><link rel="stylesheet" href="/review-window.css"><script type="module" src="/studio.js"></script></head><body class="review-editor-page" data-review-editor>'+editorForm(r.kind==='course'?courseEditorRecord(r,data):r,data)+referenceData(data)+'</body></html>');
     }
 
+    if(section==='task-asset-file')return await sendUploadedAsset(req,res,params,data,api,env);
     if(section==='task'){
       data.taskUploadsReady=Boolean(env.BLOB_READ_WRITE_TOKEN);
       if(req.method==='GET'&&params.has('file'))return await sendTaskFile(req,res,params,data,api,env);
       if(req.method==='POST'&&(f.type==='blob.generate-client-token'||f.action==='task-file-save')){
-        try{const result=f.action==='task-file-save'?await attachTaskFile(params,f,data,api,env):await taskUploadToken({...req,body:f},params,data,api,env);res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify(result||{saved:true}));}
+        try{const result=f.action==='task-file-save'?await attachTaskFile(params,f,data,api,env,taskFileStore?.head,taskFileStore?.get,fetcher):await taskUploadToken({...req,body:f},params,data,api,env);res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify(result||{saved:true}));}
         catch(e){res.statusCode=e instanceof HttpError?e.status:503;res.setHeader('Content-Type','application/json; charset=utf-8');return res.end(JSON.stringify({error:e instanceof HttpError?e.message:'The task attachment could not be saved.'}));}
       }
       let error='',status=200,retained={};
