@@ -1,3 +1,4 @@
+import {isStagedRecipe,recipeStagingPage} from './recipe-staging.mjs';
 import {collectionKinds,supportKinds,supportingLibrary,collectionPlacementFields,collectionHeader} from './studio-collections.mjs';
 import {documentText} from './document-reader.mjs';
 import {schedulingInputs,taskScheduleSummary,ganttPanel} from './studio-project-schedule.mjs';
@@ -86,6 +87,9 @@ function typeCards(sections,counts,bucket){
   }).join('')+'</nav>';
 }
 export function library(params,data,meta={}){
+  const recipeSection=params.get('kind')==='recipe'||params.get('category')==='recipes',stagingCount=data.items.filter(isStagedRecipe).length;
+  if(recipeSection&&params.get('bucket')==='staging')return recipeStagingPage(params,data);
+  if(recipeSection)data={...data,items:data.items.filter(r=>!isStagedRecipe(r))};
   const worker=Object.hasOwn(workerNames,params.get('worker'))?params.get('worker'):'';
   if(worker)data={...data,items:workerContent(data,worker)};
   const mine=params.get('view')==='mine';
@@ -93,7 +97,7 @@ export function library(params,data,meta={}){
   const bucket=['published','drafts','checked'].includes(params.get('bucket'))?params.get('bucket'):'all';
   const published=r=>r.publication?.status==='published';
   data={...data,items:data.items.filter(r=>bucket==='published'?published(r):bucket==='checked'?r.status==='Approved'&&!published(r):bucket==='drafts'?!r.sourceOnly&&!published(r)&&r.status!=='Approved':true)};
-  const lifecycle='<nav class="tabs" aria-label="Content status">'+[['all','All content'],['drafts','Drafts'],['checked','Checked'],['published','Published']].map(([id,title])=>'<a href="'+url('library',{bucket:id,kind:params.get('kind')||'',worker,view:mine?'mine':''})+'"'+(id===bucket?' aria-current="page"':'')+'>'+title+'</a>').join('')+'</nav>';
+  const lifecycle='<nav class="tabs" aria-label="Content status">'+[['all','All content'],['drafts','Drafts'],['checked','Checked'],['published','Published']].map(([id,title])=>'<a href="'+url('library',{bucket:id,kind:params.get('kind')||'',worker,view:mine?'mine':''})+'"'+(id===bucket?' aria-current="page"':'')+'>'+title+'</a>').join('')+(recipeSection?'<a href="'+url('library',{kind:'recipe',bucket:'staging'})+'">Staging ('+stagingCount+')</a>':'')+'</nav>';
   const exercise=params.get('studio')==='exercises',kind=params.get('kind')||shelves[params.get('category')]?.create||'',q=(params.get('q')||'').toLowerCase(),state=params.get('state')||'';
   if(supportKinds.has(kind)&&!q&&!state&&!worker&&!mine)return supportingLibrary(params,data,kind);
   if(!worker&&!exercise&&!kind&&!q&&!state&&!['all','mine'].includes(params.get('view'))){

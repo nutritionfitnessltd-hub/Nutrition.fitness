@@ -9,7 +9,7 @@
     "api/workspace-assistant.js": {"maxDuration": 120},
     "api/content.js": {
       "maxDuration": 120,
-      "includeFiles": "server/{guest-catalogue.enc,brand-assets/**}"
+      "includeFiles": "server/{guest-catalogue.enc,brand-assets/**,recipe-staging-images/**}"
     },
     "api/course-production.js": {
       "includeFiles": "server/guest-catalogue.enc"
