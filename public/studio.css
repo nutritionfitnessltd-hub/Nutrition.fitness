@@ -672,3 +672,20 @@ body.team-profile-open{overflow:hidden}.team-profile-modal{width:min(800px,calc(
 .team-worker-counts{display:flex;gap:12px;flex-wrap:wrap;color:#536b7c;font-size:12px}
 .team-worker-card footer{margin-top:auto;padding-top:16px;border-top:1px solid #e4e9e7}.team-worker-card footer .studio-actions{margin-top:12px}
 @media(max-width:650px){.team-worker-card{padding:20px}.team-worker-card .studio-actions{flex-wrap:wrap}}
+
+/* Simple task planning: one row per task, detail only when opened. */
+.simple-planner-task{margin:12px 0;padding:18px 20px;border:1px solid #d6ddd9;border-radius:12px;background:#fff}
+.simple-planner-task>summary,.project-task-row>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer}
+.simple-planner-task>summary>span:first-child{display:grid;gap:6px;min-width:0}
+.simple-planner-task summary strong{font-size:17px;overflow-wrap:anywhere}
+.simple-planner-task summary small{font-size:13px;color:#536572;line-height:1.5}
+.simple-planner-task[open]>summary{margin-bottom:20px}
+.simple-task-planning{display:block!important;min-width:0;padding:18px;border:1px solid #d6ddd9;border-radius:10px}
+.simple-task-planning>label{display:block;max-width:420px;margin-bottom:14px}
+.task-prerequisites{display:grid;gap:8px;margin:12px 0;max-height:240px;overflow:auto}
+.task-prerequisites label{display:flex!important;align-items:flex-start;gap:10px;padding:10px;background:#faf6ef;border-radius:7px;line-height:1.4}
+.task-prerequisites input[type=checkbox]{width:18px;min-width:18px;height:18px;margin:1px 0 0;accent-color:#06475e}
+.task-extra{margin:12px 0}.task-extra>summary{cursor:pointer;color:#06475e}.planner-question{color:#805c19}
+.project-gantt>summary{font-size:18px;font-weight:600;cursor:pointer}
+.project-task-fields .simple-task-planning{grid-column:1/-1}
+@media(max-width:650px){.simple-planner-task{padding:15px}.simple-planner-task>summary{align-items:flex-start;flex-wrap:wrap}.simple-task-planning{padding:12px}}
