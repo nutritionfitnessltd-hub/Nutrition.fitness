@@ -1,3 +1,4 @@
+import './studio-project-schedule.js';
 import './studio-newsletters.js';
 import './studio-team-modal.js';
 import './studio-shiny-modal.js';

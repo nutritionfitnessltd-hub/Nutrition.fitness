@@ -1,4 +1,4 @@
-import {scheduleFields,validateDependencies} from './studio-project-schedule.mjs';
+import {scheduleFields,validateDependencies,reorderAndSchedule} from './studio-project-schedule.mjs';
 import {requireAccess} from './library-permissions.mjs';
 import {projectTasks,ownsTask,canManageTasks} from './studio-project-tasks.mjs';
 import {reviewCourseStructure} from './studio-courses.mjs';
@@ -200,7 +200,7 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
         record:r?.id||null,scopeIds:r&&data.actor.role==='admin'?[...descendants([r.id],data.items)]:[],assignedAsset:data.actor.role==='admin',status:'To do',notes:cleanText(f.notes||'',4000)});
       scheduleFields(f,entries.at(-1),entries);update.entries=entries;
     }
-    if(update.entries)validateDependencies(update.entries);
+    if(update.entries){validateDependencies(update.entries);update.entries=reorderAndSchedule(update.entries,f.entry||update.entries.at(-1)?.id,f.schedulePresent==='1'?f.position:undefined);}
     await saveProject(api,data.actor,p,update);return {section:'project',project:p.id,week};
   }
   throw new HttpError(400,'Choose a valid studio action.');
