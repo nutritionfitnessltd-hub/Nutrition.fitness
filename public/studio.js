@@ -1,4 +1,5 @@
 import './studio-navigation.js';
+import './studio-video-modal.js';
 import './studio-engagement.js';
 import './studio-task-modal.js';
 import './studio-project-schedule.js';

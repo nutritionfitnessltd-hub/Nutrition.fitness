@@ -1,3 +1,4 @@
+import {checkedVideo} from './production-video.mjs';
 import {randomUUID} from 'node:crypto';
 import {productionWorkState,workStates} from './production-work-state.mjs';
 import {canAccess,canReadContent,canReviewContent} from './library-permissions.mjs';
@@ -56,10 +57,12 @@ export function productionRowLinks(row,data,{pilot=false,working=false}={}){
  const r=row.record;if(!r)return '';
  const files=(r.fields?.production?.files||[]).filter(f=>f.bytes>0&&/^[a-f0-9]{64}$/.test(f.sha256||'')&&productionFileUrl(f.url));
  // Supporting exports stay on the asset page instead of duplicating row actions.
- const video=files.find(f=>/\.mp4(?:$|\?)/i.test(productionFileUrl(f.url)));
- const links=video?['<a class="btn" href="'+esc(productionFileUrl(video.url))+'" target="_blank" rel="noopener noreferrer" title="'+esc((pilot||working?'Previous export; replacement in progress. ':'')+(video.name||'Checked video export'))+'">Open video</a>']:[];
- // A tracking summary alone never grants permission to open a draft.
- if(!pilot&&!working&&row.status==='Awaiting review'&&files.length&&r.status!=='Approved'&&canReviewContent(data,r))links.unshift(form('review-decision',hidden('revision',r.revision)+hidden('decision','approve')+hidden('reviewId',randomUUID()),{section:'review-preview',id:r.id},'Approve'));
+ const video=checkedVideo(r),canApprove=!pilot&&!working&&row.status==='Awaiting review'&&r.status!=='Approved'&&canReviewContent(data,r);
+ const links=video&&canReadContent(data,r)?['<a class="btn" data-production-video data-video-title="'+esc(r.title)+'" data-video-src="'+url('video-source',{id:r.id,sha:video.sha256,revision:r.revision})+'" href="'+esc(productionFileUrl(video.url))+'" target="_blank" rel="noopener noreferrer" title="'+esc((pilot||working?'Previous export; replacement in progress. ':'')+(video.name||'Checked video export'))+'">Open video</a>']:[];
+ if(canApprove&&files.length){
+  const approval=form('review-decision',hidden('revision',r.revision)+hidden('decision','approve')+hidden('reviewId',randomUUID())+(video?hidden('videoSha256',video.sha256):''),{section:'review-preview',id:r.id,...(video?{fragment:'1'}:{})},'Approve',video?'data-video-approval':'');
+  if(video&&links.length)links.push('<div data-video-approval-source hidden>'+approval+'</div>');else if(!video)links.unshift(approval);
+ }
  if(canReadContent(data,r))links.push('<a class="btn" href="'+url('item',{id:r.id})+'">Open asset</a>');
  return links.length?'<div class="studio-actions tracker-file-actions">'+links.join('')+'</div>':'';
 }

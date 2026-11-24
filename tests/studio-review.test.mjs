@@ -159,3 +159,12 @@ test('boxed editor requires editing access and does not approve on open',async()
  let res=out();await handleStudio({method:'GET'},res,opts);assert.equal(res.statusCode,200);assert.match(res.body,/data-review-editor/);assert.match(res.headers['Content-Security-Policy'],/frame-ancestors 'self'/);assert.equal(res.headers['X-Frame-Options'],'SAMEORIGIN');assert.match(res.body,/id="studio-editor-form"/);assert.doesNotMatch(res.body,/Studio navigation/);assert.equal(f.writes,0);
  res=out();await handleStudio({method:'GET'},res,{...opts,actor:{role:'staff',id:'reviewer',access:{library:true,work:true,edit:false,review_articles:true}}});assert.equal(res.statusCode,403);assert.doesNotMatch(res.body,/id="studio-editor-form"/);assert.equal(f.writes,0);
 });
+
+
+test('video approval records the checked export and refuses a replacement without writing',async()=>{
+ const f=fixture(),sha='a'.repeat(64),r=f.data.byId.get('worker:sample');
+ r.fields.production={files:[{name:'lesson.mp4',url:'https://nutritionfitness.sharepoint.com/sites/Nutrition.fitness/Shared%20Documents/lesson.mp4',bytes:10,sha256:sha}]};
+ const fields={action:'review-decision',decision:'approve',revision:'1',reviewId:randomUUID(),videoSha256:sha};
+ await assert.rejects(reviewDecision(params,{...fields,videoSha256:'b'.repeat(64)},f.data,f.api),/export changed/);assert.equal(f.writes,0);
+ const result=await reviewDecision(params,fields,f.data,f.api);assert.deepEqual(result.record.reviewFeedback[0].videoReview,{sha256:sha,filename:'lesson.mp4'});assert.equal(result.record.status,'Approved');
+});
