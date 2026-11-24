@@ -1,3 +1,4 @@
+import {roleTasksPanel} from './people-tasks.mjs';
 import {isIdea,ideaTeams,canSeeIdea} from './idea-visibility.mjs';
 import {workerSettingsPanel} from './team-worker-settings.mjs';
 import {assignmentForm,assignmentProjectId} from './team-assignments.mjs';
@@ -73,7 +74,7 @@ export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarku
     const member=members.find(m=>m.id===person.id),work=personWork(person,data);
     return '<div class="team-profile" data-team-profile>'+profileHeader(teamAvatar(member),person.name,member.role,member.owner?'Administrator account':person.code_hash?(work.open.length?taskCount(work.open.length):'No open tasks recorded'):'Access disabled')+
       (person.email?'<p class="team-profile-email">'+esc(person.email)+'</p>':'')+'<div class="studio-actions">'+(person.email?button('Email '+person.name,'mailto:'+encodeURIComponent(person.email)):'')+button('View work','/content-library/?work=1&assignments=1&staff='+encodeURIComponent(person.id))+linkButton('Assign work',teamUrl({person:person.id,assign:'1'}))+'</div>'+
-      teamReportingPanel(member,members)+
+      teamReportingPanel(member,members)+roleTasksPanel({...data,actor,people:members.filter(p=>!p.worker)},person.id)+
       '<section class="team-profile-section"><h2>Role & responsibilities</h2>'+teamProfileEditor(member,members)+'</section>'+
       '<section class="team-profile-section"><h2>Current work</h2>'+list(work.projects.filter(p=>!finished(p.status)),p=>'<a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a>'+badge(p.status),'No active projects assigned.')+list(work.open.slice(0,15),row,'No open tasks recorded.')+'</section>'+
       '<section class="team-profile-section"><h2>Recent completed work</h2>'+list(work.recent,row,'No completed work recorded.')+'</section>'+

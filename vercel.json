@@ -5,6 +5,7 @@
   "outputDirectory": "dist",
   "trailingSlash": true,
   "functions": {
+    "api/role-task-sync.js": {"maxDuration": 120},
     "api/workspace-assistant.js": {"maxDuration": 120},
     "api/content.js": {
       "maxDuration": 120,
@@ -95,6 +96,7 @@
     "NUFI_AUTH_CAPTCHA_READY": "false"
   },
   "crons": [
+    {"path":"/api/role-task-sync/","schedule":"0 * * * *"},
     {"path":"/api/publication-sync/","schedule":"*/5 * * * *"},
     {
       "path": "/api/newsletter-sync/",

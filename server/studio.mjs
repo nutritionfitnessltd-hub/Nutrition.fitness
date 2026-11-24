@@ -1,3 +1,4 @@
+import {peopleTaskModal,peopleTaskAction,linkedPeopleTasks} from './people-tasks.mjs';
 import {taskUploadToken,attachTaskFile,sendTaskFile,uploadSmallTaskFile,taskTransportData,sendUploadedAsset} from './task-files.mjs';
 import {taskPage,changeTaskPage} from './task-messages.mjs';
 import {notifyProjectTasks,notifyAssignment} from './task-notifications.mjs';
@@ -108,6 +109,9 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       catch(e){res.statusCode=e instanceof HttpError?e.status:503;res.setHeader('Content-Type','application/json; charset=utf-8');return res.end(JSON.stringify({error:e instanceof HttpError?e.message:'The upload service did not respond. Please retry.'}));}
     }
     [data,meta]=await Promise.all([studioData(api,actor,load),displayEntry(env,'shelves').catch(()=>({}))]);
+    if(req.method==='POST'&&['people-task-create','people-task-edit','role-task-save','role-task-toggle'].includes(f.action)){
+      const next=await peopleTaskAction(f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();
+    }
     if(req.method==='GET'&&section==='project')await loadPlanner(data,api);
     if(req.method==='GET'&&section==='item'){
       const r=data.byId.get(params.get('id'));
@@ -294,7 +298,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       case 'product':body=productPage(params,data);break;
       case 'product-creatives':body=creativesPage(params,data);break;
       case 'product-asset':body=productAssetPage(params,data);break;
-      case 'home':body=home(data,meta);break;
+      case 'home':body=home(data,meta)+peopleTaskModal(data,params);break;
       case 'shiny-things':body=shinyThingsPage(params,data,{},env);break;
       case 'assets':body=assetsPage(data);break;
       case 'brand-media':body=brandMediaPage(data);break;
@@ -311,7 +315,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       case 'project':{
         const project=data.projects.find(p=>p.id===params.get('project'));
         await loadProjectProductionDates(api,project,data);
-        body=(project?.studio?.ideaId||isProductionTracker(project))&&!project.assignmentOnly?ideaProjectPage(params,data,meta||{}):projectPage(params,data);break;
+        body=(project?.studio?.ideaId||isProductionTracker(project))&&!project.assignmentOnly?ideaProjectPage(params,data,meta||{}):projectPage(params,data);body+=linkedPeopleTasks(project,data);break;
       }
       case 'item':body=itemPage(params,data);if(data.byId.has(params.get('id')))body+=publicationPanel(data.byId.get(params.get('id')),data);break;
       case 'new':body=newItem(params,data);break;
@@ -404,6 +408,9 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       body+=createPage(new URLSearchParams({template:f.template}),data,f);
     }else if(req.method==='POST'&&['import-preview','import-save'].includes(f.action)&&data){
       body+=importPage(params,data,'',f);
+    }else if(req.method==='POST'&&['people-task-create','people-task-edit','role-task-save'].includes(f.action)&&data?.actor.role==='admin'){
+      const retainedParams=new URLSearchParams(f.action==='role-task-save'?{roleTask:'studio:role-task:'+f.id}:f.action==='people-task-edit'?{editTask:f.id}:{newTask:'1'});
+      body+=peopleTaskModal(data,retainedParams,f);
     }else body+=button('Return to the studio',url());
     if(['suppliers','supplier','products','product','product-creatives','product-asset'].includes(section))body='<div class="product-space">'+body+'</div>';
     return write(res,error instanceof HttpError?error.status:503,body,section,actor,meta);

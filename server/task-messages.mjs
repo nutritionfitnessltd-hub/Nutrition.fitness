@@ -31,7 +31,7 @@ export async function taskPage(params,data,api,retained={},error=''){
  const task=taskContext(params,data),thread=await threadFor(task,api),messages=thread.payload.fields.messages||[];
  const page=Math.max(0,Math.min(Math.max(0,Math.ceil(messages.length/25)-1),parseInt(params.get('messagePage'))||0));
  const end=messages.length-page*25,visible=messages.slice(Math.max(0,end-25),end);
- return '<div class="project-document task-conversation">'+button('← Back to work',task.back)+heading(task.title,task.status)+'<section><h2>Task brief</h2>'+documentText(task.brief||'No brief recorded.',{headingLevel:3})+'</section>'+
+ return '<div class="project-document task-conversation">'+button('← Back to work',task.back)+heading(task.title,task.status)+(data.actor.role==='admin'&&params.get('task')?button('Edit this task',url('home',{editTask:params.get('task')})):'')+'<section><h2>Task brief</h2>'+documentText(task.brief||'No brief recorded.',{headingLevel:3})+'</section>'+
  (canUpdateTask(task,data.actor)?'<section id="task-update"><h2>Update task</h2>'+form('assignment-status',hidden('revision',task.revision)+select('status','Status',Object.fromEntries(taskStatuses.map(s=>[s,s])),retained.status||task.status),{section:'task',...task.values},'Save status')+
  (task.status!=='Done'?form('assignment-status',hidden('revision',task.revision)+hidden('status','Done'),{section:'task',...task.values},'Mark complete'):'<p role="status">This task is complete. Choose a different status above to reopen it.</p>')+'</section>':'')+
  '<section id="task-notes"><h2>Progress notes</h2><p class="meta">Record progress, decisions and anything needed to finish this task.</p>'+
