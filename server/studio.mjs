@@ -122,7 +122,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         readable(data,r.id);res.statusCode=303;res.setHeader('Location',url(r.kind==='product'?'product':'product-asset',{id:r.id,...(params.get('tab')==='edit'?{tab:'edit'}:{})}).replaceAll('&amp;','&'));return res.end();
       }
     }
-    if(section==='video-source')return await productionVideoSource(req,res,params,data,env,fetcher);
+    if(section==='video-source')return await productionVideoSource(req,res,params,data);
     if(section==='product-file')return await sendProductFile(req,res,params,data,env);
     if(req.method==='POST'&&(section==='product-upload'||f.action==='product-file-save')){
       const result=section==='product-upload'?await productUploadToken(req,params,data,env):await attachProductFile(params,f,data,api,env);
