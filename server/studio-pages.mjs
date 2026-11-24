@@ -36,7 +36,7 @@ const personOptions=d=>Object.fromEntries(d.people.map(p=>[p.id,p.name]));
 const projectChoices=d=>({'':'Library only',...Object.fromEntries(d.projects.filter(p=>p.status!=='Complete').map(p=>[p.id,p.name]))});
 const contentRow=r=>'<div>'+itemLink(r)+'<small>'+esc(kinds[r.kind]||r.kind)+'</small></div>'+badge(r.publication?.status==='published'?'Published':r.status);
 const collections={
-  theme:['Themes','Collections such as Passport, with their meal plans, messages and campaign assets.','Layers'],
+  theme:['Themes','Martina’s monthly seasonal themes, connecting meal plans, challenges, programmes and supporting content.','Layers'],
   programme:['Programmes','Training plans, organised by level.','Dumbbell'],
   recipe:['Recipes','Ingredients, methods and nutrition information.','Utensils'],
   mealplan:['Meal plans','Weekly menus and recipe collections.','Utensils'],

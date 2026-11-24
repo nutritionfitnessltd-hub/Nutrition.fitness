@@ -1,18 +1,19 @@
 // Shared by the website tests and the authenticated worker ingress.
 export class DraftError extends Error { constructor(status,message){super(message);this.status=status;} }
-export const workerKinds=['article','recipe','lesson','email','newsletter','marketing','asset','video','course','programme','challenge','mealplan','ebook','stage','structure','session','exercise','activity','rule','review','learning','communication','campaign'];
+export const workerKinds=['theme','article','recipe','lesson','email','newsletter','marketing','asset','video','course','programme','challenge','mealplan','ebook','stage','structure','session','exercise','activity','rule','review','learning','communication','campaign'];
 const mapped={email:'communication',newsletter:'communication',marketing:'campaign',video:'asset'};
-const workerIds=['nina','imogen','marcus','rory'];
+const workerIds=['nina','imogen','marcus','rory','martina'];
 export function draftWorker(input,current){
  const named=input.fields?.workerId??input.fields?.worker;
  if(named!==undefined){
   const id=typeof named==='string'?named.toLowerCase():'';
-  if(!workerIds.includes(id))throw new DraftError(400,'Set fields.workerId to nina, imogen, marcus or rory.');
+  if(!workerIds.includes(id))throw new DraftError(400,'Set fields.workerId to nina, imogen, marcus, rory or martina.');
   return id;
  }
  if(current?.payload.workerId)return current.payload.workerId;
  if(workerIds.includes(current?.payload.workerSource?.workerId))return current.payload.workerSource.workerId;
  // Route unnamed connector deliveries to the role responsible for the requested output.
+ if(input.kind==='theme')return 'martina';
  if(['course','lesson','challenge'].includes(input.kind))return 'imogen';
  if(['programme','stage','structure','session','exercise','activity','rule','review'].includes(input.kind))return 'marcus';
  if(['video','asset'].includes(input.kind)||input.fields?.type==='Video'||input.fields?.channel==='Social')return 'rory';

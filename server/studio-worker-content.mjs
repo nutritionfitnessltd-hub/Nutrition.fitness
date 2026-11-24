@@ -10,6 +10,8 @@ export function contentWorker(record,byId=new Map(),seen=new Set()){
     const id=workerKey(value);if(id)return id;
   }
   if(record.parent){const id=contentWorker(byId.get(record.parent),byId,seen);if(id)return id;}
+  // Themes belong to Martina unless an explicit assignment overrides the default.
+  if(record.kind==='theme')return 'martina';
   // Compatibility for Nina's original connector articles, which predate named attribution.
   if(record.workerSource?.system==='Content Manager connector'&&record.workerSource.kind==='article')return 'nina';
   return '';

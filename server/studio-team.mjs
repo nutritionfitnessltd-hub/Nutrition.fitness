@@ -57,7 +57,7 @@ export function renderTeamPage({params,actor,staff,data,accessMarkup,createMarku
     const recent=(hqChat?.messages||[]).filter(m=>m.role==='assistant').slice(-3).reverse();
     const view=workerKey==='morgan'?url('shiny-things'):workerKey==='ellis'?url('software-releases'):url('library',{worker:workerKey,view:'all'});
     return '<div class="team-profile" data-team-profile>'+profileHeader(teamAvatar(w),w.name,w.role,'AI worker · '+state)+
-      '<div class="studio-actions">'+linkButton('Message '+w.name,url('worker-chat',{worker:workerKey}))+linkButton('Assign work',url('worker-chat',{worker:workerKey,brief:'1'}))+button('View work',view)+'</div>'+
+      '<div class="studio-actions">'+linkButton('Message '+w.name,url('worker-chat',{worker:workerKey}))+linkButton('Assign work',url('worker-chat',{worker:workerKey,brief:'1'}))+button('View work',view)+(workerKey==='martina'?button('Themes',url('library',{kind:'theme'}))+button('Create theme',url('new',{kind:'theme'})):'')+'</div>'+
       workerSettingsPanel(workerKey,hqSettings,hqSettingsError,hqChat?.employee?.instructions)+
       teamReportingPanel(w,members)+
       '<section class="team-profile-section"><h2>Role & responsibilities</h2>'+teamProfileEditor(w,members)+'<p class="meta">This profile describes their role in the team. Edit their AI instructions in the AI prompt section above.</p></section>'+
