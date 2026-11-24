@@ -1,3 +1,4 @@
+import {saveTeamEmail,loadTeamIdentity} from './team-contact.mjs';
 import {notifyAssignment,notifyProjectTasks} from './task-notifications.mjs';
 import {workerSettingsCommand} from './team-worker-settings.mjs';
 import {saveOrganisation} from './team-organisation.mjs';
@@ -125,6 +126,7 @@ async function teamScreen(api,actor,origin,env,params=new URLSearchParams(),fetc
   if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
   let [staff,data]=await Promise.all([api(staffTable+'?select=id,name,email,code_hash,access,access_revision&order=name.asc',service),teamWorkSnapshot(api)]);
   staff=await includeAdministrator(api,actor,staff);
+  if(params.get('person')&&params.get('person')!=='new'){const id=params.get('person')==='owner'?actor.id:params.get('person');if(staff.some(p=>p.id===id)){try{data.personIdentity=await loadTeamIdentity(api,actor,id);}catch{data.personIdentityUnavailable=true;}}}
   const target=link({work:'1',studio:'team'});
   const createMarkup=form('create-user','<label>Full name<input name="name" maxlength="100" required autocomplete="off"></label><label>Email<input name="email" type="email" maxlength="254" required autocomplete="off"></label>'+accessFields(null)+'<button class="primary">Create user</button>',target);
   const accessMarkup=s=>'<p>'+(s.code_hash?'Access enabled':'Access disabled or password not set')+'</p><div class="studio-actions">'+(s.code_hash?'<details class="team-welcome-details"><summary>Reset password</summary>'+welcomePanel(s,{origin,env,purpose:'reset'})+'</details>':form('issue-code',field('staff',s.id)+'<button>Enable account</button>',target))+(s.code_hash?form('disable-user',field('staff',s.id)+'<button>Disable access</button>',target):'')+'</div>'+form('save-access',field('staff',s.id)+field('accessRevision',s.access_revision||1)+accessFields(s.access)+'<div class="studio-actions"><button class="primary">Save access</button><button type="submit" name="previewAccount" value="yes" data-account-preview formaction="/content-library/?work=1&amp;studio=account-preview" formtarget="_blank" formnovalidate>Preview account ↗</button></div>',target)+(s.code_hash?'<details class="team-welcome-details"><summary>Send welcome details to '+esc(s.name)+'</summary>'+welcomePanel(s,{origin,env})+'</details>':'<p class="meta">Enable this account to prepare its welcome email and password setup link.</p>');
@@ -312,6 +314,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
           if(welcomeJson)return json(200,{state:result.state,detail:result.detail});
           return writePage(res,200,'<h1>'+(purpose==='reset'?'Password reset email':'Welcome email')+'</h1>'+welcomePanel(result.person,{origin,env,draft:f,result,purpose})+'<a href="'+link({work:'1',studio:'team'})+'">Back to Team & permissions</a>',actor,'team');
         }
+        if(f.action==='team-email-save'){await saveTeamEmail(f,actor,api);res.statusCode=303;res.setHeader('Location',route+'&studio=team&person='+encodeURIComponent(f.staff)+'&saved=email');return res.end();}
         if(f.action==='team-assign'){
           const [staff,projects]=await Promise.all([api(staffTable+'?select=id,name,email&order=name.asc',service),allRows(api,'/rest/v1/nufi_library_projects?select=*&order=created_at.desc,id')]);
           const person=staff.find(p=>p.id===f.staff);if(!person)throw new HttpError(404,'This person is unavailable.');
