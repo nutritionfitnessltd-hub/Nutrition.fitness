@@ -1,3 +1,4 @@
+import {taskUploadToken,attachTaskFile,sendTaskFile} from './task-files.mjs';
 import {taskPage,changeTaskPage} from './task-messages.mjs';
 import {notifyProjectTasks,notifyAssignment} from './task-notifications.mjs';
 import {suppliersPage,supplierPage,saveSupplier} from './studio-suppliers.mjs';
@@ -139,9 +140,15 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }
 
     if(section==='task'){
+      data.taskUploadsReady=Boolean(env.BLOB_READ_WRITE_TOKEN);
+      if(req.method==='GET'&&params.has('file'))return await sendTaskFile(req,res,params,data,api,env);
+      if(req.method==='POST'&&(f.type==='blob.generate-client-token'||f.action==='task-file-save')){
+        try{const result=f.action==='task-file-save'?await attachTaskFile(params,f,data,api,env):await taskUploadToken({...req,body:f},params,data,api,env);res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify(result||{saved:true}));}
+        catch(e){res.statusCode=e instanceof HttpError?e.status:503;res.setHeader('Content-Type','application/json; charset=utf-8');return res.end(JSON.stringify({error:e instanceof HttpError?e.message:'The task attachment could not be saved.'}));}
+      }
       let error='',status=200,retained={};
       if(req.method==='POST'){
-        try{const pending=await changeTaskPage(params,f,data,api,env,fetcher);const values=Object.fromEntries([...params].filter(([key])=>['project','entry','task'].includes(key)));res.statusCode=303;res.setHeader('Location',url('task',{...values,...(pending?{notification:'pending'}:{})}).replaceAll('&amp;','&')+'#task-messages');return res.end();}
+        try{const pending=await changeTaskPage(params,f,data,api,env,fetcher);const values=Object.fromEntries([...params].filter(([key])=>['project','entry','task'].includes(key)));res.statusCode=303;res.setHeader('Location',url('task',{...values,...(pending?{notification:'pending'}:{})}).replaceAll('&amp;','&')+(f.action==='task-message'?'#task-messages':f.action==='task-note'?'#task-notes':'#task-update'));return res.end();}
         catch(e){if(!(e instanceof HttpError))throw e;status=e.status;error=e.message;retained=f;}
       }
       return write(res,status,await taskPage(params,data,api,retained,error),section,actor,meta);

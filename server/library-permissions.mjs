@@ -79,7 +79,7 @@ const actions = {
   'import-preview': ['studio', 'originals', 'edit'], 'import-save': ['studio', 'originals', 'edit'],
   'ai-draft': ['library', 'edit', 'ai'], 'mealplan-generate': ['library', 'edit', 'ai'],
   'mealplan-image-generate': ['library', 'edit', 'ai'],
-  'task-message': ['work'], 'assignment-status': ['work','edit'], 'task-save': ['work', 'edit'], 'task-add': ['work', 'edit'],
+  'task-message': ['work'], 'task-note': ['work','edit'], 'task-file-save': ['work','edit'], 'assignment-status': ['work','edit'], 'task-save': ['work', 'edit'], 'task-add': ['work', 'edit'],
   'task-delete': ['work', 'edit'], 'task-restore': ['work', 'edit'], 'tracking-update': ['work', 'edit'],
   'task-attach': ['work', 'library', 'edit'], 'project-save': ['work', 'edit']
 };
@@ -93,6 +93,7 @@ export function authorizeStudioRequest(actor, section, method, fields = {}, para
   if (!Object.hasOwn(routes, section)) throw new HttpError(403, 'Administrator access is required.');
   requireAccess(actor, ...routes[section]);
   if (method === 'POST') {
+    if(section==='task'&&fields.type==='blob.generate-client-token'){requireAccess(actor,'work','edit');return;}
     if (section === 'product-upload' && fields.type === 'blob.generate-client-token') { requireAccess(actor,'library','edit'); return; }
     if (!Object.hasOwn(actions, fields.action)) throw new HttpError(403, 'This action is not available to your account.');
     requireAccess(actor, ...actions[fields.action]);

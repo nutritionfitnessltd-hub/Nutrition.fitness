@@ -17,10 +17,10 @@ for(const panel of document.querySelectorAll('[data-product-upload]')){
    if(slot.value==='Thumbnail'&&!type.startsWith('image/'))throw new Error('Choose an image for the thumbnail.');
    if(!uploaded){
     status.textContent='Uploading privately…';
-    uploaded=await upload(panel.dataset.prefix+crypto.randomUUID()+'.'+ext,file,{access:'private',contentType:type,handleUploadUrl:'/content-library/?work=1&studio=product-upload&id='+encodeURIComponent(panel.dataset.id),multipart:file.size>5*1024*1024,onUploadProgress:e=>{progress.value=e.percentage;status.textContent='Uploading… '+Math.round(e.percentage)+'%';}});
+    uploaded=await upload(panel.dataset.prefix+crypto.randomUUID()+'.'+ext,file,{access:'private',contentType:type,handleUploadUrl:panel.dataset.uploadUrl||'/content-library/?work=1&studio=product-upload&id='+encodeURIComponent(panel.dataset.id),multipart:file.size>5*1024*1024,onUploadProgress:e=>{progress.value=e.percentage;status.textContent='Uploading… '+Math.round(e.percentage)+'%';}});
    }
-   status.textContent='Saving the file to this asset…';
-   const response=await fetch('/content-library/?work=1&studio=product-asset&id='+encodeURIComponent(panel.dataset.id),{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({action:'product-file-save',pathname:uploaded.pathname,name:file.name,slot:slot.value})});
+   status.textContent=panel.dataset.saveAction==='task-file-save'?'Saving the file to this task…':'Saving the file to this asset…';
+   const response=await fetch(panel.dataset.saveUrl||'/content-library/?work=1&studio=product-asset&id='+encodeURIComponent(panel.dataset.id),{method:'POST',headers:{'Content-Type':'application/json','Accept':'application/json'},body:JSON.stringify({action:panel.dataset.saveAction||'product-file-save',pathname:uploaded.pathname,name:file.name,slot:slot.value})});
    const result=await response.json();if(!response.ok)throw new Error(result.error||'The file could not be attached.');
    uploaded=null;
    status.textContent='Saved '+(index+1)+' of '+files.length+' files.';
