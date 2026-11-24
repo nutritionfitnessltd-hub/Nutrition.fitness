@@ -7,9 +7,11 @@ function adminOnly(actor){if(actor.role!=='admin')throw new HttpError(403,'Only 
 export async function accountPreview(fields,{actor,api}){
  adminOnly(actor);
  const id=String(fields.staff||'');if(!/^[a-f0-9-]{36}$/i.test(id))throw new HttpError(400,'Choose a team member to preview.');
- const access=accessFromForm(fields);
- const [person]=await api('/rest/v1/nufi_library_staff?select=id,name,email,access_revision&id=eq.'+encodeURIComponent(id),service);
+ const selectedAccess=accessFromForm(fields);
+ const [person]=await api('/rest/v1/nufi_library_staff?select=id,name,email,access,access_revision&id=eq.'+encodeURIComponent(id),service);
  if(!person)throw new HttpError(404,'This team member is unavailable.');
+ const staleForm=Number(fields.accessRevision)>0&&Number(fields.accessRevision)!==Number(person.access_revision||0);
+ const access=staleForm?accessFor({role:'staff',access:person.access}):selectedAccess;
  let existing;
  if(fields.accountPreviewId){
   await workingCopy(api,actor,String(fields.accountPreviewId));
