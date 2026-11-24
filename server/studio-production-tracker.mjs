@@ -45,9 +45,10 @@ export function productionRunnerCheckpoint(p,data){
  if(!index)return null;
  return {record:index,...index.fields.runner};
 }
+const productionSourceKey=id=>String(id||'').replace(/^catalogue:/,'');
 function currentProductionSource(checkpoint){
  const time=Date.parse(checkpoint?.updatedAt||'');
- return checkpoint?.status==='working'&&!checkpoint.completedSourceIds?.includes(checkpoint.currentSourceId)&&Number.isFinite(time)&&Date.now()-time>=0&&Date.now()-time<15*60*1000?checkpoint.currentSourceId:null;
+ return checkpoint?.status==='working'&&!checkpoint.completedSourceIds?.some(id=>productionSourceKey(id)===productionSourceKey(checkpoint.currentSourceId))&&Number.isFinite(time)&&Date.now()-time>=0&&Date.now()-time<15*60*1000?checkpoint.currentSourceId:null;
 }
 export function productionRowLinks(row,data,{pilot=false,working=false}={}){
  const r=row.record;if(!r)return '';
@@ -72,7 +73,7 @@ export function productionTracking(p,data,meta={}){
  const row=(key,title,group,record,extra={})=>{
   const update=manual[key],derived=actualStage(record,config);
   // Tracking can describe work, but cannot grant approval or assert file delivery.
-  const working=extra.sourceId===current;
+  const working=Boolean(current)&&productionSourceKey(extra.sourceId)===productionSourceKey(current);
   const status=['Approved','Saved to SharePoint','Changes requested'].includes(derived)?derived:working?'Imogen working':
    update&&['To do','Imogen working','Awaiting review','Changes requested'].includes(update.status)?update.status:derived;
   return {key,title,group,record,status,note:update?.note||'',working,...extra};
