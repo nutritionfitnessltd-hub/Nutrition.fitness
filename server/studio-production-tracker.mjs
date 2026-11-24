@@ -1,5 +1,6 @@
+import {randomUUID} from 'node:crypto';
 import {productionWorkState,workStates} from './production-work-state.mjs';
-import {canAccess,canReadContent} from './library-permissions.mjs';
+import {canAccess,canReadContent,canReviewContent} from './library-permissions.mjs';
 import {productionFileUrl} from './production-file-links.mjs';
 import {courseProgressLink} from './studio-courses.mjs';
 import {contentWorker} from './studio-worker-content.mjs';
@@ -58,6 +59,7 @@ export function productionRowLinks(row,data,{pilot=false,working=false}={}){
  const video=files.find(f=>/\.mp4(?:$|\?)/i.test(productionFileUrl(f.url)));
  const links=video?['<a class="btn" href="'+esc(productionFileUrl(video.url))+'" target="_blank" rel="noopener noreferrer" title="'+esc((pilot||working?'Previous export; replacement in progress. ':'')+(video.name||'Checked video export'))+'">Open video</a>']:[];
  // A tracking summary alone never grants permission to open a draft.
+ if(!pilot&&!working&&row.status==='Awaiting review'&&files.length&&r.status!=='Approved'&&canReviewContent(data,r))links.unshift(form('review-decision',hidden('revision',r.revision)+hidden('decision','approve')+hidden('reviewId',randomUUID()),{section:'review-preview',id:r.id},'Approve'));
  if(canReadContent(data,r))links.push('<a class="btn" href="'+url('item',{id:r.id})+'">Open asset</a>');
  return links.length?'<div class="studio-actions tracker-file-actions">'+links.join('')+'</div>':'';
 }
@@ -123,7 +125,10 @@ export function productionTracking(p,data,meta={}){
 function workUpdate(r,checkpoint){
  const u=r.update||{},time=Date.parse(r.work.at||u.at||'');
  const when=Number.isFinite(time)?new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/London'}).format(new Date(time))+' London time':'No update time recorded';
- return '<div class="tracker-work-update"><p class="work-update-meta"><b>'+esc(r.work.label)+'</b> · '+esc(when)+'<br><small>'+esc(r.work.source)+'</small></p>'+(r.working?'<p><b>Current step:</b> '+esc(checkpoint.stage||'Production running')+'</p>':'')+(r.note?'<p><b>Latest update:</b> '+esc(r.note)+'</p>':'<p class="project-muted">No written update yet.</p>')+(u.nextStep?'<p><b>Next step:</b> '+esc(u.nextStep)+'</p>':'')+(u.blocker?'<p class="work-blocker"><b>Blocker / stopped reason:</b> '+esc(u.blocker)+'</p>':'')+'</div>';
+ const message=u.blocker|| (r.working?checkpoint.stage:'') ||r.note||u.nextStep||r.work.source;
+ const short=message.length>140?message.slice(0,137)+'…':message;
+ return '<details class="tracker-work-update"><summary><span>'+esc(short)+'</span><small>'+esc(when)+' · Details</small></summary><div><p>'+esc(r.work.source)+'</p>'+(r.note?'<p><b>Latest update:</b> '+esc(r.note)+'</p>':'')+(u.nextStep?'<p><b>Next step:</b> '+esc(u.nextStep)+'</p>':'')+(u.blocker?'<p class="work-blocker"><b>Blocker:</b> '+esc(u.blocker)+'</p>':'')+'</div></details>';
+
 }
 export function productionTrackerPanel(p,data,meta={}){
  const model=productionTracking(p,data,meta);if(!model)return '';
@@ -136,7 +141,7 @@ export function productionTrackerPanel(p,data,meta={}){
  const status=s=>'<span class="studio-status tracker-status" data-stage="'+esc(s)+'">'+esc(s==='Imogen working'?'In production':s)+'</span>';
  const renderRow=r=>{
  const working=r.working,pilot=p.studio.productionTracking.pilotIds?.includes(r.record?.id);
- return '<li class="tracker-row"><div><strong>'+(r.position?'<span class="tracker-position">'+esc(r.position)+'.</span> ':'')+esc(r.title)+'</strong>'+(r.module?'<small>'+esc(r.module)+'</small>':'')+workUpdate(r,checkpoint)+productionRowLinks(r,data,{pilot,working})+'</div><div class="tracker-row-state"><span class="work-state" data-work-state="'+esc(r.work.label)+'">'+esc(r.work.label)+'</span>'+status(working&&!['Approved','Saved to SharePoint'].includes(r.status)?'Imogen working':r.status)+
+ return '<li class="tracker-row"><div><strong>'+(r.position?'<span class="tracker-position">'+esc(r.position)+'.</span> ':'')+esc(r.title)+'</strong>'+(r.module?'<small>'+esc(r.module)+'</small>':'')+productionRowLinks(r,data,{pilot,working})+workUpdate(r,checkpoint)+'</div><div class="tracker-row-state"><span class="work-state" data-work-state="'+esc(r.work.label)+'">'+esc(r.work.label)+'</span>'+status(working&&!['Approved','Saved to SharePoint'].includes(r.status)?'Imogen working':r.status)+
   (canUpdate?'<details class="tracker-update"><summary>Update</summary>'+form('tracking-update',hidden('projectRevision',p.revision)+hidden('trackingKey',r.key)+select('status','Review / production stage',Object.fromEntries(trackingStages.slice(0,4).map(s=>[s,s])),trackingStages.slice(0,4).includes(r.status)?r.status:'Awaiting review')+select('workState','Work state',{'':'Not reported',...Object.fromEntries(workStates.map(s=>[s,s]))},r.update.workState||'')+textarea('note','Latest update — what has been done?',r.note,2)+textarea('nextStep','Next step',r.update.nextStep||'',2)+textarea('blocker','Blocker / reason stopped',r.update.blocker||'',2),state,'Save')+'</details>':'')+'</div></li>';
  };
  const summaries=[['To do',model.counts['To do']],['With Imogen',model.counts['Imogen working']+model.counts['Changes requested']],['Awaiting review',model.counts['Awaiting review']],['Approved',model.approved],['In SharePoint',model.counts['Saved to SharePoint']]];

@@ -690,3 +690,6 @@ body.team-profile-open{overflow:hidden}.team-profile-modal{width:min(800px,calc(
 .project-gantt>summary{font-size:18px;font-weight:600;cursor:pointer}
 .project-task-fields .simple-task-planning{grid-column:1/-1}
 @media(max-width:650px){.simple-planner-task{padding:15px}.simple-planner-task>summary{align-items:flex-start;flex-wrap:wrap}.simple-task-planning{padding:12px}}
+
+/* Compact project production rows and visible approval actions. */
+.tracker-work-update{margin:6px 0 0;padding:0;border:0;background:none}.tracker-work-update summary{cursor:pointer;font-size:13px;line-height:1.45;color:#526973}.tracker-work-update summary small{display:inline;margin-left:8px;font-size:12px}.tracker-work-update>div{padding:6px 10px;border-left:2px solid #cadde3;margin-top:6px}.tracker-work-update p{font-size:13px;margin:4px 0}.tracker-row{padding:12px 0;gap:14px}.tracker-file-actions{margin:8px 0 0;gap:8px}.tracker-file-actions form,.asset-approval-top form{margin:0;width:auto}.tracker-file-actions .btn,.tracker-file-actions button{min-height:34px;padding:6px 12px;font-size:13px}.asset-approval-top{margin:0 0 16px}.review-popup-footer{order:1}.review-popup-header{order:0}.review-popup-body{order:2}

@@ -266,6 +266,7 @@ export function itemPage(params,data){
   let out='<a class="back" href="'+(r.kind==='programme'?url('item',{id:r.id}):url('library',{kind:r.kind}))+'">← '+esc(r.kind==='programme'?'Programme overview':collections[r.kind]?.[0]||'Content library')+'</a>'+
     heading(r.title,isNewsletter(r)?'Newsletter':kinds[r.kind]||r.kind,preview||schedule?(canEdit&&!document?button(isNewsletter(r)?'Edit HTML & text':'Edit content',url('item',{id:r.id,tab:'edit'}),true):''):'')+
     '<p>'+badge(isNewsletterContent(r)&&r.status==='Approved'?'Approved for GHL':r.publication?.status==='published'?'Published':r.status)+' <span class="meta">'+(r.updatedAt?'Saved '+esc(new Date(r.updatedAt).toLocaleDateString('en-GB')):'')+'</span></p>';
+  if(!document&&canReviewContent(data,r)&&r.status!=='Approved')out+='<div class="studio-actions asset-approval-top">'+form('review-decision',hidden('revision',r.revision)+hidden('decision','approve')+hidden('reviewId',randomUUID()),{section:'review-preview',id:r.id},'Approve')+'<a class="btn" data-review-preview target="_blank" rel="noopener" href="'+url('review-preview',{id:r.id})+'">Review / request changes</a></div>';
   if(schedule){
     const frequencies=data.items.filter(x=>x.kind==='structure'&&x.parent===r.parent&&x.status!=='Archived');
     const selected=new URLSearchParams(params);selected.set('schedule',r.id);
