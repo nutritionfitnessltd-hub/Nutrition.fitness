@@ -2,6 +2,7 @@ import { HttpError } from './platform.mjs';
 
 export const accessOptions = [
   ['library', 'Content library', 'Browse and read working content.'],
+  ['shared_library', 'Shared content & brand assets', 'Read approved or explicitly shared content and brand assets. Editing still requires an assignment.'],
   ['originals', 'Originals', 'Browse the reference library and archive.'],
   ['studio', 'Studio', 'Create and import drafts within assigned projects. Requires Content library and editing.'],
   ['work', 'Work', 'See assigned projects, tasks and the calendar.'],
@@ -18,7 +19,7 @@ export const reviewOptions = [
   ['review_challenges', 'Challenges', ['challenge']],
   ['review_marketing', 'Messages, marketing & creative assets', ['communication','campaign','workflow','asset']]
 ];
-export const defaultAccess = Object.freeze(Object.fromEntries([...accessOptions.map(([key]) => [key, true]), ...reviewOptions.map(([key]) => [key, false])]));
+export const defaultAccess = Object.freeze(Object.fromEntries([...accessOptions.map(([key]) => [key, key !== 'shared_library']), ...reviewOptions.map(([key]) => [key, false])]));
 const keys = new Set(Object.keys(defaultAccess));
 export function accessFor(actor) {
   // NULL is the migration-compatible legacy setting. Invalid saved values fail closed.
@@ -27,6 +28,7 @@ export function accessFor(actor) {
   const raw = actor.access == null ? defaultAccess : actor.access;
   const access = Object.fromEntries([...keys].map(key => [key, raw?.[key] === true]));
   access.studio &&= access.library && access.edit;
+  access.shared_library &&= access.library;
   access.ai &&= access.library && access.edit;
   access.sources &&= access.originals;
   return access;
@@ -41,7 +43,11 @@ export const reviewsKind = (actor, kind) => actor?.role === 'admin' ||
   (canAccess(actor,'library') && canAccess(actor,'work') && reviewOptions.some(([key,,kinds])=>kinds.includes(kind)&&canAccess(actor,key)));
 export const canReviewContent = (data, record) => Boolean(record) && (data.actor.role === 'admin' ||
   (record.status === 'In review' && reviewsKind(data.actor,record.kind)));
-export const canReadContent = (data, record) => Boolean(record) && (data.actor.role === 'admin' || data.assigned.has(record.id) || canReviewContent(data,record) || data.reviewSupport?.has(record.id) || data.reviewedNow === record.id);
+const sharedKinds = new Set(['article','recipe','mealplan','programme','stage','structure','session','exercise','activity','rule','review','course','lesson','learning','ebook','leadmagnet','challenge','communication','campaign','workflow','asset','product']);
+export const canReadSharedContent = (actor, record) => Boolean(record) && canAccess(actor,'shared_library') &&
+  sharedKinds.has(record.kind) && record.status !== 'Archived' &&
+  (record.status === 'Approved' || record.shared === true || record.fields?.shared === true);
+export const canReadContent = (data, record) => Boolean(record) && (data.actor.role === 'admin' || data.assigned.has(record.id) || canReadSharedContent(data.actor,record) || canReviewContent(data,record) || data.reviewSupport?.has(record.id) || data.reviewedNow === record.id);
 
 export function accessFromForm(fields) {
   if (fields.accessVersion !== '1') throw new HttpError(400, 'Reopen the team settings before saving access.');
