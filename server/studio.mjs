@@ -1,5 +1,6 @@
 import {collectionPage,linkCollection,applyCollectionPlacement} from './studio-collections.mjs';
 import {productionVideoSource} from './production-video.mjs';
+import {requestBackgroundRestart} from './background-jobs.mjs';
 import {peopleTaskModal,peopleTaskAction,linkedPeopleTasks} from './people-tasks.mjs';
 import {taskUploadToken,attachTaskFile,sendTaskFile,uploadSmallTaskFile,taskTransportData,sendUploadedAsset} from './task-files.mjs';
 import {taskPage,changeTaskPage} from './task-messages.mjs';
@@ -201,6 +202,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='article-image'){const r=data.byId.get(params.get('id'));if(r?.workerImage&&!r.articleImage)return await sendWorkerImage(res,r,env,fetcher);return await sendArticleImage(req,res,params,data);}
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
+      if(f.action==='background-restart'){await requestBackgroundRestart(params,f,data,api);res.statusCode=303;res.setHeader('Location',url('project',{project:params.get('project')}).replaceAll('&amp;','&'));return res.end();}
       if(f.action==='supplier-save'){const next=await saveSupplier(f,data,api);res.statusCode=303;res.setHeader('Location',url('supplier',{id:next}).replaceAll('&amp;','&'));return res.end();}
       if(f.action?.startsWith('product-')){
         const next=await changeProducts(params,f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();

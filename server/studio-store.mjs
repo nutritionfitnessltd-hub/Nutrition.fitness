@@ -46,8 +46,9 @@ export async function studioData(api,actor,load){
     }
   }
   const sourceById=new Map(index.records.map(r=>[r.id,r]));
+  const backgroundControls=new Map(overlays.filter(r=>r.payload?.fields?.backgroundJobControl&&projects.some(p=>p.id===r.payload.fields.backgroundJob?.projectId)).map(r=>[r.payload.fields.backgroundJob.projectId,{...r.payload,id:r.id,revision:r.revision}]));
   const records=new Map(index.records.filter(r=>r.id.startsWith('training:')||r.fields?.recipeText).map(r=>[r.id,canonical(r)]));
-  for(const row of overlays.filter(row=>row.payload.kind!=='task-thread'&&row.payload.kind!=='account-preview'&&(actor.role==='admin'||row.payload.kind!=='worker-request')))records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
+  for(const row of overlays.filter(row=>!row.payload.fields?.backgroundJobControl&&row.payload.kind!=='task-thread'&&row.payload.kind!=='account-preview'&&(actor.role==='admin'||row.payload.kind!=='worker-request')))records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
   applyProgrammeResets(records);
   // Course outlines remain reference material until explicitly imported as working content.
   const courseNames=new Set([...records.values()].filter(r=>r.kind==='course'&&r.status!=='Archived').flatMap(r=>[r.title,r.fields?.production?.collection].filter(Boolean).map(n=>n.trim().toLowerCase())));
@@ -70,7 +71,7 @@ export async function studioData(api,actor,load){
       }
     }
   }
-  const data={index,items,byId:records,projects,tasks,people,releases,assigned,actor,ideaTeams:teams,ideaPeople};
+  const data={index,items,backgroundControls,byId:records,projects,tasks,people,releases,assigned,actor,ideaTeams:teams,ideaPeople};
   data.collectionLinks=items.filter(r=>r.kind==='settings'&&r.fields?.libraryCollectionLink===true&&r.fields.active===true).map(r=>({collectionId:r.fields.collectionId,contentId:r.fields.contentId}));
   // Project owners can track their worker's progress without gaining draft-body access.
   data.trackingByProject=projectTrackingSummaries(data);
