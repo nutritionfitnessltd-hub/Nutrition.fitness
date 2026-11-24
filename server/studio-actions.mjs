@@ -1,3 +1,4 @@
+import {scheduleFields,validateDependencies} from './studio-project-schedule.mjs';
 import {requireAccess} from './library-permissions.mjs';
 import {projectTasks,ownsTask,canManageTasks} from './studio-project-tasks.mjs';
 import {reviewCourseStructure} from './studio-courses.mjs';
@@ -155,6 +156,7 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
       if(!canManageTasks(p,data.actor))throw new HttpError(403,'Only the project owner or administrator can delete or restore tasks.');
       const removed=structuredClone(p.studio.deletedTasks||[]);
       if(action==='task-delete'){
+        if(entries.some(e=>(e.dependsOn||[]).includes(f.entry)))throw new HttpError(400,'Remove this task from dependent tasks before deleting it.');
         const index=entries.findIndex(e=>e.id===f.entry);if(index<0)throw new HttpError(404,'Task not found.');
         removed.push({...entries.splice(index,1)[0],deletedAt:new Date().toISOString(),deletedBy:data.actor.id});
       }else{
@@ -184,6 +186,9 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
       if(!['To do','In progress','Ready for review','Changes requested','Done'].includes(f.status))throw new HttpError(400,'Choose a status.');
       if(f.status==='Done')adminOnly(data);
       if(f.assignee!==undefined){adminOnly(data);if(f.assignee&&!data.people.some(person=>person.id===f.assignee))throw new HttpError(400,'Choose a valid task assignee.');entry.assignee=f.assignee;}
+      scheduleFields(f,entry,entries);
+      if(f.status==='Done'&&entry.status!=='Done')entry.completedAt=new Date().toISOString();
+      if(f.status!=='Done')delete entry.completedAt;
       Object.assign(entry,{title:cleanText(f.title,160),notes:cleanText(f.notes||'',4000),status:f.status,week:number(f.week,0,p.weeks),due:date(f.due||'')});update.entries=entries;
     }else{
       const r=action==='task-attach'?data.byId.get(f.record):null;
@@ -193,8 +198,9 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
       if(assignee&&!data.people.some(person=>person.id===assignee))throw new HttpError(400,'Choose a valid task assignee.');
       entries.push({id:randomUUID(),week,assignee,due:date(f.due||''),title:r?.title||cleanText(f.title,160),kind:r?kinds[r.kind]:cleanText(f.kind||'Content to create',100),
         record:r?.id||null,scopeIds:r&&data.actor.role==='admin'?[...descendants([r.id],data.items)]:[],assignedAsset:data.actor.role==='admin',status:'To do',notes:cleanText(f.notes||'',4000)});
-      update.entries=entries;
+      scheduleFields(f,entries.at(-1),entries);update.entries=entries;
     }
+    if(update.entries)validateDependencies(update.entries);
     await saveProject(api,data.actor,p,update);return {section:'project',project:p.id,week};
   }
   throw new HttpError(400,'Choose a valid studio action.');
