@@ -38,15 +38,15 @@ export function teamWorkRows(data){
       ghlAction:newsletterDraftButton(data,r),note:r.reviewFeedback?.at(-1)?.changes||'Saved content',review,href:published?destination.origin+releasePath(r.id):url(review?'review-preview':'item',{id:r.id}),action:published?'View published article':review?'Review':'Open'});
   }
   for(const t of tasks){
-    const r=recordRows.get(t.record_id);if(r){linked.add(r.recordId);const status=r.published?'Published':['In review','Changes requested'].includes(r.status)?r.status:t.status;rows.push({...r,id:'task:'+t.id,title:t.title||r.title,state:stateFor(status),status,updated:[date(t.updated_at),r.updated].sort().at(-1),note:t.instructions||r.note});continue;}
-    rows.push({id:'task:'+t.id,title:t.title,...person(t.staff_id),project:assignmentProjectId(t),projectName:t.record_title||'',state:stateFor(t.status),status:t.status,updated:date(t.updated_at||t.created_at),due:t.due_date||'',note:t.instructions||'',href:'/content-library/?work=1&amp;assignments=1&amp;staff='+encodeURIComponent(t.staff_id),action:'Open'});
+    const r=recordRows.get(t.record_id);if(r){linked.add(r.recordId);const status=r.published?'Published':['In review','Changes requested'].includes(r.status)?r.status:t.status;rows.push({...r,id:'task:'+t.id,title:t.title||r.title,state:stateFor(status),status,updated:[date(t.updated_at),r.updated].sort().at(-1),note:t.instructions||r.note,messageHref:url('task',{task:t.id})});continue;}
+    rows.push({id:'task:'+t.id,title:t.title,...person(t.staff_id),project:assignmentProjectId(t),projectName:t.record_title||'',state:stateFor(t.status),status:t.status,updated:date(t.updated_at||t.created_at),due:t.due_date||'',note:t.instructions||'',href:url('task',{task:t.id}),action:'Open'});
   }
   for(const p of projects)for(const [i,e] of (p.entries||[]).entries()){
     if(e.status==='Archived'||!admin&&!ownsTask(p,e,data.actor.id))continue;
     const r=recordRows.get(e.record);if(r&&linked.has(r.recordId))continue;if(r)linked.add(r.recordId);
     rows.push({...r,id:'project:'+p.id+':'+(e.id||i),title:e.title||r?.title,...(r?.type==='ai'?{owner:r.owner,ownerName:r.ownerName,type:r.type}:person(e.assignee||p.creator_id)),project:p.id,projectName:p.name,
       state:stateFor(r?.published?'Published':r&&['In review','Changes requested'].includes(r.status)?r.status:e.status),status:r?.published?'Published':r&&['In review','Changes requested'].includes(r.status)?r.status:e.status,updated:[date(e.updatedAt||p.updated_at),r?.updated||''].sort().at(-1),due:e.due||'',note:e.notes||r?.note||'',
-      href:r?.href||url('project',{project:p.id,week:e.week||0}),action:r?.action||'Open'});
+      messageHref:url('task',{project:p.id,entry:e.id}),href:r?.href||url('task',{project:p.id,entry:e.id}),action:r?.action||'Open'});
   }
   rows.push(...[...recordRows.values()].filter(r=>!linked.has(r.recordId)));
   if(admin){
@@ -97,7 +97,7 @@ export function teamWorkRows(data){
 }
 function workList(rows){
   if(!rows.length)return '<p class="studio-empty">No work matches this view.</p>';
-  return '<ul class="team-work-list">'+rows.map(r=>'<li class="team-work-row" data-work-id="'+esc(r.id)+'"><div class="team-work-owner"><span class="team-work-avatar" aria-hidden="true">'+esc((r.ownerName||'?').slice(0,1))+'</span><div><strong>'+esc(r.ownerName)+'</strong><small>'+esc(r.type==='ai'?'AI worker':'Team member')+'</small></div></div><div class="team-work-detail"><a '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.title)+'</a><small>'+esc(r.projectName)+'</small>'+(r.note?'<p>'+esc(r.note.length>180?r.note.slice(0,177)+'…':r.note)+'</p>':'')+(r.related?'<p><a href="'+r.related.href+'">'+esc(r.related.label)+'</a></p>':'')+(r.ghlAction?'<div class="studio-actions">'+r.ghlAction+'</div>':'')+'</div><div class="team-work-status">'+badge(r.status)+(r.due?'<small>Due '+esc(stamp(date(r.due)))+'</small>':'')+(r.updated?'<small>Updated '+esc(stamp(r.updated))+'</small>':'')+'</div><a class="btn" '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.action)+'</a></li>').join('')+'</ul>';
+  return '<ul class="team-work-list">'+rows.map(r=>'<li class="team-work-row" data-work-id="'+esc(r.id)+'"><div class="team-work-owner"><span class="team-work-avatar" aria-hidden="true">'+esc((r.ownerName||'?').slice(0,1))+'</span><div><strong>'+esc(r.ownerName)+'</strong><small>'+esc(r.type==='ai'?'AI worker':'Team member')+'</small></div></div><div class="team-work-detail"><a '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.title)+'</a><small>'+esc(r.projectName)+'</small>'+(r.note?'<p>'+esc(r.note.length>180?r.note.slice(0,177)+'…':r.note)+'</p>':'')+(r.related?'<p><a href="'+r.related.href+'">'+esc(r.related.label)+'</a></p>':'')+(r.messageHref&&r.messageHref!==r.href?'<p>'+button('Messages',r.messageHref)+'</p>':'')+(r.ghlAction?'<div class="studio-actions">'+r.ghlAction+'</div>':'')+'</div><div class="team-work-status">'+badge(r.status)+(r.due?'<small>Due '+esc(stamp(date(r.due)))+'</small>':'')+(r.updated?'<small>Updated '+esc(stamp(r.updated))+'</small>':'')+'</div><a class="btn" '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.action)+'</a></li>').join('')+'</ul>';
 }
 export function teamWorkCards(data,rows=teamWorkRows(data)){
   const groups=new Map();
@@ -115,7 +115,7 @@ function workerCards(cards){
     '<header><div class="team-work-owner"><span class="team-work-avatar" aria-hidden="true">'+esc(c.ownerName.slice(0,1))+'</span><div><h3>'+esc(c.ownerName)+'</h3><small>'+esc(c.type==='ai'?'AI worker':'Team member')+'</small></div></div>'+badge(c.status)+'</header>'+
     '<div class="team-worker-focus"><h4>'+esc(c.title)+'</h4>'+(c.note?'<p>'+esc(c.note.length>210?c.note.slice(0,207)+'…':c.note)+'</p>':'')+'</div>'+
     '<div class="team-worker-counts">'+(c.attentionCount?'<span>'+c.attentionCount+' need attention</span>':'')+(c.completedCount?'<span>'+c.completedCount+' completed this week</span>':'')+'</div>'+
-    '<footer>'+(c.updated?'<small>Latest update '+esc(stamp(c.updated))+'</small>':'')+'<div class="studio-actions">'+button(c.action,c.href)+button('Work & history',url('team-work',{owner:c.owner,view:'history'}))+'</div></footer></article>').join('')+'</div>';
+    '<footer>'+(c.updated?'<small>Latest update '+esc(stamp(c.updated))+'</small>':'')+'<div class="studio-actions">'+button(c.action,c.href)+(c.messageHref&&c.messageHref!==c.href?button('Messages',c.messageHref):'')+button('Work & history',url('team-work',{owner:c.owner,view:'history'}))+'</div></footer></article>').join('')+'</div>';
 }
 export function teamWorkDashboard(data){
   const rows=teamWorkRows(data),cards=teamWorkCards(data,rows).filter(c=>c.activeCount||c.completedCount);

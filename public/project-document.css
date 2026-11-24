@@ -35,4 +35,7 @@
 .project-tools .deleted-tasks{padding:8px 0;border:0;background:transparent}
 .project-document .studio-list>li{background:transparent;border:0;border-top:1px solid #dce3df;border-radius:0;padding:14px 0;box-shadow:none}
 .project-document .studio-list h3{margin:0 0 6px}
+.task-conversation>.btn{margin-bottom:16px}.task-conversation #task-messages{border-top:1px solid #dce3df;margin-top:24px}
+.task-message-list{list-style:none;margin:16px 0;padding:0;max-width:80ch}.task-message-list>li{border-top:1px solid #e0e6e2;padding:14px 0}
+.task-message-list header{display:flex;gap:12px;justify-content:space-between;flex-wrap:wrap;font-size:13px}.task-message-list time{color:#536572;font-size:12px}
 @media(max-width:650px){.project-document h1,.project-document .studio-heading h1{font-size:24px}.project-document h2{font-size:18px}.project-task-document>header{align-items:flex-start}.project-document .studio-heading{flex-wrap:wrap}.project-task-edit[open]{padding:12px}.project-document .studio-columns{grid-template-columns:1fr}.project-document .studio-heading .studio-actions{flex-wrap:wrap}}
