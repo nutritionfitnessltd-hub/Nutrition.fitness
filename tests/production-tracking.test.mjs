@@ -16,7 +16,36 @@ function fixture(scope='courses'){
 test('course tracker includes untouched lessons in order and does not count pilot export as finished',()=>{
  const {p,data,meta,add}=fixture();add('other','imogen');const m=productionTracking(p,data,meta);
  assert.deepEqual(m.rows.map(r=>r.title),['First','Second']);assert.deepEqual(m.rows.map(r=>r.status),['Imogen working','To do']);assert.equal(m.approved,0);
- const html=productionTrackerPanel(p,data,meta);assert.doesNotMatch(html,/studio=item|Rest of the library|Other content today/);assert.match(html,/Second/);
+ const html=productionTrackerPanel(p,data,meta);assert.doesNotMatch(html,/Rest of the library|Other content today|Review &amp; approve/);assert.match(html,/Open previous export/);assert.match(html,/studio=item/);assert.match(html,/Second/);
+});
+test('checked lessons link to the actual file and existing approval preview without approving on GET',()=>{
+ const {p,data,meta,pilot}=fixture();p.studio.productionTracking.pilotIds=[];
+ let html=productionTrackerPanel(p,data,meta);
+ assert.match(html,/href="https:\/\/nutritionfitness.sharepoint.com[^\"]+test.mp4"/);assert.match(html,/Open video/);
+ assert.match(html,/data-review-preview[^>]+studio=review-preview&amp;id=pilot/);assert.match(html,/Review &amp; approve/);
+ assert.doesNotMatch(html,/name="decision" value="approve"/);assert.equal(pilot.status,'Draft');
+ pilot.fields.production.files[0].url='javascript:alert(1)';html=productionTrackerPanel(p,data,meta);assert.doesNotMatch(html,/javascript:|Review &amp; approve|Open video/);
+});
+test('project summaries cannot grant draft review or editing permissions',async()=>{
+ const {p,pilot,meta}=fixture();p.studio.productionTracking.pilotIds=[];
+ const api=async path=>path.includes('nufi_studio_items')?[{id:pilot.id,payload:pilot,revision:pilot.revision}]:path.includes('nufi_library_projects')?[p]:[];
+ const actor={role:'staff',id:'kasia',access:{work:true,library:true,originals:true,edit:true}};
+ const data=await studioData(api,actor,async()=>({records:[]}));
+ const html=productionTrackerPanel(p,data,meta);assert.match(html,/Open video/);assert.doesNotMatch(html,/Review &amp; approve|studio=review-preview|studio=item/);
+});
+test('fresh matching worker checkpoints update the row and counts while an old export is being redone',()=>{
+ const {p,data,meta,pilot,add}=fixture();p.studio.productionTracking.pilotIds=[];
+ const index=add('index','imogen',{kind:'asset',fields:{courseProductionIndex:true,runner:{projectId:p.id,status:'working',currentSourceId:'s1',stage:'Correcting colours',updatedAt:new Date().toISOString(),completedSourceIds:[]}}});
+ let model=productionTracking(p,data,meta);assert.equal(model.counts['Imogen working'],1);assert.equal(model.counts['Awaiting review'],0);
+ index.fields.runner.currentSourceId='catalogue:s1';model=productionTracking(p,data,meta);assert.equal(model.counts['Imogen working'],1);assert.equal(model.rows[0].working,true);
+ let html=productionTrackerPanel(p,data,meta);assert.match(html,/Latest production update/);assert.match(html,/Correcting colours/);assert.match(html,/Open previous export/);assert.doesNotMatch(html,/Review &amp; approve/);
+ index.fields.runner.updatedAt='2020-01-01T00:00:00Z';model=productionTracking(p,data,meta);assert.equal(model.counts['Imogen working'],0);
+ index.fields.runner.projectId='different-project';html=productionTrackerPanel(p,data,meta);assert.doesNotMatch(html,/Latest production update|Correcting colours/);
+});
+test('missing files never gain an approval shortcut and saved approvals retain their state',()=>{
+ const {p,data,meta,pilot}=fixture();p.studio.productionTracking.pilotIds=[];
+ pilot.fields.production.files=[];assert.doesNotMatch(productionTrackerPanel(p,data,meta),/Review &amp; approve|Open video/);
+ pilot.status='Approved';assert.equal(productionTracking(p,data,meta).rows[0].status,'Approved');
 });
 test('other tracker includes only assigned non-course items, including inherited assignments',()=>{
  const {p,data,meta,add}=fixture('other');add('mine','imogen');add('ninas','nina');add('unassigned',undefined);add('course-asset','imogen',{kind:'asset',sourceId:'s2'});

@@ -84,15 +84,17 @@ function typeCards(sections,counts,bucket){
 export function library(params,data,meta={}){
   const worker=Object.hasOwn(workerNames,params.get('worker'))?params.get('worker'):'';
   if(worker)data={...data,items:workerContent(data,worker)};
+  const mine=params.get('view')==='mine';
+  if(mine)data={...data,items:data.items.filter(r=>r.createdBy===data.actor.id)};
   const bucket=['published','drafts','checked'].includes(params.get('bucket'))?params.get('bucket'):'all';
   const published=r=>r.publication?.status==='published';
   data={...data,items:data.items.filter(r=>bucket==='published'?published(r):bucket==='checked'?r.status==='Approved'&&!published(r):bucket==='drafts'?!published(r)&&r.status!=='Approved':true)};
-  const lifecycle='<nav class="tabs" aria-label="Content status">'+[['all','All content'],['drafts','Drafts'],['checked','Checked'],['published','Published']].map(([id,title])=>'<a href="'+url('library',{bucket:id,kind:params.get('kind')||'',worker})+'"'+(id===bucket?' aria-current="page"':'')+'>'+title+'</a>').join('')+'</nav>';
+  const lifecycle='<nav class="tabs" aria-label="Content status">'+[['all','All content'],['drafts','Drafts'],['checked','Checked'],['published','Published']].map(([id,title])=>'<a href="'+url('library',{bucket:id,kind:params.get('kind')||'',worker,view:mine?'mine':''})+'"'+(id===bucket?' aria-current="page"':'')+'>'+title+'</a>').join('')+'</nav>';
   const exercise=params.get('studio')==='exercises',kind=params.get('kind')||shelves[params.get('category')]?.create||'',q=(params.get('q')||'').toLowerCase(),state=params.get('state')||'';
-  if(!worker&&!exercise&&!kind&&!q&&!state&&params.get('view')!=='all'){
+  if(!worker&&!exercise&&!kind&&!q&&!state&&!['all','mine'].includes(params.get('view'))){
     const counts=new Map();
     for(const r of data.items)if(r.status!=='Archived'){const type=isNewsletterContent(r)?'newsletter':r.kind;counts.set(type,(counts.get(type)||0)+1);}
-    return heading('Content library','Your working content.',(canAccess(data.actor,'studio')?button('Create content',url('create'),true):'')+(canAccess(data.actor,'originals')?button('Browse original collections',url('workspace-archive',{tab:'originals'})):''))+lifecycle+
+    return heading('Content library','Your working content.',(canAccess(data.actor,'studio')?button('Add content',url('create',{view:'daily'}),true)+button('My content',url('library',{view:'mine'})):'')+(canAccess(data.actor,'originals')?button('Browse original collections',url('workspace-archive',{tab:'originals'})):''))+lifecycle+
       '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','library')+hidden('view','all')+hidden('bucket',bucket)+hidden('worker',worker)+input('q','Search all content','','search')+'<button>Search</button>'+button('Browse all content',url('library',{view:'all',bucket}))+'</form>'+
       typeCards(contentSections,counts,bucket)+
       '<details class="panel"><summary>More content types</summary>'+typeCards(Object.entries(collections).filter(([id])=>!contentSections.some(([key])=>key===id)).map(([id,[title]])=>[id,title]),counts,bucket)+'</details>';
@@ -109,12 +111,12 @@ export function library(params,data,meta={}){
   const words=value=>Array.isArray(value)?value.join(' '):String(value||'');
   if(kind==='ebook'&&params.get('bookType'))rows=rows.filter(r=>(r.fields.bookType||'Guide')===params.get('bookType'));
   rows=rows.filter(r=>(r.title+' '+words(r.fields.aliases)+' '+words(r.fields.equipment)+' '+words(r.fields.muscles)).toLowerCase().includes(q));
-  const filter='<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio',exercise?'exercises':'library')+hidden('view','all')+hidden('bucket',bucket)+hidden('worker',worker)+input('q','Search',params.get('q')||'','search')+
+  const filter='<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio',exercise?'exercises':'library')+hidden('view',mine?'mine':'all')+hidden('bucket',bucket)+hidden('worker',worker)+input('q','Search',params.get('q')||'','search')+
     (kind?hidden('kind',kind):select('kind','Content type',{'':'All types',...kinds,newsletter:'Newsletter'},kind))+
     (kind==='ebook'?select('bookType','Book type',{'':'All books','Recipe book':'Recipe books','Workout book':'Workout books',Guide:'Guides'},params.get('bookType')||''):'')+
     '<details class="filter-details"'+(state?' open':'')+'><summary>More filters</summary>'+select('state','Progress',{'':'Active content',Draft:'Draft','In review':'Needs checking','Changes requested':'Needs changes',Approved:'Checked',Archived:'Archived'},state)+'</details><button>Search</button></form>';
 
-  return (!exercise?'<a class="back" href="'+url('library',{bucket})+'">← Content types</a>':'')+heading(worker?workerNames[worker]+'’s work':exercise?'Exercises & drills':kind==='ebook'&&params.get('bookType')?params.get('bookType')+'s':collections[kind]?.[0]||'All content',worker?'Open content to edit, submit for approval or approve a submitted draft.':exercise?'Find instructions, coaching cues and demonstrations.':collections[kind]?.[1]||'Your working Nutrition.fitness content.',(canAccess(data.actor,'studio')?button(kind?'Create '+(kind==='newsletter'?'newsletter':kinds[kind]||'content').toLowerCase():'Create content',(kind==='newsletter'?createLink(kind):url('new',{kind:kind||(exercise?'exercise':'article')})),true):''))+lifecycle+filter+
+  return (!exercise?'<a class="back" href="'+url('library',{bucket})+'">← Content types</a>':'')+heading(mine?'My content':worker?workerNames[worker]+'’s work':exercise?'Exercises & drills':kind==='ebook'&&params.get('bookType')?params.get('bookType')+'s':collections[kind]?.[0]||'All content',worker?'Open content to edit, submit for approval or approve a submitted draft.':exercise?'Find instructions, coaching cues and demonstrations.':collections[kind]?.[1]||'Your working Nutrition.fitness content.',(canAccess(data.actor,'studio')?button(kind?'Create '+(kind==='newsletter'?'newsletter':kinds[kind]||'content').toLowerCase():'Add content',!kind&&!exercise?url('create',{view:'daily'}):(kind==='newsletter'?createLink(kind):url('new',{kind:kind||(exercise?'exercise':'article')})),true):''))+lifecycle+filter+
     (!rows.length?'<p class="studio-empty">'+(q||state?'No content matches these filters.':(bucket==='published'?'Nothing has been published here yet. Checked content is kept separately.':'Nothing here yet. Create an item or import an original.'))+'</p>':'')+
     '<div data-worker-updates="library">'+pages(params,rows,rs=>'<div class="studio-content-grid">'+rs.map(r=>{
       const preview=meta.training?.[r.id]||meta.assets?.[r.id]?.preview||meta.training?.[r.parent];
@@ -124,6 +126,8 @@ export function library(params,data,meta={}){
     }).join('')+'</div>')+'</div>';
 }
 export function createPage(params,data,values={}){
+  if(params.get('view')==='daily'||data.actor.role!=='admin')return heading('Add content','Choose a content type. Save your own draft to the Content Library; a project is optional.')+'<div class="studio-cards studio-type-grid">'+contentSections.map(([kind,title])=>card(title,'',createLink(kind))).join('')+'</div>';
+
   if(data.actor.role==='admin'&&(params.get('project')==='1'||params.get('blank')==='1'))return projectCreatePage(params,data,values);
   if(params.get('template')==='mealplan')return mealPlanForm(data,values);
   const choice=params.get('template'),t=data.actor.role==='admin'?templates[choice]:null;

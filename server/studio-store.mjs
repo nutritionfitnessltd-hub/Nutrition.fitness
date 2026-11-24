@@ -53,6 +53,7 @@ export async function studioData(api,actor,load){
     ...tasks.map(t=>t.record_id),
   ],index.records);
   if(actor.role!=='admin'){
+    for(const r of items)if(r.createdBy===actor.id)assigned.add(r.id);
     for(const p of projects.filter(p=>!p.assignmentOnly)){
       for(const id of p.creator_id===actor.id?p.studio?.allowedIds||[]:[])assigned.add(id);
       for(const e of p.entries.filter(e=>e.assignedAsset&&(p.creator_id===actor.id||ownsTask(p,e,actor.id)))){

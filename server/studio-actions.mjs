@@ -1,3 +1,4 @@
+import {requireAccess} from './library-permissions.mjs';
 import {projectTasks,ownsTask,canManageTasks} from './studio-project-tasks.mjs';
 import {reviewCourseStructure} from './studio-courses.mjs';
 import {productionTracking,trackingStages} from './studio-production-tracker.mjs';
@@ -67,7 +68,10 @@ function reviewRecord(next,status,f,data,revision){
   if(note)next.comments=[...(next.comments||[]),{id:randomUUID(),body:note,author:data.actor.name||'Administrator',at:new Date().toISOString()}];
 }
 export async function createItem(record,projectId,entryId,data,api){
-  if(!projectId){adminOnly(data);await saveRecord(api,data.actor,record,0);return;}
+  if(!projectId){
+    requireAccess(data.actor,'library','studio','edit');
+    await saveRecord(api,data.actor,{...record,createdBy:data.actor.id},0);return;
+  }
   const p=projectFor(data,projectId);
   const chosen=p.entries.find(e=>e.id===entryId);
   if(data.actor.role!=='admin'&&chosen&&!ownsTask(p,chosen,data.actor.id))throw new HttpError(403,'You can only create content for your assigned tasks.');
