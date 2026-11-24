@@ -121,10 +121,10 @@ test('task deletion is revision guarded and restricted to owner or admin',async(
  html=productionTrackerPanel(p,data,meta);assert.match(html,/Open asset/);assert.doesNotMatch(html,/Open video|Open file/);
  });
 
-test('updates collapse full notes and keep actions above the short summary',()=>{
+test('updates have a clear dropdown label and keep timestamps and full notes inside',()=>{
  const {p,data,meta}=fixture();p.studio.trackingUpdates={'lesson:Fat Loss:1':{note:'Long update '.repeat(40),at:'2026-11-24T12:00:00Z'}};
  const html=productionTrackerPanel(p,data,meta);
- assert.match(html,/<details class="tracker-work-update"><summary>/);
+ assert.match(html,/<details class="tracker-work-update"><summary>Updates<\/summary><div><p class="tracker-update-time">/);
  assert.doesNotMatch(html,/<details class="tracker-work-update" open/);
  assert.ok(html.indexOf('tracker-file-actions')<html.indexOf('tracker-work-update'));
  assert.ok(html.includes('Long update '.repeat(40)));

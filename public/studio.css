@@ -723,3 +723,6 @@ body.team-profile-open{overflow:hidden}.team-profile-modal{width:min(800px,calc(
 @media(max-width:600px){.task-edit-modal{width:calc(100vw - 16px);max-height:96dvh;border-radius:11px}.task-modal-bar{padding:18px}.task-modal-bar h2{font-size:20px}.task-modal-body{padding:20px 18px}.task-modal-body .simple-task-planning{grid-template-columns:1fr;padding:16px}.project-document .project-task-document>summary{padding:14px;align-items:flex-start}.task-modal-error{margin:16px 18px 0}}
 
 .task-modal-body [data-task-delete] button{background:#fff;color:#962f2f;border:1px solid #c7b0ab}
+
+/* Clearly labelled updates dropdown; timestamps belong inside the panel. */
+.tracker-work-update{margin-top:10px}.tracker-work-update>summary{display:list-item;width:fit-content;box-sizing:border-box;padding:7px 12px;list-style-position:inside;border:1px solid #ced9dc;border-radius:6px;background:#f7fafb;color:#174b5a;font-size:13px;font-weight:600;line-height:1.4}.tracker-work-update>summary:hover{background:#edf4f5}.tracker-work-update>summary:focus-visible{outline:2px solid #00677b;outline-offset:3px}.tracker-work-update[open]>summary{margin-bottom:8px}.tracker-work-update>div{padding:10px 14px;background:#f7fafb;max-width:780px;border-radius:4px}.tracker-work-update .tracker-update-time{margin:0 0 8px;color:#617581;font-size:12px}

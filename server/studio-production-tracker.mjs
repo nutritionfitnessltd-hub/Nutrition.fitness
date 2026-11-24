@@ -125,9 +125,7 @@ export function productionTracking(p,data,meta={}){
 function workUpdate(r,checkpoint){
  const u=r.update||{},time=Date.parse(r.work.at||u.at||'');
  const when=Number.isFinite(time)?new Intl.DateTimeFormat('en-GB',{dateStyle:'medium',timeStyle:'short',timeZone:'Europe/London'}).format(new Date(time))+' London time':'No update time recorded';
- const message=u.blocker|| (r.working?checkpoint.stage:'') ||r.note||u.nextStep||r.work.source;
- const short=message.length>140?message.slice(0,137)+'…':message;
- return '<details class="tracker-work-update"><summary><span>'+esc(short)+'</span><small>'+esc(when)+' · Details</small></summary><div><p>'+esc(r.work.source)+'</p>'+(r.note?'<p><b>Latest update:</b> '+esc(r.note)+'</p>':'')+(u.nextStep?'<p><b>Next step:</b> '+esc(u.nextStep)+'</p>':'')+(u.blocker?'<p class="work-blocker"><b>Blocker:</b> '+esc(u.blocker)+'</p>':'')+'</div></details>';
+ return '<details class="tracker-work-update"><summary>Updates</summary><div><p class="tracker-update-time">'+esc(when)+'</p><p>'+esc(r.work.source)+'</p>'+(r.working?'<p><b>Current step:</b> '+esc(checkpoint.stage||'Production running')+'</p>':'')+(r.note?'<p><b>Latest update:</b> '+esc(r.note)+'</p>':'<p>No written update yet.</p>')+(u.nextStep?'<p><b>Next step:</b> '+esc(u.nextStep)+'</p>':'')+(u.blocker?'<p class="work-blocker"><b>Blocker:</b> '+esc(u.blocker)+'</p>':'')+'</div></details>';
 
 }
 export function productionTrackerPanel(p,data,meta={}){
