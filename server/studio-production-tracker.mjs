@@ -1,5 +1,5 @@
 import {productionWorkState,workStates} from './production-work-state.mjs';
-import {canAccess,canReadContent,canReviewContent} from './library-permissions.mjs';
+import {canAccess,canReadContent} from './library-permissions.mjs';
 import {productionFileUrl} from './production-file-links.mjs';
 import {courseProgressLink} from './studio-courses.mjs';
 import {contentWorker} from './studio-worker-content.mjs';
@@ -54,12 +54,11 @@ function currentProductionSource(checkpoint){
 export function productionRowLinks(row,data,{pilot=false,working=false}={}){
  const r=row.record;if(!r)return '';
  const files=(r.fields?.production?.files||[]).filter(f=>f.bytes>0&&/^[a-f0-9]{64}$/.test(f.sha256||'')&&productionFileUrl(f.url));
- const links=files.map(f=>'<a class="btn" href="'+esc(productionFileUrl(f.url))+'" target="_blank" rel="noopener noreferrer" title="'+esc(f.name||'Checked export')+'">'+(pilot||working?'Open previous export':/\.mp4(?:$|\?)/i.test(f.url)?'Open video':'Open file')+'</a>');
- // A tracking summary alone never grants permission to open or approve a draft.
- if(canReadContent(data,r)){
-  if(!pilot&&!working&&files.length&&canReviewContent(data,r))links.push('<a class="btn" data-review-preview target="_blank" rel="noopener" href="'+url('review-preview',{id:r.id})+'">'+(r.status==='Approved'?'View approved lesson':'Review &amp; approve')+'</a>');
-  else links.push('<a class="btn" href="'+url('item',{id:r.id})+'">Open lesson</a>');
- }
+ // Supporting exports stay on the asset page instead of duplicating row actions.
+ const video=files.find(f=>/\.mp4(?:$|\?)/i.test(productionFileUrl(f.url)));
+ const links=video?['<a class="btn" href="'+esc(productionFileUrl(video.url))+'" target="_blank" rel="noopener noreferrer" title="'+esc((pilot||working?'Previous export; replacement in progress. ':'')+(video.name||'Checked video export'))+'">Open video</a>']:[];
+ // A tracking summary alone never grants permission to open a draft.
+ if(canReadContent(data,r))links.push('<a class="btn" href="'+url('item',{id:r.id})+'">Open asset</a>');
  return links.length?'<div class="studio-actions tracker-file-actions">'+links.join('')+'</div>':'';
 }
 export function productionTracking(p,data,meta={}){

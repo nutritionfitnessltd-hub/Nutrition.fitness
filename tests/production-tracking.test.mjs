@@ -16,13 +16,13 @@ function fixture(scope='courses'){
 test('course tracker includes untouched lessons in order and does not count pilot export as finished',()=>{
  const {p,data,meta,add}=fixture();add('other','imogen');const m=productionTracking(p,data,meta);
  assert.deepEqual(m.rows.map(r=>r.title),['First','Second']);assert.deepEqual(m.rows.map(r=>r.status),['Imogen working','To do']);assert.equal(m.approved,0);
- const html=productionTrackerPanel(p,data,meta);assert.doesNotMatch(html,/Rest of the library|Other content today|Review &amp; approve/);assert.match(html,/Open previous export/);assert.match(html,/studio=item/);assert.match(html,/Second/);
+ const html=productionTrackerPanel(p,data,meta);assert.doesNotMatch(html,/Rest of the library|Other content today|Review &amp; approve/);assert.match(html,/Previous export; replacement in progress/);assert.match(html,/studio=item/);assert.match(html,/Second/);
 });
-test('checked lessons link to the actual file and existing approval preview without approving on GET',()=>{
+test('checked lessons link to the video and asset page without approving on GET',()=>{
  const {p,data,meta,pilot}=fixture();p.studio.productionTracking.pilotIds=[];
  let html=productionTrackerPanel(p,data,meta);
  assert.match(html,/href="https:\/\/nutritionfitness.sharepoint.com[^\"]+test.mp4"/);assert.match(html,/Open video/);
- assert.match(html,/data-review-preview[^>]+studio=review-preview&amp;id=pilot/);assert.match(html,/Review &amp; approve/);
+ assert.match(html,/studio=item&amp;id=pilot/);assert.match(html,/Open asset/);assert.doesNotMatch(html,/studio=review-preview|Review &amp; approve/);
  assert.doesNotMatch(html,/name="decision" value="approve"/);assert.equal(pilot.status,'Draft');
  pilot.fields.production.files[0].url='javascript:alert(1)';html=productionTrackerPanel(p,data,meta);assert.doesNotMatch(html,/javascript:|Review &amp; approve|Open video/);
 });
@@ -38,7 +38,7 @@ test('fresh matching worker checkpoints update the row and counts while an old e
  const index=add('index','imogen',{kind:'asset',fields:{courseProductionIndex:true,runner:{projectId:p.id,status:'working',currentSourceId:'s1',stage:'Correcting colours',updatedAt:new Date().toISOString(),completedSourceIds:[]}}});
  let model=productionTracking(p,data,meta);assert.equal(model.counts['Imogen working'],1);assert.equal(model.counts['Awaiting review'],0);
  index.fields.runner.currentSourceId='catalogue:s1';model=productionTracking(p,data,meta);assert.equal(model.counts['Imogen working'],1);assert.equal(model.rows[0].working,true);
- let html=productionTrackerPanel(p,data,meta);assert.match(html,/Latest production update/);assert.match(html,/Correcting colours/);assert.match(html,/Open previous export/);assert.doesNotMatch(html,/Review &amp; approve/);
+ let html=productionTrackerPanel(p,data,meta);assert.match(html,/Latest production update/);assert.match(html,/Correcting colours/);assert.match(html,/Previous export; replacement in progress/);assert.doesNotMatch(html,/Review &amp; approve/);
  index.fields.runner.updatedAt='2020-01-01T00:00:00Z';model=productionTracking(p,data,meta);assert.equal(model.counts['Imogen working'],0);
  index.fields.runner.projectId='different-project';html=productionTrackerPanel(p,data,meta);assert.doesNotMatch(html,/Latest production update|Correcting colours/);
 });
@@ -108,3 +108,15 @@ test('task deletion is revision guarded and restricted to owner or admin',async(
  data.actor.id='kasia';assert.match(deleteTaskControl(p,p.entries[0],data),/Delete task/);await assert.rejects(changeStudio(new URLSearchParams({project:p.id}),{...f,projectRevision:2},data,api),e=>e.status===409);assert.equal(writes,0);
  p.studio.deletedTasks=[p.entries[0]];assert.match(deletedTasksPanel(p,data),/Restore task/);
 });
+
+ test('multiple supporting files and duplicate videos produce one video and one asset action',()=>{
+ const {p,data,meta,pilot}=fixture();
+ const video=pilot.fields.production.files[0];
+ pilot.fields.production.files.push({...video},{...video,name:'captions.vtt',url:video.url.replace('test.mp4','captions.vtt')},{...video,name:'transcript.txt',url:video.url.replace('test.mp4','transcript.txt')});
+ let html=productionTrackerPanel(p,data,meta);
+ assert.equal((html.match(/>Open video<\/a>/g)||[]).length,1);
+ assert.equal((html.match(/>Open asset<\/a>/g)||[]).length,1);
+ assert.doesNotMatch(html,/Open file|href="[^"]+captions.vtt|href="[^"]+transcript.txt/);
+ pilot.fields.production.files=pilot.fields.production.files.filter(f=>!f.url.endsWith('.mp4'));
+ html=productionTrackerPanel(p,data,meta);assert.match(html,/Open asset/);assert.doesNotMatch(html,/Open video|Open file/);
+ });
