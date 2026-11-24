@@ -674,3 +674,19 @@ body.team-profile-open{overflow:hidden}.team-profile-modal{width:min(800px,calc(
 @media(max-width:650px){.team-worker-card{padding:20px}.team-worker-card .studio-actions{flex-wrap:wrap}}
 
 .tracker-work-update{margin:10px 0;padding:10px 12px;border-left:3px solid #cadde3;background:#f7fafb;border-radius:4px}.tracker-work-update p{margin:5px 0;font-size:14px;line-height:1.55}.work-update-meta small{color:#526d7a}.work-state{display:inline-block;padding:6px 11px;border-radius:6px;font-weight:650;font-size:14px;background:#eaf0f3;color:#284956}.work-state[data-work-state=Running]{background:#e3f2eb;color:#246045}.work-state[data-work-state=Blocked]{background:#fde9e7;color:#962f35}.work-state[data-work-state=Stopped]{background:#fff0db;color:#81510e}.work-state[data-work-state=Completed]{background:#e2edf7;color:#28577a}.work-blocker{color:#962f35}.tracker-row-state{gap:8px}.tracker-update textarea{min-height:64px}
+/* Simple task planning: one row per task, detail only when opened. */
+.simple-planner-task{margin:12px 0;padding:18px 20px;border:1px solid #d6ddd9;border-radius:12px;background:#fff}
+.simple-planner-task>summary,.project-task-row>summary{display:flex;align-items:center;justify-content:space-between;gap:16px;cursor:pointer}
+.simple-planner-task>summary>span:first-child{display:grid;gap:6px;min-width:0}
+.simple-planner-task summary strong{font-size:17px;overflow-wrap:anywhere}
+.simple-planner-task summary small{font-size:13px;color:#536572;line-height:1.5}
+.simple-planner-task[open]>summary{margin-bottom:20px}
+.simple-task-planning{display:block!important;min-width:0;padding:18px;border:1px solid #d6ddd9;border-radius:10px}
+.simple-task-planning>label{display:block;max-width:420px;margin-bottom:14px}
+.task-prerequisites{display:grid;gap:8px;margin:12px 0;max-height:240px;overflow:auto}
+.task-prerequisites label{display:flex!important;align-items:flex-start;gap:10px;padding:10px;background:#faf6ef;border-radius:7px;line-height:1.4}
+.task-prerequisites input[type=checkbox]{width:18px;min-width:18px;height:18px;margin:1px 0 0;accent-color:#06475e}
+.task-extra{margin:12px 0}.task-extra>summary{cursor:pointer;color:#06475e}.planner-question{color:#805c19}
+.project-gantt>summary{font-size:18px;font-weight:600;cursor:pointer}
+.project-task-fields .simple-task-planning{grid-column:1/-1}
+@media(max-width:650px){.simple-planner-task{padding:15px}.simple-planner-task>summary{align-items:flex-start;flex-wrap:wrap}.simple-task-planning{padding:12px}}

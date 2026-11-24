@@ -14,7 +14,9 @@ export function projectTasks(value='[]',people=[]){
   if(assignee&&!people.some(p=>p.id===assignee))throw new HttpError(400,'Choose a team member for each assigned task.');
   const due=row.due||'';
   if(due&&(!/^\d{4}-\d{2}-\d{2}$/.test(due)||!Number.isFinite(Date.parse(due))||new Date(due).toISOString().slice(0,10)!==due))throw new HttpError(400,'Choose a valid task due date.');
-  return {id:randomUUID(),title,assignee,due,notes:cleanText(row.notes||'',4000),kind:'Task',week:0,status:'To do',record:null,scopeIds:[],assignedAsset:true};
+  const estimatedHours=row.estimatedHours===undefined||row.estimatedHours===null||row.estimatedHours===''?null:Number(row.estimatedHours);
+  if(estimatedHours!==null&&(!Number.isFinite(estimatedHours)||estimatedHours<=0||estimatedHours>5000||!/^\d+(?:\.\d{1,2})?$/.test(String(row.estimatedHours))))throw new HttpError(400,'Enter estimated hours between 0.01 and 5,000.');
+  return {id:randomUUID(),title,assignee,due,estimatedHours,notes:cleanText(row.notes||'',4000),kind:'Task',week:0,status:'To do',record:null,scopeIds:[],assignedAsset:true};
  });
 }
 export const participates=(p,id)=>p.creator_id===id||p.entries.some(e=>e.assignee===id);
