@@ -168,3 +168,15 @@ test('video approval records the checked export and refuses a replacement withou
  await assert.rejects(reviewDecision(params,{...fields,videoSha256:'b'.repeat(64)},f.data,f.api),/export changed/);assert.equal(f.writes,0);
  const result=await reviewDecision(params,fields,f.data,f.api);assert.deepEqual(result.record.reviewFeedback[0].videoReview,{sha256:sha,filename:'lesson.mp4'});assert.equal(result.record.status,'Approved');
 });
+
+
+test('video source check is explicit, revision guarded and saved atomically with approval',async()=>{
+ const f=fixture(),sha='a'.repeat(64),r=f.data.byId.get('worker:sample');r.kind='lesson';r.source={id:'catalogue:original',needsChecking:true};
+ r.fields.production={files:[{name:'lesson.mp4',url:'https://nutritionfitness.sharepoint.com/sites/Nutrition.fitness/Shared%20Documents/lesson.mp4',bytes:10,sha256:sha}]};
+ const fields={action:'review-decision',decision:'approve',revision:'1',reviewId:randomUUID(),videoSha256:sha};
+ await assert.rejects(reviewDecision(params,fields,f.data,f.api),/Compare the imported content/);assert.equal(f.writes,0);assert.equal(r.source.needsChecking,true);
+ await assert.rejects(reviewDecision(params,{...fields,sourceChecked:'yes',revision:'0'},f.data,f.api),/changed/);assert.equal(f.writes,0);
+ await assert.rejects(reviewDecision(params,{...fields,sourceChecked:'yes',videoSha256:'b'.repeat(64)},f.data,f.api),/export changed/);assert.equal(f.writes,0);
+ await assert.rejects(reviewDecision(params,{...fields,sourceChecked:'yes',videoSha256:''},f.data,f.api),/Compare the imported content/);assert.equal(f.writes,0);
+ const result=await reviewDecision(params,{...fields,sourceChecked:'yes'},f.data,f.api);assert.equal(f.writes,1);assert.equal(result.record.status,'Approved');assert.deepEqual(result.record.source,{id:'catalogue:original',needsChecking:false});assert.equal(result.record.reviewFeedback[0].videoReview.sourceChecked,true);assert.equal(r.source.needsChecking,true);
+});

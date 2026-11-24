@@ -149,3 +149,11 @@ test('updates have a clear dropdown label and keep timestamps and full notes ins
  assert.ok(html.indexOf('tracker-file-actions')<html.indexOf('tracker-work-update'));
  assert.ok(html.includes('Long update '.repeat(40)));
 });
+
+
+test('video approval asks for a source check only when the saved source requires it',()=>{
+ const {p,data,meta,pilot}=fixture();p.studio.productionTracking.pilotIds=[];
+ assert.doesNotMatch(productionTrackerPanel(p,data,meta),/data-video-source-check/);
+ pilot.source={id:'original',needsChecking:true};const html=productionTrackerPanel(p,data,meta);
+ assert.match(html,/name="sourceChecked" value="yes" data-video-source-check required/);assert.match(html,/I have checked this video against the original source/);
+});
