@@ -1,4 +1,4 @@
-import {ndaDocument} from './nda-fixture.mjs';
+import {ndaDocument,welcomeFixture} from './nda-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { randomUUID,createHash } from 'node:crypto';
@@ -20,6 +20,7 @@ test('work queue separates guest, admin and personal staff codes and scopes task
   const user={id:owner,email:'owner@example.test',email_confirmed_at:'2026-01-01'};
   const calls=[];
   const api=async(endpoint,opts={})=>{
+ const welcome=welcomeFixture(endpoint);if(welcome)return welcome;
     calls.push([endpoint,opts]);
     if(endpoint.includes('nufi_library_nda_agreements'))return [ndaDocument];
     if(endpoint.includes('nufi_library_nda_acceptances'))return [{id:'existing-test-acceptance'}];

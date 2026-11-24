@@ -2,7 +2,7 @@ import {isIdea,ideaTeams,canSeeIdea} from './idea-visibility.mjs';
 import {workerSettingsPanel} from './team-worker-settings.mjs';
 import {assignmentForm,assignmentProjectId} from './team-assignments.mjs';
 import {organisationMap} from './team-organisation.mjs';
-import {profileId,teamProfiles,teamAvatar,teamProfileEditor,teamReportingPanel,profileDestination,validProfilePhoto,validateReportingLine} from './team-profiles.mjs';
+import {engagementFields,profileId,teamProfiles,teamAvatar,teamProfileEditor,teamReportingPanel,profileDestination,validProfilePhoto,validateReportingLine} from './team-profiles.mjs';
 import {workers} from './studio-workers.mjs';
 import {workerContent} from './studio-worker-content.mjs';
 import {allRows,saveRecord} from './studio-store.mjs';
@@ -100,7 +100,7 @@ export async function saveTeamProfile(f,actor,staff,data,api){
   if(portrait!==''&&!validProfilePhoto(portrait))throw new HttpError(400,'Choose a photo using Change photo. The saved image must be smaller than 120 KB.');
   const reportsTo=validateReportingLine(member,text(f.reportsTo??member.manager,160),members);
   const enteredTeam=text(f.team??old?.fields?.team??'',80),team=members.find(m=>m.team.toLowerCase()===enteredTeam.toLowerCase())?.team||enteredTeam;
-  await saveRecord(api,actor,{id:profileId(id),kind:'settings',title:'Team profile',status:'Draft',fields:{...old?.fields,role:text(f.role||'',160),responsibilities:text(f.responsibilities||'',4000),reportsTo,portrait,team}},revision);
+  await saveRecord(api,actor,{id:profileId(id),kind:'settings',title:'Team profile',status:'Draft',fields:{...old?.fields,...(f.worker?{}:engagementFields(f,old?.fields)),role:text(f.role||'',160),responsibilities:text(f.responsibilities||'',4000),reportsTo,portrait,team}},revision);
 }
 
 export async function saveTeamReporting(f,actor,staff,data,api){

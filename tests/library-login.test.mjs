@@ -1,4 +1,4 @@
-import {ndaDocument} from './nda-fixture.mjs';
+import {ndaDocument,welcomeFixture} from './nda-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createServer} from 'node:http';
@@ -14,6 +14,7 @@ test('one login protects all entry points and admin-created team users share it'
   const env={NUFI_LIBRARY_CATALOGUE_KEY:'a'.repeat(64),NUFI_LIBRARY_PASSWORD_SHA256:createHash('sha256').update('fixture-shared').digest('hex'),SUPABASE_SERVICE_ROLE_KEY:'fixture-only',SUPABASE_URL:'https://example.invalid',SUPABASE_ANON_KEY:'fixture',SITE_URL:'https://example.test'};
   const index={version:1,records:[],files:{[fileId]:{name:'Sample.pdf',type:'application/pdf'}}};
   const api=async(endpoint,opts={})=>{
+ const welcome=welcomeFixture(endpoint);if(welcome)return welcome;
     if(endpoint.includes('nufi_library_nda_agreements'))return [ndaDocument];
     if(endpoint.includes('nufi_library_nda_acceptances'))return [{id:'existing-test-acceptance'}];
     const query=new URL(endpoint,'https://example.invalid').searchParams;
