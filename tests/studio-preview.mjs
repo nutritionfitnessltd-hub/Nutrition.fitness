@@ -1,3 +1,4 @@
+import {proposalSample} from './proposal-prose-sample.mjs';
 // An isolated HTTP fixture: all saves are in memory; no production services or login cookies.
 import http from 'node:http';
 import fs from 'node:fs/promises';
@@ -54,7 +55,7 @@ http.createServer(async(req,res)=>{
   const u=new URL(req.url,'http://127.0.0.1');
   if(u.pathname==='/content-library/'){
    let raw='';for await(const chunk of req)raw+=chunk;req.body=raw?Object.fromEntries(new URLSearchParams(raw)):undefined;
-   return handleStudio(req,res,{params:u.searchParams,actor,api,load:async()=>index,env:{NUFI_HQ_SITE_TOKEN:'fixture-only'},fetcher:async(endpoint,options)=>{const input=JSON.parse(options.body);return new Response(JSON.stringify(input.action==='ideas'?{version:4,ideas:[{id:'fixture-proposal',title:'Can people explain the free Reset in ten seconds?',day:'2026-11-24',state:'pending',summary:'Test two mobile headline cards privately with six consenting adults.\n\n- Show the two alternatives in a different order.\n- Ask what it costs and what the first step is.\n- Record anonymous feedback.',rationale:'Check offer clarity before traffic spend or publishing. Treat this as qualitative discovery, not a conversion forecast.',sources:[{title:'The existing launch brief',url:'https://example.test/brief'}]}]}:{messages:[]}),{headers:{'Content-Type':'application/json'}});}});
+   return handleStudio(req,res,{params:u.searchParams,actor,api,load:async()=>index,env:{NUFI_HQ_SITE_TOKEN:'fixture-only'},fetcher:async(endpoint,options)=>{const input=JSON.parse(options.body);return new Response(JSON.stringify(input.action==='ideas'?{version:4,ideas:[{id:'fixture-proposal',title:'Can people explain the free Reset in ten seconds?',day:'2026-11-24',state:'pending',summary:proposalSample,rationale:'Check offer clarity before traffic spend or publishing. Treat this as qualitative discovery, not a conversion forecast.',sources:[{title:'The existing launch brief',url:'https://example.test/brief'}]}]}:{messages:[]}),{headers:{'Content-Type':'application/json'}});}});
   }
   if(u.pathname.startsWith('/api/')){res.writeHead(503,{'Content-Type':'application/json'});return res.end('{"error":"Local fixture service unavailable"}');}
   let file=path.resolve(root,'.'+decodeURIComponent(u.pathname));
