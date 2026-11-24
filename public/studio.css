@@ -690,3 +690,39 @@ body.team-profile-open{overflow:hidden}.team-profile-modal{width:min(800px,calc(
 .project-gantt>summary{font-size:18px;font-weight:600;cursor:pointer}
 .project-task-fields .simple-task-planning{grid-column:1/-1}
 @media(max-width:650px){.simple-planner-task{padding:15px}.simple-planner-task>summary{align-items:flex-start;flex-wrap:wrap}.simple-task-planning{padding:12px}}
+
+/* Compact project production rows and visible approval actions. */
+.tracker-work-update{margin:6px 0 0;padding:0;border:0;background:none}.tracker-work-update summary{cursor:pointer;font-size:13px;line-height:1.45;color:#526973}.tracker-work-update summary small{display:inline;margin-left:8px;font-size:12px}.tracker-work-update>div{padding:6px 10px;border-left:2px solid #cadde3;margin-top:6px}.tracker-work-update p{font-size:13px;margin:4px 0}.tracker-row{padding:12px 0;gap:14px}.tracker-file-actions{margin:8px 0 0;gap:8px}.tracker-file-actions form,.asset-approval-top form{margin:0;width:auto}.tracker-file-actions .btn,.tracker-file-actions button{min-height:34px;padding:6px 12px;font-size:13px}.asset-approval-top{margin:0 0 16px}.review-popup-footer{order:1}.review-popup-header{order:0}.review-popup-body{order:2}
+/* Compact task list with the original full-sized form styling inside a modal. */
+.project-document .project-task-document{padding:0;margin:10px 0;border:1px solid #d6ddd9;border-radius:10px;background:#fff}
+.project-document .project-task-document>summary{padding:16px 20px;display:flex;align-items:center;justify-content:space-between;gap:18px;cursor:pointer}
+.project-task-document>summary>span:first-child{display:grid;gap:6px;min-width:0}
+.project-document .project-task-document>summary strong{font-size:16px;line-height:1.5}
+.project-document .project-task-document>summary small{font-size:13px;line-height:1.5;color:#536572;font-weight:400}
+.project-task-document[open]>:not(summary){margin:16px 20px}
+.task-modal-open{overflow:hidden}
+.task-edit-modal{padding:0;width:min(820px,calc(100vw - 40px));max-height:90dvh;overflow:auto;border:1px solid #d6ddd9;border-radius:14px;background:#fff;color:#092a3e;box-shadow:0 24px 90px #092a3e33}
+.task-edit-modal::backdrop{background:#092a3e70;backdrop-filter:blur(2px)}
+.task-modal-bar{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:flex-start;gap:24px;padding:22px 28px;background:#faf6ef;border-bottom:1px solid #d6ddd9}
+.task-modal-bar h2{font-size:23px;line-height:1.4;margin:0;overflow-wrap:anywhere}
+.task-modal-bar button{flex:none;background:white;color:#06475e;border:1px solid #c7d0d5;border-radius:7px;padding:9px 14px;font-size:14px}
+.task-modal-body{padding:26px 28px 30px}.task-modal-body .studio-form{max-width:none;margin:0;display:grid;gap:18px}
+.task-modal-body .studio-form>label,.task-modal-body .simple-task-planning>label{display:flex;flex-direction:column;align-items:stretch;gap:8px;max-width:none;margin:0;font-size:15px;font-weight:500}
+.task-modal-body input:not([type=checkbox]):not([type=hidden]),.task-modal-body select,.task-modal-body textarea{display:block;width:100%;min-width:0;box-sizing:border-box;font:inherit;font-size:16px;min-height:46px;padding:11px 13px;border:1px solid #c7d0d5;border-radius:7px;background:#fff;color:#092a3e}
+.task-modal-body textarea{min-height:116px;line-height:1.6;resize:vertical}
+.task-modal-body .simple-task-planning{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;padding:20px;margin:0;border:1px solid #d6ddd9;border-radius:9px}
+.task-modal-body .simple-task-planning>details,.task-modal-body .simple-task-planning>p{grid-column:1/-1;margin:0}
+.task-modal-body .simple-task-planning legend{font-size:15px;padding:0 6px}
+.task-modal-body .project-task-edit{border:0;background:transparent;padding:0;margin:0}.task-modal-body .project-task-edit>summary{display:none}
+.task-editable .project-task-brief{display:none}.task-modal-body .task-schedule-summary{margin:0 0 22px;font-size:14px}
+.task-modal-body .project-task-fields{display:grid;gap:18px}.task-modal-body .project-task-fields>*{grid-column:1/-1}
+.task-modal-body .studio-form>button{justify-self:start;min-height:46px;padding:11px 22px;font-size:16px}
+.task-modal-body [data-task-delete]{margin-top:24px}.task-modal-body .task-prerequisites{margin:12px 0 0}.task-modal-body .task-prerequisites label{font-size:15px;font-weight:400}
+.task-modal-error{padding:14px 18px;margin:20px 28px 0;background:#fff1f0;color:#962f2f;border-left:3px solid #962f2f}.task-modal-error[hidden]{display:none}
+.task-modal-body button:disabled{opacity:.6;cursor:wait}
+@media(max-width:600px){.task-edit-modal{width:calc(100vw - 16px);max-height:96dvh;border-radius:11px}.task-modal-bar{padding:18px}.task-modal-bar h2{font-size:20px}.task-modal-body{padding:20px 18px}.task-modal-body .simple-task-planning{grid-template-columns:1fr;padding:16px}.project-document .project-task-document>summary{padding:14px;align-items:flex-start}.task-modal-error{margin:16px 18px 0}}
+
+.task-modal-body [data-task-delete] button{background:#fff;color:#962f2f;border:1px solid #c7b0ab}
+
+/* Clearly labelled updates dropdown; timestamps belong inside the panel. */
+.tracker-work-update{margin-top:10px}.tracker-work-update>summary{display:list-item;width:fit-content;box-sizing:border-box;padding:7px 12px;list-style-position:inside;border:1px solid #ced9dc;border-radius:6px;background:#f7fafb;color:#174b5a;font-size:13px;font-weight:600;line-height:1.4}.tracker-work-update>summary:hover{background:#edf4f5}.tracker-work-update>summary:focus-visible{outline:2px solid #00677b;outline-offset:3px}.tracker-work-update[open]>summary{margin-bottom:8px}.tracker-work-update>div{padding:10px 14px;background:#f7fafb;max-width:780px;border-radius:4px}.tracker-work-update .tracker-update-time{margin:0 0 8px;color:#617581;font-size:12px}

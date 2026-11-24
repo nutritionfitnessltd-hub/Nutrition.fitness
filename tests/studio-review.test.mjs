@@ -25,7 +25,7 @@ test('review list opens accessible preview with saved revision and two clear dec
 });
 test('article review window has one article and persistent controls without manager navigation and with a deferred editor',()=>{
  const f=fixture(),html=reviewWindowDocument(params,f.data);
- assert.match(html,/article-review-window/);assert.match(html,/review-window-controls/);
+ assert.match(html,/article-review-window/);assert.match(html,/review-window-controls/);assert.ok(html.indexOf('review-window-controls')<html.indexOf('<h1>'));
  for(const label of ['Approve','Edit','Request changes'])assert.ok(html.includes('>'+label+'<'));
  assert.doesNotMatch(html,/Studio navigation|review-popup-header/);
  assert.match(html,/<iframe title="Edit content form" data-review-edit-frame><\/iframe>/);

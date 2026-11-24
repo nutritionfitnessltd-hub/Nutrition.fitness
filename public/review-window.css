@@ -51,3 +51,7 @@ body.review-editor-page{box-sizing:border-box;margin:0;padding:24px 28px 100px;m
 @media print{body.content-review-window{padding:0;background:white}.approval-paper{padding:0;box-shadow:none}.review-window-controls,.review-edit-dialog{display:none}}
 
 .review-editor-page button[value="review"]{display:none}
+
+/* Approval is the first action above the document. */
+.review-window-controls{position:sticky;top:0;bottom:auto;left:auto;right:auto;max-height:50dvh;border-top:0;border-bottom:1px solid #d8d4cb;box-shadow:0 4px 14px #00334912;margin-bottom:20px}
+body.article-review-window,body.content-review-window,body.newsletter-review-window{padding-bottom:32px}
