@@ -119,7 +119,7 @@ export function createLibraryReader({ env = process.env, load = readIndex,
         clearLibraryCookies(res);
         return redirect(res);
       }
-      if(fields.action==='accept-nda'){
+      if(['accept-nda','acknowledge-welcome'].includes(fields.action)){
         let actor;try{actor=await libraryActor(req,res,env,apiFactory);}catch{return html(res,503,loginScreen('Sign-in could not be checked. Please try again.'));}
         if(!actor&&!validSession(req,key))return html(res,401,loginScreen());
         await requireLibraryNda(req,res,{actor:ndaActor(actor),api:apiFactory(env),params});return;

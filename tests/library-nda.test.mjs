@@ -14,6 +14,9 @@ function fixture(){
   const env={NUFI_LIBRARY_PASSWORD_SHA256:hash(password),NUFI_LIBRARY_CATALOGUE_KEY:'a'.repeat(64),SUPABASE_URL:'https://invalid.test',SUPABASE_ANON_KEY:'fixture',SUPABASE_SERVICE_ROLE_KEY:'fixture',SITE_URL:'https://example.test'};
   const api=async(path,options={})=>{
     calls.push([path,options]);const q=new URL(path,'https://invalid.test').searchParams;
+    // NDA tests start after the separately tested welcome acknowledgement.
+    if(path.includes('nufi_studio_items'))return [{payload:{fields:{role:'Editor',engagementType:'freelance',rate:'25',currency:'GBP',rateBasis:'hour',agreedHours:'10',hoursPeriod:'week'}}}];
+    if(path.includes('nufi_team_welcome_acknowledgements'))return [{id:'welcome-receipt'}];
     if(path.includes('nufi_library_nda_agreements'))return document?[document]:[];
     if(path.includes('nufi_library_nda_acceptances')){
       if(outage)throw new Error('Fixture outage');
@@ -115,7 +118,7 @@ test('address, explicit signature and ID are required together and saved with th
  const record=f.receipts[0];assert.equal(record.signed_details,true);assert.match(record.postal_address,/1 Example Street/);assert.equal(record.signature_method,'typed');assert.equal(record.identity_received,true);assert.equal(record.identity_sha256.length,64);
  const page=await f.request('?work=1&nda=record',null,cookie);assert.match(page.html,/NDA reference/);assert.match(page.html,/1 Example Street/);assert.match(page.html,/Test Signer/);assert.match(page.html,/ID supplied/);assert.doesNotMatch(page.html,/data:image/);
  const image=await f.request('?work=1&nda=identity',null,cookie);assert.equal(image.headers['content-type'],'image/webp');
- assert.ok(f.calls.filter(([url])=>url.includes('document_hash=eq.')).every(([url])=>url.includes('select=id,signed_details')));
+ assert.ok(f.calls.filter(([url])=>url.includes('nufi_library_nda_acceptances')&&url.includes('document_hash=eq.')).every(([url])=>url.includes('select=id,signed_details')));
 });
 test('drawn signature is bounded numeric data and shown in the signed record',async()=>{
  const f=fixture(),cookie=await f.signIn();

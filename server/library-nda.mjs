@@ -1,3 +1,4 @@
+import {requireTeamWelcome} from './team-welcome.mjs';
 import { signedDetails, detailsForm, signatureMarkup, identityImage } from './library-nda-details.mjs';
 import { createHash } from 'node:crypto';
 import { esc, link } from './library-shelves.mjs';
@@ -49,6 +50,7 @@ async function accountEmail(api,actor){
 export async function requireLibraryNda(req,res,{actor,api,params}){
   // Called only after authentication; never trust posted actor IDs, times or document text.
   try{
+    if(await requireTeamWelcome(req,res,{actor,api,params,render}))return true;
     const {version:ndaVersion,document_text:ndaText,document_hash:ndaHash,requires_identity:requiresIdentity}=await currentAgreement(api);
     const found=await accepted(api,actor,ndaHash);
     const record=found&&(!requiresIdentity||found.signed_details)?found:null;
