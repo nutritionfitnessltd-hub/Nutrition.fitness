@@ -57,3 +57,11 @@ test('newsletter shelf includes newsletter designs and named drafts without mixi
  const html=library(new URLSearchParams({kind:'newsletter'}),data);assert.match(html,/Recipe newsletter/);assert.match(html,/Monthly update/);assert.doesNotMatch(html,/Welcome message/);assert.match(html,/studio=builder&amp;build=newsletter/);
  const messages=library(new URLSearchParams({kind:'communication'}),data);assert.match(messages,/Welcome message/);assert.doesNotMatch(messages,/Recipe newsletter/);
 });
+
+test('simple task save persists hours and checkbox prerequisites without rewriting deadlines',async()=>{
+ const data=fixture(),p={id:randomUUID(),creator_id:owner,revision:1,weeks:1,status:'Planning',studio:{type:'blank'},entries:[{id:'first',title:'First',status:'To do',week:0,kind:'Task',due:'2026-12-01'},{id:'second',title:'Second',assignee,status:'To do',week:0,kind:'Task',due:'2026-12-03'}]};data.projects=[p];
+ let saved;const api=async(path,options)=>{saved=options.payload;return [saved];};
+ await changeStudio(new URLSearchParams({project:p.id}),{action:'task-save',projectRevision:1,entry:'second',title:'Second',status:'In progress',week:0,due:'2026-12-03',schedulePresent:'1',plannerVersion:'2',dependencySelection:'1','dependency.first':'1',estimatedHours:'8',remainingHours:'4'},data,api);
+ const second=saved.entries.find(e=>e.id==='second');assert.deepEqual(second.dependsOn,['first']);assert.equal(second.estimatedHours,8);assert.equal(second.remainingHours,4);assert.equal(second.due,'2026-12-03');assert.equal(saved.entries[0].due,'2026-12-01');
+ await assert.rejects(changeStudio(new URLSearchParams({project:p.id}),{action:'task-save',projectRevision:1,entry:'first',title:'First',status:'To do',week:0,schedulePresent:'1',plannerVersion:'2',dependencySelection:'1','dependency.first':'1',estimatedHours:'2'},data,api),e=>e.status===400);
+});

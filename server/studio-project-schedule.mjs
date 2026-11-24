@@ -14,12 +14,22 @@ export function validateDependencies(entries){
  entries.forEach(visit);
 }
 export function scheduleFields(f,e,entries){
- if(f.schedulePresent!=='1')return; // Preserve schedules submitted through older task forms.
- const start=f.start||(f.duration?e.start||todayLondon():''),duration=f.duration===''?null:Number(f.duration),deps=String(f.dependencies||'').split(',').map(x=>x.trim()).filter(Boolean);
- if(start&&!validDate(start))throw new HttpError(400,'Choose a valid start date.');
- if(duration!==null&&(!Number.isInteger(duration)||duration<1||duration>365))throw new HttpError(400,'Duration must be 1–365 working days.');
- Object.assign(e,{start,duration,dependsOn:[...new Set(deps)]});validateDependencies(entries);
+ if(f.schedulePresent!=='1')return;
+ const deps=f.dependencySelection==='1'?Object.keys(f).filter(k=>k.startsWith('dependency.')).map(k=>k.slice(11)):String(f.dependencies||'').split(',').filter(Boolean);
+ if(f.plannerVersion==='2'){
+  const parse=(value,label)=>{if(value===''||value===undefined)return null;const n=Number(value);if(!Number.isFinite(n)||n<=0||n>5000||!/^\d+(?:\.\d{1,2})?$/.test(String(value)))throw new HttpError(400,'Enter '+label+' between 0.01 and 5,000 hours.');return n;};
+  const estimatedHours=parse(f.estimatedHours,'estimated hours');
+  const remainingHours=parse(f.remainingHours,'remaining hours');
+  Object.assign(e,{estimatedHours,remainingHours,start:'',duration:estimatedHours===null?(e.duration??null):null,dependsOn:[...new Set(deps)]});
+ }else{
+  const start=f.start||'',duration=f.duration===''?null:Number(f.duration);
+  if(start&&!validDate(start))throw new HttpError(400,'Choose a valid start date.');
+  if(duration!==null&&(!Number.isInteger(duration)||duration<1||duration>365))throw new HttpError(400,'Duration must be 1–365 working days.');
+  Object.assign(e,{start,duration,dependsOn:[...new Set(deps)]});
+ }
+ validateDependencies(entries);
 }
+// Legacy day-based calculation retained for saved-plan compatibility. Live pages use portfolioSchedule.
 export function projectSchedule(p,today=todayLondon(),forecast=true){
  const byId=new Map(p.entries.map(e=>[e.id,e])),memo=new Map(),active=new Set();
  function calc(e){if(memo.has(e.id))return memo.get(e.id);if(active.has(e.id))return {error:'Circular dependency',blocked:true};active.add(e.id);
@@ -43,15 +53,86 @@ export function reorderAndSchedule(entries,entryId,position){
  const byId=new Map(ordered.map(e=>[e.id,e])),seen=new Set(),result=[];
  function visit(e){if(seen.has(e.id))return;for(const id of e.dependsOn||[])visit(byId.get(id));seen.add(e.id);result.push(e);}
  ordered.forEach(visit);
- for(const row of projectSchedule({entries:result},todayLondon(),false))if(row.finish&&row.entry.status!=='Done')row.entry.due=row.finish;
  return result;
 }
-export function schedulingInputs(p,e={}){return '<fieldset class="task-scheduling" data-schedule-task="'+esc(e.id||'')+'" data-schedule-entries="'+esc(JSON.stringify(p.entries))+'"><legend>Schedule · Monday–Friday</legend>'+hidden('schedulePresent','1')+input('position','Task position',e.id?p.entries.findIndex(t=>t.id===e.id)+1:p.entries.length+1,'number','min="1" max="'+(e.id?p.entries.length:p.entries.length+1)+'" step="1"')+input('start','Earliest start',e.start||'','date')+input('duration','Days to complete (working days)',e.duration??'','number','min="1" max="365" step="1"')+'<details class="schedule-dependencies"><summary>Dependencies ('+(e.dependsOn||[]).length+')</summary><label>Finish these tasks first<select name="dependencyPicker" multiple size="4" data-dependency-picker>'+p.entries.filter(t=>t.id!==e.id).map(t=>'<option value="'+esc(t.id)+'"'+((e.dependsOn||[]).includes(t.id)?' selected':'')+'>'+esc(t.title)+'</option>').join('')+'</select></label></details><input type="hidden" name="dependencies" data-dependency-value value="'+esc((e.dependsOn||[]).join(','))+'"><small>Select multiple tasks with Ctrl / Command. Delivery date updates from start, duration and dependencies. Prerequisites are automatically ordered first. Saturdays and Sundays do not count; bank holidays are not excluded.</small></fieldset>';}
-export function taskScheduleSummary(p,e){const r=projectSchedule(p).find(r=>r.entry.id===e.id);return '<div class="task-schedule-summary">'+(r.duration?'<span>'+r.duration+' working day'+(r.duration===1?'':'s')+'</span>':'<span>Duration not set</span>')+(r.finish?'<span>Forecast finish '+esc(r.finish)+'</span>':'<span>Schedule not set</span>')+(r.overdue?'<strong class="schedule-late">Overdue'+(r.late?' · '+r.late+' working day'+(r.late===1?'':'s')+' late':'')+'</strong>':'')+(r.blocked?'<strong class="schedule-blocked">Blocked by dependency</strong>':'')+(r.atRisk?'<strong class="schedule-late">Forecast after delivery date</strong>':'')+(r.error?'<strong>'+esc(r.error)+'</strong>':'')+'</div>';}
-export function ganttPanel(p){
- const rows=projectSchedule(p),dates=rows.flatMap(r=>[r.start,r.finish,validDate(r.entry.due)?r.entry.due:'']).filter(Boolean),today=todayLondon();
+export function weeklyHours(fields={}){
+ const hours=Number(fields.agreedHours);
+ if(!Number.isFinite(hours)||hours<=0||!['week','month'].includes(fields.hoursPeriod))return null;
+ const weekly=fields.hoursPeriod==='month'?hours*12/52:hours;
+ return weekly<=168?weekly:null;
+}
+const taskKey=(p,e)=>p.id+':'+e.id;
+export function portfolioSchedule(projects,profiles={},today=todayLondon()){
+ const result=new Map(),pending=[],bookings=new Map();
+ for(const p of projects){
+  if(['Complete','Archived'].includes(p.status))continue;
+  for(const [order,e] of (p.entries||[]).entries())pending.push({p,e,order,key:taskKey(p,e)});
+ }
+ const daily=id=>{const n=weeklyHours(profiles[id]);return n===null?null:n/5;};
+ const set=(t,details)=>{const e=t.e;const overdue=e.status!=='Done'&&validDate(e.due)&&e.due<today;
+  result.set(t.key,{entry:e,start:'',finish:'',blocked:(e.dependsOn||[]).some(id=>t.p.entries.find(x=>x.id===id)?.status!=='Done'),overdue,late:overdue?workDaysBetween(e.due,today):0,...details,atRisk:Boolean(details.finish&&validDate(e.due)&&details.finish>e.due&&e.status!=='Done'),unscheduled:!details.finish});};
+ const rank=t=>t.e.status==='In progress'||t.e.status==='Changes requested'?0:1;
+ pending.sort((a,b)=>rank(a)-rank(b)||(a.e.due||'9999').localeCompare(b.e.due||'9999')||String(a.p.id).localeCompare(String(b.p.id))||a.order-b.order);
+ while(pending.length){
+  let progressed=false;
+  for(let i=0;i<pending.length;){
+   const t=pending[i],{p,e}=t,deps=(e.dependsOn||[]).map(id=>({id,entry:p.entries.find(x=>x.id===id),row:result.get(p.id+':'+id)}));
+   if(e.status==='Done'){const end=validDate(e.completedAt?.slice(0,10))?e.completedAt.slice(0,10):today;set(t,{start:end,finish:end,hours:0});}
+   else if(deps.some(d=>!d.entry)){set(t,{error:'Choose an available prerequisite.'});}
+   else if(deps.some(d=>!d.row)){i++;continue;}
+   else if(deps.some(d=>!d.row.finish)){set(t,{error:'Waiting for prerequisite planning or review.'});}
+   else if(e.status==='Ready for review'){set(t,{error:'Awaiting review; finish date will update after approval.'});}
+   else{
+    const person=e.assignee||p.creator_id,capacity=daily(person);
+    const hours=Number.isFinite(e.remainingHours)&&e.remainingHours>0?e.remainingHours:Number.isFinite(e.estimatedHours)&&e.estimatedHours>0?e.estimatedHours:capacity&&e.duration?e.duration*capacity:null;
+    if(e.milestone||e.kind==='Milestone'){
+     const finish=deps.length?deps.map(d=>d.row.finish).sort().at(-1):workStart(today);set(t,{start:finish,finish,hours:0});
+    }else if(capacity===null){set(t,{missingCapacity:true,error:'Set weekly hours in the assigned person’s profile.'});}
+    else if(!hours){set(t,{error:'Add estimated hours to plan this task.'});}
+    else{
+     let start=workStart(validDate(e.start)&&e.start>today?e.start:today);
+     for(const d of deps){const after=workStart(next(d.row.finish));if(after>start)start=after;}
+     const load=bookings.get(person)||new Map();bookings.set(person,load);
+     let left=hours,first='',finish='',days=0;const reserved=[];
+     for(let day=start;left>0.000001&&days<1096;day=workStart(next(day)),days++){
+      const available=Math.max(0,capacity-(load.get(day)||0));if(!available)continue;
+      const amount=Math.min(left,available);reserved.push([day,amount]);left-=amount;if(!first)first=day;finish=day;
+     }
+     if(left>0.000001)set(t,{error:'This task exceeds the planning window. Split it into smaller tasks.'});
+     else{for(const [day,n] of reserved)load.set(day,(load.get(day)||0)+n);set(t,{start:first,finish,hours,duration:workDaysBetween(first,finish)+1,capacity,person});}
+    }
+   }
+   pending.splice(i,1);progressed=true;
+  }
+  if(!progressed){for(const t of pending)set(t,{error:'Dependencies form a circle. Update the prerequisites.'});break;}
+ }
+ return result;
+}
+export function plannedRows(p,data={}){
+ if(data.planner?.unavailable)return p.entries.map(entry=>({entry,error:'Planning is temporarily unavailable. Your tasks and deadlines are saved.'}));
+ const plan=data.planner?.rows||portfolioSchedule(data.projects?.length?data.projects:[p],Object.fromEntries([...(data.byId||new Map())].filter(([id])=>id.startsWith('studio:team-profile:')).map(([id,r])=>[id.slice('studio:team-profile:'.length),r.fields||{}])));
+ return p.entries.map(e=>plan.get(taskKey(p,e))||{entry:e,error:p.status==='Complete'?'Project complete':'Planning details unavailable'});
+}
+export function schedulingInputs(p,e={},data={}){
+ const person=e.assignee||p.creator_id,f=data.byId?.get('studio:team-profile:'+person)?.fields||{},hours=weeklyHours(f);
+ const estimate=e.estimatedHours??(e.duration&&hours?Math.round(e.duration*hours/5*100)/100:'');
+ return '<fieldset class="task-scheduling simple-task-planning"><legend>Plan the work</legend>'+hidden('schedulePresent','1')+hidden('plannerVersion','2')+hidden('dependencySelection','1')+
+  ((e.milestone||e.kind==='Milestone')?'<p class="meta">A milestone marks a result; its date follows its prerequisites.</p>':input('estimatedHours','Estimated hours',estimate,'number','min="0.01" max="5000" step="0.01" placeholder="How many hours of work?"')+
+  (['In progress','Changes requested'].includes(e.status)?input('remainingHours','Hours left',e.remainingHours??estimate,'number','min="0.01" max="5000" step="0.01"'):hidden('remainingHours',e.remainingHours??'')))+
+  '<details class="schedule-dependencies"><summary>Must finish first (<span data-dependency-count>'+(e.dependsOn||[]).length+'</span>)</summary><div class="task-prerequisites">'+
+  (p.entries.filter(t=>t.id!==e.id).map(t=>'<label><input type="checkbox" name="dependency.'+esc(t.id)+'" value="1" data-task-prerequisite'+((e.dependsOn||[]).includes(t.id)?' checked':'')+'><span>'+esc(t.title)+'</span></label>').join('')||'<p class="meta">No other tasks yet.</p>')+'</div></details><p class="meta">Expected dates update when you save. Deadlines stay fixed.</p></fieldset>';
+}
+export function taskScheduleSummary(p,e,data={}){
+ const r=plannedRows(p,data).find(r=>r.entry.id===e.id);
+ return '<div class="task-schedule-summary">'+(r.hours?'<span>'+esc(r.hours)+' hours'+(e.remainingHours?' left':' estimated')+'</span>':'')+(r.finish?'<span>Expected '+esc(r.finish)+'</span>':'')+(r.overdue?'<strong class="schedule-late">Deadline missed</strong>':r.atRisk?'<strong class="schedule-late">At risk of missing deadline</strong>':'')+(r.blocked?'<strong class="schedule-blocked">Waiting for prerequisites</strong>':'')+(r.error?'<span class="planner-question">'+esc(r.error)+'</span>':'')+(r.missingCapacity&&data.actor?.role==='admin'?'<a href="/content-library/?work=1&amp;studio=team&amp;person='+encodeURIComponent(e.assignee||p.creator_id)+'">Set working hours</a>':'')+'</div>';
+}
+export function taskForecastLabel(p,e,data={}){
+ const r=plannedRows(p,data).find(r=>r.entry.id===e.id);
+ return r.finish?'Expected '+r.finish+(r.overdue?' · Deadline missed':r.atRisk?' · At risk':'')+(r.blocked?' · Waiting for prerequisites':''):r.error||'Add planning details';
+}
+export function ganttPanel(p,data={}){
+ const rows=plannedRows(p,data),today=todayLondon(),dates=rows.flatMap(r=>[r.start,r.finish,validDate(r.entry.due)?r.entry.due:'']).filter(Boolean);
  if(!rows.length)return '';
  dates.push(today);const from=dates.reduce((a,b)=>a<b?a:b),last=dates.reduce((a,b)=>a>b?a:b),all=[];for(let s=from;s<=last&&all.length<366;s=next(s))all.push(s);
- const clipped=last>all.at(-1),width=Math.max(900,all.length*30),positions=new Map(all.map((d,i)=>[d,i]));
- return '<section class="panel project-gantt"><h2>Project timeline · Gantt chart</h2><p>Monday–Friday working days. Shaded columns are weekends. Delivery dates follow saved start, duration and dependencies; forecasts show the impact of unfinished work. Duration is the full task estimate, not time remaining.</p><details><summary>Timeline and dependency table</summary><div class="gantt-scroll"><div style="min-width:'+width+'px"><div class="gantt-dates">'+all.map(d=>'<span style="background:'+(working(d)?'#fff':'#edf0f2')+'" title="'+d+'">'+esc(d.slice(5))+'</span>').join('')+'</div>'+rows.map(r=>{const a=positions.get(r.start),b=r.finish?(positions.get(r.finish)??all.length-1):undefined;return '<div class="gantt-label">'+esc(r.entry.title)+(r.entry.status==='Done'?' · Done':r.overdue?' · Overdue':r.blocked?' · Blocked':'')+'</div><div class="gantt-track" style="--columns:'+all.length+'">'+all.map(d=>'<span class="gantt-day '+(!working(d)?'weekend ':'')+(d===today?'today':'')+'"></span>').join('')+(a!==undefined&&b!==undefined?'<span class="gantt-bar '+(r.overdue||r.atRisk?'late':r.entry.status==='Done'?'done':'')+'" style="left:'+a/all.length*100+'%;width:'+Math.max(1,b-a+1)/all.length*100+'%" title="'+esc(r.start+' to '+r.finish)+'">'+r.duration+'d</span>':'')+'</div>';}).join('')+'</div></div>'+(clipped?'<p>Chart limited to the first 366 calendar days; the full dates are in the table.</p>':'')+'<div class="gantt-scroll"><table><thead><tr><th>Task</th><th>Depends on</th><th>Days</th><th>Forecast start</th><th>Forecast finish</th><th>Delivery</th><th>Flags</th></tr></thead><tbody>'+rows.map(r=>'<tr>'+[r.entry.title,(r.entry.dependsOn||[]).map(id=>p.entries.find(e=>e.id===id)?.title||'Unavailable task').join(', ')||'None',r.duration??'Not set',r.start||'Not set',r.finish||'Not set',r.entry.due||'Not set',[r.overdue?'Overdue':'',r.blocked?'Blocked':'',r.atRisk?'At risk':'',r.error].filter(Boolean).join(' · ')||'—'].map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></details></section>';
+ return '<details class="panel project-gantt"><summary>View timeline</summary><p>Expected dates share each person’s weekly hours across Monday–Friday and all active projects. In-progress work comes first, then earlier deadlines. Prerequisites finish before the next working day starts. Bank holidays are not excluded. Deadlines stay fixed.</p><div class="gantt-scroll"><div style="min-width:'+Math.max(900,all.length*30)+'px"><div class="gantt-dates">'+all.map(d=>'<span class="'+(!working(d)?'weekend':'')+'">'+esc(d.slice(5))+'</span>').join('')+'</div>'+rows.map(r=>{const a=all.indexOf(r.start),b=all.indexOf(r.finish);return '<div class="gantt-label">'+esc(r.entry.title)+'</div><div class="gantt-track" style="--columns:'+all.length+'">'+all.map(d=>'<span class="gantt-day '+(!working(d)?'weekend ':'')+(d===today?'today':'')+'"></span>').join('')+(a>=0&&b>=0?'<span class="gantt-bar '+(r.atRisk||r.overdue?'late':r.entry.status==='Done'?'done':'')+'" style="left:'+a/all.length*100+'%;width:'+(b-a+1)/all.length*100+'%" title="'+esc(r.start+' to '+r.finish)+'"></span>':'')+'</div>';}).join('')+'</div></div>'+(last>all.at(-1)?'<p>Timeline shows the first 366 days. Full dates appear below.</p>':'')+'<div class="gantt-scroll"><table><thead><tr><th>Task</th><th>Expected start</th><th>Expected finish</th><th>Deadline</th><th>Planning note</th></tr></thead><tbody>'+rows.map(r=>'<tr>'+[r.entry.title,r.start||'—',r.finish||'—',r.entry.due||'None',r.error||(r.atRisk?'At risk':r.blocked?'Waiting for prerequisites':'')].map(v=>'<td>'+esc(v)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div></details>';
 }

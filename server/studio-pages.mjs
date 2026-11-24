@@ -1,4 +1,4 @@
-import {schedulingInputs,taskScheduleSummary,ganttPanel} from './studio-project-schedule.mjs';
+import {schedulingInputs,taskScheduleSummary,ganttPanel,taskForecastLabel} from './studio-project-schedule.mjs';
 import {productionFileLinks} from './production-file-links.mjs';
 import {newsletterDraftButton} from './newsletter-draft-links.mjs';
 import {isLaunchPack} from './studio-launch-pack.mjs';
@@ -169,26 +169,26 @@ export function projectPage(params,data){
     const type=e.kind==='Task'?'task':data.byId.get(e.record)?.kind||Object.keys(kinds).find(k=>kinds[k]===e.kind)||({'PT WhatsApp message':'communication','Content to create':'article'})[e.kind]||'article';
     if(!taskRows.has('task'))taskRows.set('task',[]);taskRows.get('task').push(e);
   }
-  const rows=[...taskRows].map(([type,entries])=>'<section class="studio-task-group"><h3>'+esc(collections[type]?.[0]||(type==='task'?'Tasks':'Content'))+'</h3>'+entries.map(e=>{
+  const rows=[...taskRows].map(([type,entries])=>'<section class="studio-task-group">'+entries.map(e=>{
     const r=data.byId.get(e.record);
-    return '<section class="studio-task"><div class="studio-heading"><div><small>'+esc(e.kind)+'</small><h3>'+esc(e.title)+'</h3></div>'+badge(e.status)+'</div><p>Assigned to: '+esc(data.people.find(person=>person.id===(e.assignee||p.creator_id))?.name||'Team member')+(e.due?' · Delivery '+esc(e.due):'')+'</p>'+taskScheduleSummary(p,e)+'<p class="prose">'+esc(e.notes||'')+'</p>'+
+    return '<details class="project-task-row simple-planner-task"><summary><span><strong>'+esc(e.title)+'</strong><small>'+esc(data.people.find(person=>person.id===(e.assignee||p.creator_id))?.name||'Team member')+' · '+esc(taskForecastLabel(p,e,data))+(e.due?' · Deadline '+esc(e.due):'')+'</small></span>'+badge(e.status==='Ready for review'?'Needs review':e.status)+'</summary>'+taskScheduleSummary(p,e,data)+'<p class="prose">'+esc(e.notes||'')+'</p>'+
       (r?(canAccess(data.actor,'library')?button('Open content',url('item',{id:r.id})):'' ):canAccess(data.actor,'studio')&&e.kind!=='Task'?button('Create this content',url('new',{project:p.id,entry:e.id,kind:e.kind==='PT WhatsApp message'?'communication':e.kind==='Creative asset'?'asset':e.kind==='GHL workflow'?'workflow':'article',title:e.title})):'' )+
-      (admin||ownsTask(p,e,data.actor.id)?'<details><summary>Update task</summary>'+form('task-save',base+hidden('entry',e.id)+
+      (admin||ownsTask(p,e,data.actor.id)?form('task-save',base+hidden('entry',e.id)+
       (admin?select('assignee','Assign to',{'':'Project owner',...personOptions(data)},e.assignee||''):'')+input('title','Task',e.title,'text','required maxlength="160"')+textarea('notes','Brief and feedback',e.notes||'',3)+
-      select('status','Progress',Object.fromEntries((admin?['To do','In progress','Ready for review','Changes requested','Done']:['To do','In progress','Ready for review','Changes requested']).map(x=>[x,x])),e.status)+
-      (blank?hidden('week',e.week):input('week','Week (0 is preparation)',e.week,'number','min="0" max="'+p.weeks+'"'))+input('due','Delivery date',e.due||'','date')+schedulingInputs(p,e),state)+'</details>':'')+deleteTaskControl(p,e,data)+'</section>';
+      select('status','Progress',Object.fromEntries((admin?['To do','In progress','Ready for review','Changes requested','Done']:['To do','In progress','Ready for review','Changes requested']).map(x=>[x,x==='Ready for review'?'Needs review':x])),e.status)+
+      (blank?hidden('week',e.week):'<details class="task-extra"><summary>Programme details</summary>'+input('week','Week (0 is preparation)',e.week,'number','min="0" max="'+p.weeks+'"')+'</details>')+input('due','Deadline (optional)',e.due||'','date')+schedulingInputs(p,e,data),state,'Save task'):'')+deleteTaskControl(p,e,data)+'</details>';
   }).join('')+'</section>').join('');
   const candidates=data.items.filter(r=>(r.title+' '+r.kind).toLowerCase().includes((params.get('find')||'').toLowerCase())).slice(0,35);
   return heading(p.name,p.studio.audience||p.brief,canAccess(data.actor,'library')&&(!blank||p.entries.some(e=>e.record))?button('Preview journey',url('journey',{project:p.id}))+button('Export',url('release',{project:p.id})):'' )+
-    '<p class="studio-project-meta">'+esc(p.status)+' · '+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</p>'+ganttPanel(p)+
+    '<p class="studio-project-meta">'+esc(p.status)+' · '+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</p>'+ganttPanel(p,data)+
     (root&&canAccess(data.actor,'library')?'<p>Programme content · '+itemLink(root)+'</p>':'')+nav+'<div class="studio-columns project-columns"><section><h2>'+(blank?'Tasks':week?'Week '+week:'Preparation')+'</h2>'+(rows||(blank?'<p>No tasks yet. Add your first task to get started.</p>':'<p>No tasks in this week yet.</p>'))+'</section>'+
     '<aside class="panel">'+deletedTasksPanel(p,data)+'<details'+(blank?' open':'')+'><summary>Add work</summary>'+form('task-add',base+input('title','What needs doing?','','text','required maxlength="160"')+
-    (admin?select('assignee','Assign to',{'':'Project owner',...personOptions(data)}):'')+input('due','Delivery date (optional)','','date')+schedulingInputs(p)+select('kind',blank?'Task type':'Content type',{...(blank?{Task:'Task'}:{}),'Content to create':'Content to create','PT WhatsApp message':'PT WhatsApp message','GHL workflow':'GHL workflow','Creative asset':'Creative asset','Marketing content':'Marketing content'})+textarea('notes','What does a finished result need?'),state,'Add task')+'</details>'+
+    (admin?select('assignee','Assign to',{'':'Project owner',...personOptions(data)}):'')+input('due','Deadline (optional)','','date')+schedulingInputs(p,{},data)+'<details class="task-extra"><summary>More details</summary>'+select('kind',blank?'Task type':'Content type',{...(blank?{Task:'Task'}:{}),'Content to create':'Content to create','PT WhatsApp message':'PT WhatsApp message','GHL workflow':'GHL workflow','Creative asset':'Creative asset','Marketing content':'Marketing content'})+textarea('notes','What does a finished result need?')+'</details>',state,'Add task')+'</details>'+
     (canAccess(data.actor,'library')?'<details><summary>Attach existing content</summary><form action="/content-library/">'+hidden('work','1')+hidden('studio','project')+hidden('project',p.id)+hidden('week',week)+input('find','Find content',params.get('find')||'')+'<button>Find</button></form>'+
     (params.has('find')?form('task-attach',base+select('record','Library item',Object.fromEntries(candidates.map(r=>[r.id,r.title]))),state,'Attach to this week'):'')+'</details>':'')+
     '<details><summary>Creator & details</summary>'+form('project-save',base+(admin?input('name','Name',p.name)+select('creator','Creator',personOptions(data),p.creator_id):'')+
       textarea('brief','Project brief',p.brief)+input('launch','Target launch',p.studio.launchDate||'','date')+
-      select('status','Status',Object.fromEntries((admin?['Planning','In progress','Ready for review','Complete']:['Planning','In progress','Ready for review']).map(x=>[x,x])),p.status),state)+'</details></aside></div>';
+      select('status','Status',Object.fromEntries((admin?['Planning','In progress','Ready for review','Complete']:['Planning','In progress','Ready for review']).map(x=>[x,x==='Ready for review'?'Needs review':x])),p.status),state)+'</details></aside></div>';
 }
 function readable(value,data){
   if(Array.isArray(value))return '<ol>'+value.map(v=>'<li>'+readable(v,data)+'</li>').join('')+'</ol>';

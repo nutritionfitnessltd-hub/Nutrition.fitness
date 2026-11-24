@@ -1,4 +1,5 @@
 import {suppliersPage,supplierPage,saveSupplier} from './studio-suppliers.mjs';
+import {loadPlanner} from './studio-planner-context.mjs';
 import {courseEditorRecord} from './studio-courses.mjs';
 import {editorForm,referenceData} from './studio-editor.mjs';
 import {canEditContent} from './library-permissions.mjs';
@@ -100,6 +101,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       res.setHeader('Content-Type',file.type);res.statusCode=200;return res.end(Buffer.from(file.data,'base64'));
     }
     [data,meta]=await Promise.all([studioData(api,actor,load),displayEntry(env,'shelves').catch(()=>({}))]);
+    if(req.method==='GET'&&section==='project')await loadPlanner(data,api);
     if(req.method==='GET'&&section==='item'){
       const r=data.byId.get(params.get('id'));
       if(r?.kind==='product'||isProductAsset(r)){
