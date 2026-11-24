@@ -60,6 +60,7 @@ export function accessFromForm(fields) {
 
 const routes = {
   'video-source':['library'],
+  'recipe-staging-image':['library'],
   'brand-file': ['shared_library'],
   collection: ['library'], task: ['work'], 'task-asset-file': ['library'], suppliers: ['library'], supplier: ['library'], products: ['library'], product: ['library'], 'product-creatives': ['library'], 'product-asset': ['library'], 'product-file': ['library'], 'product-upload': ['library'],
   'shiny-things': ['library'], home: [], 'team-work': [], assets: [], 'brand-media': ['library'], 'workspace-archive': [], library: ['library'], exercises: ['library'], item: ['library'], history: ['library'], 'review-history': ['work','library'],
@@ -70,6 +71,7 @@ const routes = {
   release: ['work', 'library'], export: ['work', 'library']
 };
 const actions = {
+  'recipe-photo-review':['library','edit'],
   'collection-link':['library','edit'],
   'idea-save': ['library','edit'], 'idea-discussion': ['library','edit'],
   'course-structure-review': ['work','library'],

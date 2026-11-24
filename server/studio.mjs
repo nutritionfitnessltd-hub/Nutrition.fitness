@@ -1,3 +1,4 @@
+import {saveRecipePhotoReview,sendRecipeStagingImage} from './recipe-staging.mjs';
 import {collectionPage,linkCollection,applyCollectionPlacement} from './studio-collections.mjs';
 import {productionVideoSource} from './production-video.mjs';
 import {requestBackgroundRestart} from './background-jobs.mjs';
@@ -124,6 +125,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       }
     }
     if(section==='video-source')return await productionVideoSource(req,res,params,data);
+    if(section==='recipe-staging-image')return await sendRecipeStagingImage(req,res,params,data);
     if(section==='product-file')return await sendProductFile(req,res,params,data,env);
     if(req.method==='POST'&&(section==='product-upload'||f.action==='product-file-save')){
       const result=section==='product-upload'?await productUploadToken(req,params,data,env):await attachProductFile(params,f,data,api,env);
@@ -203,6 +205,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
       if(f.action==='background-restart'){await requestBackgroundRestart(params,f,data,api);res.statusCode=303;res.setHeader('Location',url('project',{project:params.get('project')}).replaceAll('&amp;','&'));return res.end();}
+      if(f.action==='recipe-photo-review'){await saveRecipePhotoReview(params,f,data,api);res.statusCode=303;res.setHeader('Location',url('library',{kind:'recipe',bucket:'staging',...Object.fromEntries([...params].filter(([k])=>['q','book','photo','match','page'].includes(k)))}).replaceAll('&amp;','&'));return res.end();}
       if(f.action==='supplier-save'){const next=await saveSupplier(f,data,api);res.statusCode=303;res.setHeader('Location',url('supplier',{id:next}).replaceAll('&amp;','&'));return res.end();}
       if(f.action?.startsWith('product-')){
         const next=await changeProducts(params,f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();

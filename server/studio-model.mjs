@@ -122,6 +122,7 @@ export function issues(record,records){
       if(b.type==='exercise'&&(!(b.sets>0)||!(b.repMin>0||b.durationSeconds>0||b.distanceMetres>0)))out.push('Complete the working targets for block '+(i+1)+'.');
     }
   }
+  if(d.recipeStaging&&d.recipeStaging.photoReview!=='usable')out.push('Check the staged recipe picture and mark it usable before approval.');
   if(record.source?.needsChecking)out.push('Compare the imported content with its source and confirm the check.');
   out.push(...articleMediaIssues(record));
   return [...new Set(out)];
