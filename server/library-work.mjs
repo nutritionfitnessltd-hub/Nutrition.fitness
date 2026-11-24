@@ -1,3 +1,4 @@
+import {notifyAssignment,notifyProjectTasks} from './task-notifications.mjs';
 import {workerSettingsCommand} from './team-worker-settings.mjs';
 import {saveOrganisation} from './team-organisation.mjs';
 import {allRows} from './studio-store.mjs';
@@ -142,7 +143,7 @@ function tasksMarkup(tasks,staff,actor) {
     const destination=assignmentLink(t),taskLink=destination===null?'<a href="'+link({item:t.record_id})+'">'+esc(t.record_title)+'</a>':destination?'<a href="'+destination+'">Project: '+esc(t.record_title)+'</a>':'<span>Standalone task</span>';
     const who=staff.find(s=>s.id===t.staff_id)?.name||actor.name||'';
     const stateForm=!canAccess(actor,'edit')?'':form('update',field('id',t.id)+field('revision',t.revision)+'<label>Status<select name="status">'+options(statuses,t.status)+'</select></label><button>Save status</button>');
-    return '<section class="task"><strong>'+esc(t.title)+'</strong>'+taskLink+(destination===null&&canAccess(actor,'sources')?assetButton(t.record_id):'')+'<small>'+esc([who,t.due_date?'Due '+t.due_date:'',t.status].filter(Boolean).join(' · '))+'</small>'+(t.instructions?'<p>'+esc(t.instructions)+'</p>':'')+stateForm+'</section>';
+    return '<section class="task"><strong><a href="'+link({work:'1',studio:'task',task:t.id})+'">'+esc(t.title)+'</a></strong><a href="'+link({work:'1',studio:'task',task:t.id})+'">Messages &amp; task details</a>'+taskLink+(destination===null&&canAccess(actor,'sources')?assetButton(t.record_id):'')+'<small>'+esc([who,t.due_date?'Due '+t.due_date:'',t.status].filter(Boolean).join(' · '))+'</small>'+(t.instructions?'<p>'+esc(t.instructions)+'</p>':'')+stateForm+'</section>';
   }).join('');
 }
 async function dashboard(params,api,actor,load) {
@@ -172,13 +173,15 @@ async function dashboard(params,api,actor,load) {
   if(admin)out+='<section class="panel"><a href="'+link({work:'1',studio:'team'})+'">Team & permissions</a></section>';
   return out+'</div>';
 }
-async function change(actor,f,api,load,origin,env) {
+async function change(actor,f,api,load,origin,env,fetcher=fetch) {
   if(f.action==='update'){
     requireAccess(actor,'work','edit');
     const revision=Number(f.revision);
     if(!Number.isSafeInteger(revision)||revision<1||!statuses.includes(f.status))throw new HttpError(400,'Choose a valid task status.');
+    const before=(await api(tasksTable+'?id=eq.'+uuid(f.id)+(actor.role==='staff'?'&staff_id=eq.'+actor.id:'')+'&select=status',service))[0];
     const rows=await api(tasksTable+'?id=eq.'+uuid(f.id)+'&revision=eq.'+revision+(actor.role==='staff'?'&staff_id=eq.'+actor.id:''),{service:true,method:'PATCH',headers:{Prefer:'return=representation'},payload:{status:f.status,revision:revision+1}});
     if(!rows.length)throw new HttpError(409,'The assignment changed. Reopen the queue to see its current status.');
+    await notifyAssignment(f.id,'status',{api,actor,env,fetcher},before?.status);
     return;
   }
   if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
@@ -213,6 +216,7 @@ async function change(actor,f,api,load,origin,env) {
   if(!item)throw new HttpError(400,'Choose an item in the library.');
   const data={id:uuid(f.id),created_by:actor.id,staff_id:uuid(f.staff),record_id:item.id,record_title:item.title,title:readText(f.title,'the task title',160),instructions:readText(f.instructions||'','the instructions',3000,false),due_date:dueDate(f.due)};
   await api(tasksTable+'?on_conflict=id',post(data,'resolution=ignore-duplicates,return=minimal'));
+  await notifyAssignment(data.id,'assigned',{api,actor,env,fetcher});
 }
 export async function handleLibraryWork(req,res,{env,load,params,apiFactory=platform,fetcher=fetch,copyActor}) {
   const origin='https://'+req.headers.host;
@@ -220,7 +224,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
   const projects=params.get('projects')==='1';
   const asset=params.get('assets');
   const studio=params.get('studio');
-  const destination=params.get('reader')==='1'?Object.fromEntries([...params].filter(([k])=>['reader','file','image','preview'].includes(k))):studio?Object.fromEntries([...params].filter(([k])=>['studio','id','project','week','source','template','kind','tab','category','schedule','view','contentKind','shelf','folder','item','from','progress','q','page','reader','file','image','preview','collection','bucket','bookType','build','worker','person','assign','role','ai'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
+  const destination=params.get('reader')==='1'?Object.fromEntries([...params].filter(([k])=>['reader','file','image','preview'].includes(k))):studio?Object.fromEntries([...params].filter(([k])=>['studio','id','project','entry','task','week','source','template','kind','tab','category','schedule','view','contentKind','shelf','folder','item','from','progress','q','page','reader','file','image','preview','collection','bucket','bookType','build','worker','person','assign','role','ai'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
   let actor;
   const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
   const welcomeJson=req.method==='POST'&&['send-welcome','send-password-reset'].includes(f.action)&&req.headers.accept?.includes('application/json');
@@ -311,7 +315,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
         if(f.action==='team-assign'){
           const [staff,projects]=await Promise.all([api(staffTable+'?select=id,name,email&order=name.asc',service),allRows(api,'/rest/v1/nufi_library_projects?select=*&order=created_at.desc,id')]);
           const person=staff.find(p=>p.id===f.staff);if(!person)throw new HttpError(404,'This person is unavailable.');
-          try{await saveAssignment(f,actor,staff,projects,api);}
+          try{await saveAssignment(f,actor,staff,projects,api);await notifyAssignment(f.id,'assigned',{api,actor,env,fetcher});}
           catch(e){if(!(e instanceof HttpError))throw e;return writePage(res,e.status,assignmentForm(person,projects,f,e.message),actor,'team');}
           res.statusCode=303;res.setHeader('Location',route+'&studio=team&person='+encodeURIComponent(f.staff)+'&saved=assignment');return res.end();
         }
@@ -321,7 +325,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
         if(f.action==='team-reporting-save'){const staff=await api(staffTable+'?select=id,name,email&order=name.asc',service);const {section,...destination}=await saveTeamReporting(f,actor,staff,await teamWorkSnapshot(api),api);res.statusCode=303;res.setHeader('Location',route+'&studio=team&'+new URLSearchParams({...destination,saved:'reporting'}));return res.end();}
         if(f.action==='team-profile-save'){const staff=await api(staffTable+'?select=id,name,email&order=name.asc',service);await saveTeamProfile(f,actor,staff,await teamWorkSnapshot(api),api);res.statusCode=303;res.setHeader('Location',route+'&studio=team'+(f.worker?'&tab=workers&worker='+encodeURIComponent(f.worker):'&person='+encodeURIComponent(f.staff))+'&saved=profile');return res.end();}
         if(!['create-user','issue-code','disable-user','save-access'].includes(f.action))throw new HttpError(400,'Choose a team action.');
-        const message=await change(actor,f,api,load,origin,env);
+        const message=await change(actor,f,api,load,origin,env,fetcher);
         if(message)return writePage(res,200,message,actor,'team');
         res.statusCode=303;res.setHeader('Location',route+'&studio=team'+(f.action==='save-access'?'&saved=access&person='+encodeURIComponent(f.staff):f.action==='disable-user'?'&person='+encodeURIComponent(f.staff):''));return res.end();
       }
@@ -338,11 +342,14 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
       if(req.method==='POST')requireAccess(actor,'edit');
       if(req.method==='GET'&&actor.role==='staff') { res.statusCode=303;res.setHeader('Location',route+'&studio=projects');return res.end(); }
       if(req.method==='GET')return writePage(res,200,await projectScreen(params,actor,api,load),actor);
+      const previous=params.get('project')?await api('/rest/v1/nufi_library_projects?id=eq.'+uuid(params.get('project'))+'&select=*',service):[];
       const next=await changeProject(params,f,actor,api,load);
+      const action=({'project-create':'project-create','project-settings':'project-save','project-attach':'task-attach','project-brief':'task-add','project-entry-save':'task-save'})[f.action];
+      if(action)await notifyProjectTasks(params,{action},{projects:previous},next,{api,actor,env,fetcher});
       res.statusCode=303;res.setHeader('Location',route+'&projects=1&'+new URLSearchParams(next));return res.end();
     }
     if(req.method==='POST'){
-      const message=await change(actor,f,api,load,origin,env);
+      const message=await change(actor,f,api,load,origin,env,fetcher);
       return message?writePage(res,200,message,actor):redirect(res);
     }
     if(!params.has('assignments')&&!['item','find','staff','status','page'].some(k=>params.has(k)))return handleStudio(req,res,{params:new URLSearchParams({studio:'home'}),actor,api,load,env});

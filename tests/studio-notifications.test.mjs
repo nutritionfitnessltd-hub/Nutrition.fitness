@@ -87,7 +87,7 @@ test('multiple reviewers save, reload, and retain legacy selections without send
   await assert.rejects(changeNotifications({action:'notifications-save',revision:'1',enabled:'yes',reviewersVersion:'1'},data,api,env),/Select at least one/);
   await assert.rejects(changeNotifications(fields,data,api,env),{status:409});
   await changeNotifications({action:'notifications-save',revision:'1',reviewersVersion:'1'},data,api,env);
-  assert.deepEqual(rows.get(saved.id).payload.fields,{enabled:false,reviewers:[]});
+  assert.deepEqual(rows.get(saved.id).payload.fields,{enabled:false,tasksEnabled:false,reviewers:[]});
   assert.equal(rows.size,1);
 });
 test('content, project and task reviews reach every selected reviewer once, including repeated requests',async()=>{

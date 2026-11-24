@@ -1,3 +1,5 @@
+import {taskPage,changeTaskPage} from './task-messages.mjs';
+import {notifyProjectTasks,notifyAssignment} from './task-notifications.mjs';
 import {suppliersPage,supplierPage,saveSupplier} from './studio-suppliers.mjs';
 import {loadPlanner} from './studio-planner-context.mjs';
 import {courseEditorRecord} from './studio-courses.mjs';
@@ -136,6 +138,14 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       return res.end('<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Edit '+esc(r.title)+'</title><link rel="stylesheet" href="/studio.css"><link rel="stylesheet" href="/review-window.css"><script type="module" src="/studio.js"></script></head><body class="review-editor-page" data-review-editor>'+editorForm(r.kind==='course'?courseEditorRecord(r,data):r,data)+referenceData(data)+'</body></html>');
     }
 
+    if(section==='task'){
+      let error='',status=200,retained={};
+      if(req.method==='POST'){
+        try{const pending=await changeTaskPage(params,f,data,api,env,fetcher);const values=Object.fromEntries([...params].filter(([key])=>['project','entry','task'].includes(key)));res.statusCode=303;res.setHeader('Location',url('task',{...values,...(pending?{notification:'pending'}:{})}).replaceAll('&amp;','&')+'#task-messages');return res.end();}
+        catch(e){if(!(e instanceof HttpError))throw e;status=e.status;error=e.message;retained=f;}
+      }
+      return write(res,status,await taskPage(params,data,api,retained,error),section,actor,meta);
+    }
     data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';
     data.publicationDestination=publicationDestination(env);
     if(section==='newsletter-preview'||section==='newsletter-html')return await sendNewsletter(req,res,readable(data,params.get('id')),section,env);
@@ -153,6 +163,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         try{
           if(!['review-decision','review-retry','review-schedule','review-publish','review-keep-draft','review-assign'].includes(f.action))throw new HttpError(400,'Choose a review action.');
           const result=await reviewDecision(params,f,data,api,env,fetcher);
+          if(f.action==='review-assign')await notifyAssignment(f.taskId,'assigned',{api,actor,env,fetcher});
           data.byId.set(result.id,result.record);data.items=data.items.map(r=>r.id===result.id?result.record:r);params.set('reviewed',result.reviewed);
         }catch(e){status=e instanceof HttpError?e.status:503;retained={...f,message:e instanceof HttpError?e.message:'Could not save your review. Your feedback is still here.'};}
       }else if(req.method!=='GET')throw new HttpError(405,'Use GET to open a preview.');
@@ -170,7 +181,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       }
       if(f.action?.startsWith('ghl-sync-')){await saveNewsletterConnection(f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url('connections').replaceAll('&amp;','&'));return res.end();}
       if(f.action==='project-setup')return write(res,200,projectCreatePage(params,data,f),'project-create',actor,meta);
-      if(f.action?.startsWith('idea-')){const next=await changeShinyThing(params,f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();}
+      if(f.action?.startsWith('idea-')){const next=await changeShinyThing(params,f,data,api,env,fetcher);if(next.project&&await notifyProjectTasks(params,{action:'project-create'},data,next,{api,actor,env,fetcher}))next.notification='pending';res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();}
       if(['hq-message','hq-idea','hq-approve-plan'].includes(f.action)){const result=await changeHq(params,f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url(result.section,result).replaceAll('&amp;','&'));return res.end();}
 
       if(f.action==='software-manager-review'){await hqRequest(env,{action:'message',worker:'ellis',message:f.message,clientMessageId:f.requestId},fetcher);res.statusCode=303;res.setHeader('Location',url('worker-chat',{worker:'ellis'}).replaceAll('&amp;','&'));return res.end();}
@@ -254,12 +265,13 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         res.statusCode=303;res.setHeader('Location',url('item',{id:r.id}).replaceAll('&amp;','&'));return res.end();
       }
       let notifications=[],notificationError=false;
-      try{notifications=workflowNotifications(params,f,data,env);}catch{notificationError=true;}
+      try{notifications=f.action==='task-save'?[]:workflowNotifications(params,f,data,env);}catch{notificationError=true;}
       const articlePreview=f.action==='content-save'&&f.intent==='preview'&&f.previewWindow==='yes';
       if(articlePreview)editable(data,params.get('id'));
       const next=await (['publish-test','publish-live'].includes(f.action)?publishStudio(params,f,data,api):f.action==='content-save'&&f.imageUpload?saveArticleImage(params,f,data,api,env):changeStudio(params,f,data,api,{returnRecord:articlePreview}));
       if(articlePreview){res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify({record:next.record,previewUrl:url('review-preview',{id:next.id}).replaceAll('&amp;','&')}));}
-      if(notificationError||await notifyWorkflow(notifications,{api,actor,env,fetcher}))next.notification='pending';
+      const taskEmailPending=await notifyProjectTasks(params,f,data,next,{api,actor,env,fetcher});
+      if(notificationError||await notifyWorkflow(notifications,{api,actor,env,fetcher})||taskEmailPending)next.notification='pending';
       res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();
     }
     let body;

@@ -13,7 +13,7 @@ const adminOnly=actor=>{if(actor.role!=='admin')throw new HttpError(403,'Adminis
 const reviewerList=values=>[...new Set(values.map(value=>email(value)))];
 export function notificationSettings(data){
   const fields=data.byId.get(settingsId)?.fields||{};
-  return {enabled:fields.enabled===true,reviewers:reviewerList(Array.isArray(fields.reviewers)?fields.reviewers:[fields.reviewer||'kasia@nutrition.fitness'])};
+  return {enabled:fields.enabled===true,tasksEnabled:fields.tasksEnabled===true,reviewers:reviewerList(Array.isArray(fields.reviewers)?fields.reviewers:[fields.reviewer||'kasia@nutrition.fitness'])};
 }
 function reviewerSelector(data,settings){
   const selected=new Set(settings.reviewers),people=new Map();
@@ -30,6 +30,11 @@ const recordUrl=id=>itemTable+'?id=eq.'+encodeURIComponent(id)+'&select=id,paylo
 const recordFrom=row=>row?{...row.payload,revision:row.revision}:null;
 async function saveNotification(api,actor,record,expected){
   if(actor.role!=='system')return saveRecord(api,actor,record,expected);
+  // Server task events may record only task notification delivery, never content.
+  if(actor.id==='task-workflow'&&record.kind==='notification'&&record.fields?.type==='task-workflow'&&record.id.startsWith(notificationPrefix)){
+    const rows=await api('/rest/v1/rpc/nufi_studio_save',{service:true,method:'POST',payload:{item:record.id,expected,document:record,editor_name:'system:task-workflow'}});
+    if(!rows.length)throw new HttpError(409,'The email delivery state changed.');return rows[0];
+  }
   // Only the server's password recovery flow may record its own email delivery.
   // This grants no content-editing role or browser session to the requester.
   if(actor.id!=='team-password-reset'||record.kind!=='notification'||record.fields?.type!=='team-access'||!record.id.startsWith(notificationPrefix))throw new HttpError(403,'This notification cannot be saved.');
@@ -152,7 +157,7 @@ export async function connectionsPage(data,env,api,params){
     (params.get('saved')?'<p role="status">Notification settings saved.</p>':'')+
     (params.get('mail')?'<p role="status">'+esc(statuses[params.get('mail')]||'Check the recent email activity below.')+'</p>':'')+
     '<section class="panel"><h2>Email notifications</h2><p><strong>Microsoft 365 · '+(configured?'Ready to test':'Not connected')+'</strong></p><p>From '+sender+'</p>'+(!configured?'<p>Authorise your Microsoft 365 sender to turn on notifications.</p>':'')+
-    form('notifications-save',hidden('revision',r?.revision||0)+'<label class="check"><input type="checkbox" name="enabled" value="yes"'+(settings.enabled?' checked':'')+(!configured?' disabled':'')+'> Send workflow notifications</label>'+reviewerSelector(data,settings)+'<p class="meta">Email the assigned person when work is assigned, the selected reviewers when work is ready, and the creator when a review is finished. Saving a draft does not send an email.</p>',{section:'connections'},'Save settings')+
+    form('notifications-save',hidden('revision',r?.revision||0)+'<label class="check"><input type="checkbox" name="enabled" value="yes"'+(settings.enabled?' checked':'')+(!configured?' disabled':'')+'> Send workflow notifications</label><label class="check"><input type="checkbox" name="tasksEnabled" value="yes"'+(settings.tasksEnabled?' checked':'')+(!configured?' disabled':'')+'> Email task assignments, messages and status changes</label>'+reviewerSelector(data,settings)+'<p class="meta">Email the assigned person when work is assigned, the selected reviewers when work is ready, and the creator when a review is finished. Saving a draft does not send an email.</p>',{section:'connections'},'Save settings')+
     (configured?'<details><summary>Send a test email</summary>'+form('notifications-test',hidden('requestId',randomUUID())+input('recipient','Send to','james@nutrition.fitness','email','required'),{section:'connections'},'Send test email')+'</details>':'')+
     '<details><summary>Microsoft 365 setup</summary><p>Use a Microsoft Entra app authorised to send from '+sender+'. Scope its Exchange permission to this mailbox.</p><p>Add the tenant ID, app ID and client secret in this project’s Vercel environment settings as <code>EXCHANGE_TENANT_ID</code>, <code>EXCHANGE_CLIENT_ID</code> and <code>EXCHANGE_CLIENT_SECRET</code>. Keep the secret in Vercel, then redeploy and send a test.</p><p>'+button('Open Vercel settings','https://vercel.com/nufi2/nutrition-fitness-website-2/settings/environment-variables')+'</p></details>'+
     (rows.length?'<details><summary>Recent email activity</summary><ul class="studio-list">'+rows.map(row=>{const f=row.payload.fields;return '<li><div><strong>'+esc(row.payload.title)+'</strong><small>'+esc(f.recipient)+' · '+esc(statuses[f.state]||f.state)+' · '+esc(row.updated_at?.slice(0,16).replace('T',' '))+'</small><p>'+esc(f.detail||'')+'</p>'+(f.state==='failed'?form('notifications-retry',hidden('notification',row.id),{section:'connections'},'Retry email'):'')+'</div></li>';}).join('')+'</ul><p class="meta">Accepted means Microsoft has queued the email. Delivery can take a moment. Uncertain sends are not retried automatically.</p></details>':'')+'</section>'+
@@ -161,12 +166,12 @@ export async function connectionsPage(data,env,api,params){
 export async function changeNotifications(f,data,api,env,fetcher){
   adminOnly(data.actor);
   if(f.action==='notifications-save'){
-    if(f.enabled==='yes'&&!exchangeConfigured(env))throw new HttpError(400,'Connect Microsoft 365 before turning on notifications.');
+    if((f.enabled==='yes'||f.tasksEnabled==='yes')&&!exchangeConfigured(env))throw new HttpError(400,'Connect Microsoft 365 before turning on notifications.');
     const values=f.reviewersVersion==='1'?[...Object.entries(f).filter(([key])=>/^reviewer_\d+$/.test(key)).map(([,value])=>value),...String(f.additionalReviewers||'').split(/[,;\n]/).map(value=>value.trim()).filter(Boolean)]:[f.reviewer];
     const reviewers=reviewerList(values);
     if(reviewers.length>25)throw new HttpError(400,'Choose up to 25 review recipients.');
     if(f.enabled==='yes'&&!reviewers.length)throw new HttpError(400,'Select at least one person to receive review requests.');
-    await saveRecord(api,data.actor,{id:settingsId,kind:'settings',title:'Email notifications',status:'Draft',fields:{enabled:f.enabled==='yes',reviewers}},Number(f.revision));
+    await saveRecord(api,data.actor,{id:settingsId,kind:'settings',title:'Email notifications',status:'Draft',fields:{enabled:f.enabled==='yes',tasksEnabled:f.tasksEnabled==='yes',reviewers}},Number(f.revision));
     return {saved:'1'};
   }
   if(f.action==='notifications-test'){

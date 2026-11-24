@@ -27,7 +27,7 @@ export async function allRows(api,url){
 }
 export async function studioData(api,actor,load){
   let [index,overlays,projects,tasks,people,releases]=await Promise.all([
-    load(),allRows(api,itemTable+'?select=id,payload,revision,updated_at&order=id&id=not.like.studio:notification:*'),
+    load(),allRows(api,itemTable+'?select=id,payload,revision,updated_at&order=id&id=not.like.studio:notification:*&and=(id.not.like.studio:task-thread:*)'),
     allRows(api,projectTable+'?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&or=(creator_id.eq.'+actor.id+',entries.cs.'+encodeURIComponent(JSON.stringify([{assignee:actor.id}]))+')')),
     allRows(api,'/rest/v1/nufi_library_tasks?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&staff_id=eq.'+actor.id)),
     api('/rest/v1/nufi_library_staff?select=id,name'+(actor.role==='admin'?',email':'')+'&order=name',service),
@@ -45,7 +45,7 @@ export async function studioData(api,actor,load){
     }
   }
   const records=new Map(index.records.filter(r=>r.id.startsWith('training:')||r.fields?.recipeText).map(r=>[r.id,canonical(r)]));
-  for(const row of overlays.filter(row=>row.payload.kind!=='account-preview'&&(actor.role==='admin'||row.payload.kind!=='worker-request')))records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
+  for(const row of overlays.filter(row=>row.payload.kind!=='task-thread'&&row.payload.kind!=='account-preview'&&(actor.role==='admin'||row.payload.kind!=='worker-request')))records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
   // Course outlines remain reference material until explicitly imported as working content.
   const courseNames=new Set([...records.values()].filter(r=>r.kind==='course'&&r.status!=='Archived').flatMap(r=>[r.title,r.fields?.production?.collection].filter(Boolean).map(n=>n.trim().toLowerCase())));
   for(const source of index.records.filter(r=>r.kind==='Course outline'&&r.id.startsWith('course:'))){
