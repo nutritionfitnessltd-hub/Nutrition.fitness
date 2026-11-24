@@ -1,3 +1,4 @@
+import {applyProgrammeResets} from './studio-programme-reset.mjs';
 import {isIdea,ideaTeams,canSeeIdea} from './idea-visibility.mjs';
 import {ownsTask} from './studio-project-tasks.mjs';
 import {includeAdministrator} from './team-owner.mjs';
@@ -46,6 +47,7 @@ export async function studioData(api,actor,load){
   }
   const records=new Map(index.records.filter(r=>r.id.startsWith('training:')||r.fields?.recipeText).map(r=>[r.id,canonical(r)]));
   for(const row of overlays.filter(row=>row.payload.kind!=='task-thread'&&row.payload.kind!=='account-preview'&&(actor.role==='admin'||row.payload.kind!=='worker-request')))records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
+  applyProgrammeResets(records);
   // Course outlines remain reference material until explicitly imported as working content.
   const courseNames=new Set([...records.values()].filter(r=>r.kind==='course'&&r.status!=='Archived').flatMap(r=>[r.title,r.fields?.production?.collection].filter(Boolean).map(n=>n.trim().toLowerCase())));
   for(const source of index.records.filter(r=>r.kind==='Course outline'&&r.id.startsWith('course:'))){
