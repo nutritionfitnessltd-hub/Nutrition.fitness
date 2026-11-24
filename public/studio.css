@@ -672,3 +672,5 @@ body.team-profile-open{overflow:hidden}.team-profile-modal{width:min(800px,calc(
 .team-worker-counts{display:flex;gap:12px;flex-wrap:wrap;color:#536b7c;font-size:12px}
 .team-worker-card footer{margin-top:auto;padding-top:16px;border-top:1px solid #e4e9e7}.team-worker-card footer .studio-actions{margin-top:12px}
 @media(max-width:650px){.team-worker-card{padding:20px}.team-worker-card .studio-actions{flex-wrap:wrap}}
+
+.tracker-work-update{margin:10px 0;padding:10px 12px;border-left:3px solid #cadde3;background:#f7fafb;border-radius:4px}.tracker-work-update p{margin:5px 0;font-size:14px;line-height:1.55}.work-update-meta small{color:#526d7a}.work-state{display:inline-block;padding:6px 11px;border-radius:6px;font-weight:650;font-size:14px;background:#eaf0f3;color:#284956}.work-state[data-work-state=Running]{background:#e3f2eb;color:#246045}.work-state[data-work-state=Blocked]{background:#fde9e7;color:#962f35}.work-state[data-work-state=Stopped]{background:#fff0db;color:#81510e}.work-state[data-work-state=Completed]{background:#e2edf7;color:#28577a}.work-blocker{color:#962f35}.tracker-row-state{gap:8px}.tracker-update textarea{min-height:64px}

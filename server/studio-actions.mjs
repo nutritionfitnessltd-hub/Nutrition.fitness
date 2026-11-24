@@ -1,3 +1,4 @@
+import {workStates} from './production-work-state.mjs';
 import {scheduleFields,validateDependencies,reorderAndSchedule} from './studio-project-schedule.mjs';
 import {requireAccess} from './library-permissions.mjs';
 import {projectTasks,ownsTask,canManageTasks} from './studio-project-tasks.mjs';
@@ -171,7 +172,9 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
       const model=productionTracking(p,data,data.trackingMeta||{});
       if(!model?.rows.some(r=>r.key===f.trackingKey))throw new HttpError(404,'This item is not in this tracker.');
       if(!trackingStages.slice(0,4).includes(f.status))throw new HttpError(400,'Approval and delivery must be recorded on the content itself.');
-      update.studio={...p.studio,trackingUpdates:{...p.studio.trackingUpdates,[f.trackingKey]:{status:f.status,note:cleanText(f.note||'',1000),by:data.actor.id,at:new Date().toISOString()}}};
+      if(f.workState!==undefined&&f.workState!==''&&!workStates.includes(f.workState))throw new HttpError(400,'Choose a valid work state.');
+      if(['Blocked','Stopped'].includes(f.workState)&&!String(f.blocker||'').trim())throw new HttpError(400,'Explain the blocker or why work has stopped.');
+      update.studio={...p.studio,trackingUpdates:{...p.studio.trackingUpdates,[f.trackingKey]:{...p.studio.trackingUpdates?.[f.trackingKey],status:f.status,note:cleanText(f.note||'',1000),...(f.workState!==undefined?{workState:f.workState,nextStep:cleanText(f.nextStep||'',1000),blocker:cleanText(f.blocker||'',1000)}:{}),by:data.actor.id,at:new Date().toISOString()}}};
     }else if(action==='project-save'){
       if(data.actor.role!=='admin'&&p.creator_id!==data.actor.id)throw new HttpError(403,'Only the project owner can change project details.');
       const allowed=data.actor.role==='admin'?['Planning','In progress','Ready for review','Complete']:['Planning','In progress','Ready for review'];
