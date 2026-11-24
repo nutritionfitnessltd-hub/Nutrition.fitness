@@ -1,3 +1,4 @@
+import {welcomeFixture} from './nda-fixture.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash, createHmac, randomUUID } from 'node:crypto';
@@ -22,6 +23,7 @@ function fixture(access=null){
   const person={...staff(access),email:'creator@example.test',code_hash:createHash('sha256').update('fixture-password').digest('hex'),access_revision:1};
   const calls=[],copies=new Map();
   const api=async(path,options={})=>{
+ const welcome=welcomeFixture(path);if(welcome)return welcome;
     calls.push([path,options]);
     if(path.includes('/rpc/nufi_studio_save')){
       const p=options.payload,current=copies.get(p.item);if((current?.revision||0)!==p.expected)return [];

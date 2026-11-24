@@ -39,7 +39,7 @@ export const profileDestination=member=>({section:'team',...(member.worker?{work
 export function teamProfileEditor(member){
   const photo='<div class="team-photo-editor" data-team-photo><div data-team-photo-preview data-name="'+esc(member.name)+'" data-default-portrait="'+esc(member.defaultPortrait)+'">'+teamAvatar(member)+'</div><div><label class="team-photo-pick">Change photo<input type="file" accept="image/jpeg,image/png,image/webp" data-team-photo-file></label><button type="button" class="team-photo-remove" data-team-photo-remove'+(member.fields.portrait?'':' hidden')+'>Use default</button><p class="meta" data-team-photo-status role="status">JPG, PNG or WebP · up to 8 MB</p></div>'+hidden('portrait',validProfilePhoto(member.fields.portrait)?member.fields.portrait:'')+'</div>';
   return form('team-profile-save',hidden(member.worker?'worker':'staff',member.worker||member.id)+hidden('revision',member.revision)+photo+
-    input('role','Job role',member.role,'text','maxlength="160"')+textarea('responsibilities','Responsibilities',member.responsibilities,4),
+    input('role','Job role',member.role,'text','maxlength="160"')+(member.worker?'':engagementEditor(member.fields))+textarea('responsibilities','Responsibilities',member.responsibilities,4),
     profileDestination(member),'Save profile','data-team-profile-form');
 }
 export function teamReportingPanel(member,members){
@@ -70,4 +70,29 @@ export function validateReportingLine(member,value,members){
   const visited=new Set([member.key]);let current=manager;
   while(current){if(visited.has(current.key))throw new HttpError(400,'This reporting line would create a loop. Choose another manager.');visited.add(current.key);current=members.find(m=>m.key===current.parent);}
   return manager.key;
+}
+
+export const engagementTypes={'':'Choose engagement type',freelance:'Freelance',contractor:'Contractor',fte:'Full-time employee (FTE)',part_time:'Part-time employee',volunteer:'Volunteer',intern:'Intern'};
+export function engagementEditor(f){
+  return '<fieldset><legend>Working arrangement</legend>'+select('engagementType','Engagement type',engagementTypes,f.engagementType||'')+
+    input('rate','Agreed rate',f.rate||'','number','min="0" step="0.01"')+input('currency','Currency',f.currency||'GBP','text','maxlength="3"')+
+    select('rateBasis','Rate basis',{hour:'Per hour',day:'Per day',month:'Per month',year:'Per year',project:'Per project'},f.rateBasis||'hour')+
+    input('agreedHours','Agreed hours',f.agreedHours||'','number','min="0" max="744" step="0.25"')+
+    select('hoursPeriod','Hours period',{week:'Per week',month:'Per month'},f.hoursPeriod||'week')+
+    input('startDate','Start date',f.startDate||'','date')+textarea('availability','Agreed availability / flexible working',f.availability||'',3)+
+    '<p class="meta">Employee arrangements require a separate employment contract. Contract preparation is deferred and is not completed by this welcome letter.</p></fieldset>';
+}
+export function engagementFields(post,old={}){
+ const fields={};
+ for(const [key,max] of Object.entries({engagementType:30,rate:20,currency:3,rateBasis:20,agreedHours:20,hoursPeriod:10,startDate:10,availability:2000})){
+  const value=post[key]??old[key]??'';
+  if(typeof value!=='string'||value.length>max)throw new HttpError(400,'Check the working arrangement details.');
+  fields[key]=value.trim();
+ }
+ if(fields.engagementType&&!Object.hasOwn(engagementTypes,fields.engagementType))throw new HttpError(400,'Choose an engagement type.');
+ for(const key of ['rate','agreedHours'])if(fields[key]&&(!/^\d+(?:\.\d{1,2})?$/.test(fields[key])||!Number.isFinite(Number(fields[key]))||Number(fields[key])>(key==='rate'?100000000:744)))throw new HttpError(400,'Enter valid non-negative rates and hours.');
+ if(fields.currency&&!/^[A-Z]{3}$/.test(fields.currency))throw new HttpError(400,'Use a three-letter currency code.');
+ if(fields.rateBasis&&!['hour','day','month','year','project'].includes(fields.rateBasis)||fields.hoursPeriod&&!['week','month'].includes(fields.hoursPeriod))throw new HttpError(400,'Choose the rate and hours periods.');
+ if(fields.startDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(fields.startDate)||!Number.isFinite(Date.parse(fields.startDate))))throw new HttpError(400,'Enter a valid start date.');
+ return fields;
 }

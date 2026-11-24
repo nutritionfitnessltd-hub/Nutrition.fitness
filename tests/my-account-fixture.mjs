@@ -4,7 +4,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {createHash,createHmac} from 'node:crypto';
 import {handleLibraryWork} from '../server/library-work.mjs';
-import {ndaDocument} from './nda-fixture.mjs';
+import {ndaDocument,welcomeFixture} from './nda-fixture.mjs';
 const root=path.resolve(import.meta.dirname,'../dist'),key='a'.repeat(64);
 const person={id:'00000000-0000-4000-8000-000000000002',name:'Sample team member',email:'member@example.test',access:{work:true},code_hash:createHash('sha256').update('local-fixture-password-only').digest('hex')};
 const sign=value=>createHmac('sha256',key).update('library-work:v1:'+value).digest('base64url');
@@ -12,6 +12,7 @@ const claims=Buffer.from(JSON.stringify({role:'staff',id:person.id,generation:si
 const cookie='__Host-nufi-library-work='+claims+'.'+sign(claims);
 const receipt={id:'00000000-0000-4000-8000-000000000003',actor_role:'staff',actor_id:person.id,full_name:person.name,email:person.email,document_text:ndaDocument.document_text,document_hash:ndaDocument.document_hash,agreement_version:ndaDocument.version,accepted_at:'2026-11-19T10:00:00Z',identity_basis:'Authenticated staff account',signature_method:'typed',signature_name:person.name};
 const api=async(endpoint,options={})=>{
+ const welcome=welcomeFixture(endpoint);if(welcome)return welcome;
  if(options.method&&options.method!=='GET'){
   if(endpoint.includes('nufi_library_staff')&&options.method==='PATCH'&&Object.keys(options.payload).join()==='name'){person.name=options.payload.name;return [person];}
   throw Error('Fixture refuses other writes');

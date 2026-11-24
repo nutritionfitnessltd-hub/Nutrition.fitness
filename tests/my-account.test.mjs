@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createHash,createHmac,randomUUID} from 'node:crypto';
 import {handleLibraryWork} from '../server/library-work.mjs';
 import {changeMyAccount,myAccountScreen} from '../server/my-account.mjs';
-import {ndaDocument} from './nda-fixture.mjs';
+import {ndaDocument,welcomeFixture} from './nda-fixture.mjs';
 import {verifyTeamPassword} from '../server/team-passwords.mjs';
 const env={NUFI_LIBRARY_CATALOGUE_KEY:'x'.repeat(64),SUPABASE_SERVICE_ROLE_KEY:'fixture-service',SUPABASE_URL:'https://fixture.supabase.co',SUPABASE_ANON_KEY:'fixture-anon',SITE_URL:'https://fixture.test'};
 const digest=s=>createHash('sha256').update(s).digest('hex');
@@ -12,6 +12,7 @@ function fixture(){
  const calls=[],admin={role:'admin',id:randomUUID()},user={id:admin.id,email:'admin@example.test',email_confirmed_at:'2026-11-19T10:00:00Z',is_anonymous:false,user_metadata:{full_name:'Administrator'}};
  let reauthId=admin.id;
  const api=async(path,o={})=>{
+ const welcome=welcomeFixture(path);if(welcome)return welcome;
   calls.push([path,structuredClone(o)]);
   if(path.includes('nufi_library_staff')){if(o.method==='PATCH'){Object.assign(person,o.payload);}return [structuredClone(person)];}
   if(path.includes('nufi_consume_password_attempt'))return {allowed:true,retry_after:0};
