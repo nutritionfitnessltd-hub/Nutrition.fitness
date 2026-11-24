@@ -20,3 +20,6 @@
 @media print{.document-sheet{border:0;padding:0;box-shadow:none}.document-edit-form,.document-decisions{display:none}}
 
 .document-sheet>.panel{border:0;border-radius:0;box-shadow:none;background:transparent;padding:24px 0}.document-sheet>.studio-heading{margin-top:0}.document-reader .studio-content-preview{border:0;box-shadow:none;background:transparent}
+
+.document-reader .document-options{margin:24px 0 28px;padding-left:20px;border-left:3px solid #c8d7d0;max-width:70ch}.document-reader .document-options section{margin:0 0 20px}.document-reader .document-options h4{font-size:14px;letter-spacing:.05em;text-transform:uppercase;color:#60757c;margin:0 0 8px}.document-reader .document-options p{font-size:19px;line-height:1.55;margin:0}.document-reader .document-method li{padding-left:3px;margin:12px 0;max-width:70ch}.document-reader .document-constraints{border-top:1px solid #e2e6df;margin:28px 0 0;padding-top:8px;max-width:76ch}.document-reader .document-constraints p{font-size:15px;line-height:1.7}.document-reader .document-section>p{max-width:70ch}
+@media(max-width:700px){.document-reader .document-options{padding-left:14px}.document-reader .document-options p{font-size:17px}}

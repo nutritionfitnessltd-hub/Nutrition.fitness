@@ -1,5 +1,5 @@
 import {hqRequest} from './studio-hq.mjs';
-import {documentText,documentSection} from './document-reader.mjs';
+import {documentText,documentSection,proposalText} from './document-reader.mjs';
 import {esc,url,hidden,form,textarea,list} from './studio-ui.mjs';
 export async function workerIdeaSummaries(env,fetcher){
  const entries=await Promise.all(['alex','andy','martina'].map(async worker=>{try{const state=await hqRequest(env,{action:'ideas',worker},fetcher);return [worker,state.ideas?.[0]||null];}catch{return [worker,null];}}));return Object.fromEntries(entries);
@@ -12,7 +12,7 @@ export async function workerIdeasPanel(worker,env,fetcher){
   const results=new Map((state.taskResults||[]).map(t=>[t.id,t]));
   const sources=(i.sources||[]).map(s=>'<li><a href="'+esc(/^https:\/\//.test(s.url)?s.url:'#')+'" target="_blank" rel="noopener noreferrer">'+esc(s.title)+'</a></li>').join('');
   return '<article class="document-reader document-sheet worker-proposal"><header class="document-header"><h2>'+esc(i.title)+'</h2><p class="document-meta"><time>'+esc(i.day)+'</time> &middot; '+esc(({pending:'Awaiting your approval',superseded:'Replaced by a newer idea',rejected:'Declined',scoping:'Preparing scope',scoped:'Scope ready for your review',active:'Working through plan',done:'Completed'})[i.state]||i.state)+'</p></header>'+
-   documentSection('The proposal',i.summary,{level:3})+documentSection('Why it matters',i.rationale,{level:3})+
+   (i.summary?'<section class="document-section"><h3>The proposal</h3>'+proposalText(i.summary)+'</section>':'')+documentSection('Why it matters',i.rationale,{level:3})+
    (sources?'<section class="document-section"><h3>Sources &amp; evidence</h3><ul class="document-sources">'+sources+'</ul></section>':'')+
    documentSection('Your feedback',i.feedback,{level:3})+
    (i.scope?'<section class="document-section"><h3>Scope</h3>'+documentText(i.scope.overview,{headingLevel:4})+'<ol class="document-stages">'+(i.scope.stages||[]).map(s=>{const t=results.get(s.taskId);return '<li><h4>'+esc(s.title)+'</h4><p class="document-meta">'+esc(s.worker)+' &middot; '+esc(s.state)+'</p>'+documentText(s.brief,{headingLevel:5})+(t?'<p class="document-meta">Status: '+esc(t.status)+'</p>'+documentText(t.result||'Work is queued in James HQ.',{headingLevel:5}):'')+'</li>';}).join('')+'</ol></section>':'')+
