@@ -76,6 +76,7 @@ function html(res, status, page) {
 export function createLibraryReader({ env = process.env, load = readIndex,
   fetchFile = name => get(name, { access: 'private' }), apiFactory=platform } = {}) {
   return async (req, res) => {
+    const params = new URL(req.url, 'https://localhost').searchParams;
     res.setHeader('Cache-Control', 'private, no-store, max-age=0');
     res.setHeader('Vercel-CDN-Cache-Control', 'no-store');
     res.setHeader('Vary', 'Cookie');
@@ -83,8 +84,7 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; worker-src 'self' blob:; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' blob:; frame-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
-    const params = new URL(req.url, 'https://localhost').searchParams;
+    res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; worker-src 'self' blob:; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' blob:; frame-src 'self'; "+(params.get('work')==='1'?"media-src 'self' https://nutritionfitness.sharepoint.com; ":'')+"form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
     if (params.get('work')==='1') return handleLibraryWork(req,res,{env,load,params,apiFactory});
     const fields=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
     const loginScreen=error=>libraryLogin({target:escTarget(req.url),shared:true,error});

@@ -49,3 +49,13 @@ test('shared password controls the catalogue, detail pages and direct downloads'
   assert.equal((await get('')).status,401);
   delete env.NUFI_LIBRARY_PASSWORD_SHA256;assert.equal((await get('')).status,503);
 });
+
+
+test('workspace media policy permits the protected player and tenant SharePoint only',async()=>{
+ const handler=createLibraryReader({env:{},apiFactory:()=>async()=>[],load:async()=>({records:[]})});
+ const output=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},end(value){this.body=value;}});
+ const workspace=output();await handler({method:'GET',url:'/content-library/?work=1&studio=project',headers:{}},workspace);
+ const csp=workspace.headers['Content-Security-Policy'];assert.match(csp,/media-src 'self' https:\/\/nutritionfitness\.sharepoint\.com;/);
+ assert.match(csp,/default-src 'none'/);assert.match(csp,/script-src 'self'/);assert.match(csp,/form-action 'self'/);assert.doesNotMatch(csp,/media-src[^;]*\*/);
+ const catalogue=output();await handler({method:'GET',url:'/content-library/',headers:{}},catalogue);assert.doesNotMatch(catalogue.headers['Content-Security-Policy'],/media-src/);
+});
