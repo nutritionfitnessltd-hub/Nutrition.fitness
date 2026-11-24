@@ -4,16 +4,16 @@ function openVideo(link){
  const dialog=document.createElement('dialog');dialog.className='production-video-modal';dialog.setAttribute('aria-labelledby','video-review-title');
  const header=document.createElement('header'),title=document.createElement('h2'),close=document.createElement('button');title.id='video-review-title';title.textContent=link.dataset.videoTitle||'Video review';close.type='button';close.textContent='Close';close.setAttribute('aria-label','Close video');header.append(title,close);
  const video=document.createElement('video');video.controls=true;video.playsInline=true;video.preload='metadata';video.src=link.dataset.videoSrc;video.setAttribute('aria-label',title.textContent);video.setAttribute('controlslist','nodownload');
- const footer=document.createElement('footer'),status=document.createElement('p');status.role='status';status.textContent='Watch the video to the end to enable approval.';
+ const footer=document.createElement('footer'),status=document.createElement('p'),accessLink=document.createElement('a');accessLink.className='btn';accessLink.textContent='Open in SharePoint';accessLink.href=link.href;accessLink.target='_blank';accessLink.rel='noopener noreferrer';accessLink.hidden=true;status.role='status';status.textContent='Watch the video to the end to enable approval.';
  const original=link.closest('.tracker-file-actions')?.querySelector('[data-video-approval-source] form'),form=original?.cloneNode(true),approve=form?.querySelector('button');
  if(approve){approve.disabled=true;approve.setAttribute('aria-describedby','video-review-status');}else status.textContent='This video is available to watch. Approval is not available for this export.';
- status.id='video-review-status';footer.append(status);if(form)footer.append(form);dialog.append(header,video,footer);document.body.append(dialog);
+ status.id='video-review-status';footer.append(status);if(form)footer.append(form);footer.append(accessLink);dialog.append(header,video,footer);document.body.append(dialog);
  const state={dialog,video,form,approve,busy:false,finished:false};active=state;
  const end=()=>{if(state.busy)return;dialog.close();};close.addEventListener('click',end);dialog.addEventListener('cancel',event=>{if(state.busy)event.preventDefault();});
  dialog.addEventListener('click',event=>{if(event.target!==dialog)return;const r=dialog.getBoundingClientRect();if(event.clientX<r.left||event.clientX>r.right||event.clientY<r.top||event.clientY>r.bottom)end();});
  dialog.addEventListener('close',()=>{video.pause();video.removeAttribute('src');video.load();dialog.remove();document.body.classList.remove('video-review-open');active=null;link.focus();});
  video.addEventListener('ended',()=>{if(approve){state.finished=true;approve.disabled=false;status.textContent='Video finished. You can now approve this saved version.';}});
- video.addEventListener('error',()=>{state.finished=false;if(approve)approve.disabled=true;status.textContent='The video could not load. Approval stays disabled. Close and reopen it to retry, or open the asset to check its SharePoint file.';});
+ video.addEventListener('error',()=>{state.finished=false;if(approve)approve.disabled=true;accessLink.hidden=false;status.textContent='SharePoint could not play this video. Open it in SharePoint to check your sign-in and file access, then close and reopen this player. Approval stays disabled.';});
  if(form)form.addEventListener('submit',async event=>{
   event.preventDefault();if(!state.finished||state.busy||approve.disabled)return;
   state.busy=true;close.disabled=true;approve.disabled=true;status.textContent='Saving approval…';
