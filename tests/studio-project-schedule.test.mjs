@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {workFinish,workStart,projectSchedule,scheduleFields,validateDependencies,ganttPanel} from '../server/studio-project-schedule.mjs';
+import {workFinish,workStart,projectSchedule,scheduleFields,validateDependencies,ganttPanel,reorderAndSchedule} from '../server/studio-project-schedule.mjs';
 test('inclusive working durations skip weekends and cross year boundaries',()=>{
  assert.equal(workFinish('2026-11-27',2),'2026-11-30');
  assert.equal(workStart('2026-11-28'),'2026-11-30');
@@ -23,4 +23,16 @@ test('older forms retain schedules; unknown predecessor timing stays unscheduled
 });
 test('Gantt escapes task names and renders weekend and dependency information',()=>{
  const html=ganttPanel({entries:[{id:'a',title:'<script>alert(1)</script>',start:'2026-11-27',duration:2,status:'To do'}]});assert.match(html,/&lt;script&gt;/);assert.doesNotMatch(html,/<script>/);assert.match(html,/Gantt chart/);assert.match(html,/weekend/);
+});
+
+test('saved durations update delivery dates and cascade through dependency order',()=>{
+ const entries=[{id:'b',title:'Second',start:'2026-11-27',duration:2,dependsOn:['a'],status:'To do'},{id:'a',title:'First',start:'2026-11-27',duration:2,status:'To do'}];
+ const rows=reorderAndSchedule(entries);assert.deepEqual(rows.map(e=>e.id),['a','b']);assert.equal(rows[0].due,'2026-11-30');assert.equal(rows[1].due,'2026-12-02');
+ rows[0].duration=3;const changed=reorderAndSchedule(rows);assert.equal(changed[0].due,'2026-12-01');assert.equal(changed[1].due,'2026-12-03');
+});
+test('manual ordering persists except when it would precede a prerequisite',()=>{
+ const rows=[{id:'a'},{id:'b'},{id:'c',dependsOn:['a']}];assert.deepEqual(reorderAndSchedule(rows,'b','1').map(e=>e.id),['b','a','c']);assert.deepEqual(reorderAndSchedule(rows,'c','1').map(e=>e.id),['a','c','b']);assert.throws(()=>reorderAndSchedule(rows,'a','0'));
+});
+test('past schedules do not silently move delivery dates to today',()=>{
+ const row=reorderAndSchedule([{id:'a',start:'2026-01-01',duration:2,status:'To do'}])[0];assert.equal(row.due,'2026-01-02');
 });
