@@ -32,10 +32,15 @@ ${['fte','part_time','intern'].includes(f.engagementType)?'A separate employment
 
 The Nutrition.fitness Team`;
 }
-export async function requireTeamWelcome(req,res,{actor,api,params,render}){
- if(actor.role!=='staff')return false;
+export async function teamOnboardingProfile(actor,api){
+ if(actor.role!=='staff')return null;
  const rows=await api('/rest/v1/nufi_studio_items?id=eq.'+encodeURIComponent(profileId(actor.id))+'&select=payload&limit=1',service);
- const f=rows[0]?.payload?.fields||{};
+ return rows[0]?.payload?.fields||{};
+}
+export async function requireTeamWelcome(req,res,{actor,api,params,render,profile}){
+ if(actor.role!=='staff')return false;
+ const f=profile??await teamOnboardingProfile(actor,api);
+ if(f.engagementType==='owner_director')return false;
  const people=await api('/rest/v1/nufi_library_staff?id=eq.'+encodeURIComponent(actor.id)+'&select=name&limit=1',service);
  const name=people[0]?.name||actor.name||'Team member';
  const complete=['role','engagementType','rate','currency','rateBasis','agreedHours','hoursPeriod'].every(k=>typeof f[k]==='string'&&f[k].trim())&&Boolean(engagementTypes[f.engagementType]);

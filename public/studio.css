@@ -726,3 +726,5 @@ body.team-profile-open{overflow:hidden}.team-profile-modal{width:min(800px,calc(
 
 /* Clearly labelled updates dropdown; timestamps belong inside the panel. */
 .tracker-work-update{margin-top:10px}.tracker-work-update>summary{display:list-item;width:fit-content;box-sizing:border-box;padding:7px 12px;list-style-position:inside;border:1px solid #ced9dc;border-radius:6px;background:#f7fafb;color:#174b5a;font-size:13px;font-weight:600;line-height:1.4}.tracker-work-update>summary:hover{background:#edf4f5}.tracker-work-update>summary:focus-visible{outline:2px solid #00677b;outline-offset:3px}.tracker-work-update[open]>summary{margin-bottom:8px}.tracker-work-update>div{padding:10px 14px;background:#f7fafb;max-width:780px;border-radius:4px}.tracker-work-update .tracker-update-time{margin:0 0 8px;color:#617581;font-size:12px}
+
+[data-contract-terms][hidden],[data-owner-arrangement][hidden],[data-task-effort-fields][hidden],[data-owner-task][hidden]{display:none!important}[data-task-effort-fields]{display:contents}[data-task-effort-fields]>label{display:flex;flex-direction:column;gap:8px;min-width:0}
