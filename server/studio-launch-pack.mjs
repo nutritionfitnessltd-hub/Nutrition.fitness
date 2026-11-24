@@ -1,3 +1,4 @@
+import {documentText} from './document-reader.mjs';
 import {launchPackChildren,launchPackFields} from './launch-packs.mjs';
 import {canReadContent} from './library-permissions.mjs';
 import {workerImagePath} from './worker-images.mjs';
@@ -6,7 +7,7 @@ import {esc,url} from './studio-ui.mjs';
 export const isLaunchPack=r=>r?.kind==='campaign'&&r.fields?.coursePack===true;
 const text=value=>typeof value==='string'?value:'';
 const https=value=>{try{const u=new URL(value);return u.protocol==='https:'&&!u.username&&!u.password?u.href:'';}catch{return '';}};
-const paragraphs=value=>text(value).split(/\n\s*\n/).filter(Boolean).map(p=>'<p class="prose">'+esc(p)+'</p>').join('');
+const paragraphs=value=>documentText(text(value),{headingLevel:3});
 const copy=(value,label='Copy text')=>text(value).trim()?'<div class="launch-copy"><button type="button" data-launch-copy>'+label+'</button><textarea hidden data-launch-text>'+esc(value)+'</textarea><span role="status" data-launch-status></span></div>':'';
 const section=(id,title,value,extra='')=>'<section id="launch-'+id+'" class="launch-section"><header><h2>'+title+'</h2>'+copy(value,id==='video'?'Copy script':'Copy text')+'</header>'+extra+(text(value).trim()?paragraphs(value):'<p class="meta">Not added yet.</p>')+'</section>';
 

@@ -1,3 +1,4 @@
+import {documentText} from './document-reader.mjs';
 import {workerIdeasPanel} from './studio-ideas.mjs';
 import {randomUUID} from 'node:crypto';
 import {HttpError} from './platform.mjs';
@@ -18,15 +19,15 @@ export async function workerChatPage(params,data,env,fetcher=fetch,retained={}){
  const w=workers[key];let chat,error;try{chat=await hqRequest(env,{action:'chat',worker:key},fetcher);}catch(e){error=e.message;}
  const ideas=await workerIdeasPanel(key,env,fetcher);
  const state=chat?.task?.status,label={queued:'Message queued in James HQ',working:w.name+' is working on a reply',ready:'Reply received',needs_input:'Waiting for your reply',done:'Conversation ready'}[state]||'Start a conversation';
- return heading('Message '+w.name,'This conversation is saved with the real employee in James HQ.',button('Dashboard',url()))+
+ return heading(['alex','andy','martina'].includes(key)?w.name+': ideas & conversation':'Message '+w.name,'This conversation is saved with the real employee in James HQ.',button('Dashboard',url()))+
  ideas+'<section class="panel worker-chat-profile">'+workerPortrait(w)+'<div><h2>'+esc(w.name)+'</h2><p>'+esc(w.role)+'</p><p>AI worker · James HQ</p></div></section>'+
- (error?'<p role="alert">'+esc(error)+'</p>':'')+'<section data-worker-updates="conversation" class="worker-conversation" aria-label="Conversation"><p role="status">'+esc(label)+'</p>'+
- list(chat?.messages||[],m=>'<div class="worker-message '+(m.role==='user'?'from-you':'from-worker')+'"><strong>'+esc(m.role==='user'?'You':m.author||w.name)+'</strong><p class="prose">'+esc(m.body)+'</p><small>'+esc(m.createdAt||'')+'</small></div>','No messages yet.')+'</section>'+
+ (error?'<p role="alert">'+esc(error)+'</p>':'')+'<section data-worker-updates="conversation" class="worker-conversation" aria-label="Conversation"><h2>Conversation</h2><p role="status">'+esc(label)+'</p>'+
+ list(chat?.messages||[],m=>'<div class="worker-message document-reader '+(m.role==='user'?'from-you':'from-worker')+'"><h3>'+esc(m.role==='user'?'You':m.author||w.name)+'</h3>'+documentText(m.body,{headingLevel:4})+'<small>'+esc(m.createdAt||'')+'</small></div>','No messages yet.')+'</section>'+
  form('hq-message',hidden('worker',key)+hidden('clientMessageId',retained.clientMessageId||randomUUID())+textarea('message','Your message',retained.message||'',5)+'<p class="meta">HQ replies when its worker checks the queue. Sending a message does not approve spending, publishing or a monthly plan.</p>',{section:'worker-chat',worker:key},'Send to '+w.name,state==='working'?'data-worker-busy="true"':'');
 }
 export function seasonalPlanPanel(r,data){
  const plan=r.fields?.seasonalPlan;if(contentWorker(r,data.byId)!=='martina'||!plan)return '';
- return '<section class="panel seasonal-plan"><h2>Monthly theme</h2><h3>'+esc(plan.theme||r.title)+'</h3><p>'+esc(plan.month||'Month not set')+'</p>'+list(plan.assignments||[],a=>'<div><strong>'+esc(a.title)+'</strong><small>'+esc(workerNames[a.worker]||'Choose a worker')+'</small><p class="prose">'+esc(a.brief)+'</p></div>','No assignments prepared yet.')+
+ return '<section class="document-reader document-sheet seasonal-plan"><h2>Monthly theme</h2><h3>'+esc(plan.theme||r.title)+'</h3><p>'+esc(plan.month||'Month not set')+'</p>'+list(plan.assignments||[],a=>'<div><strong>'+esc(a.title)+'</strong><small>'+esc(workerNames[a.worker]||'Choose a worker')+'</small><p class="prose">'+esc(a.brief)+'</p></div>','No assignments prepared yet.')+
  (plan.dispatch?'<p role="status">Approved and sent to James HQ · '+esc(plan.dispatch.approvedAt)+'</p>':data.actor.role==='admin'?form('hq-approve-plan',hidden('revision',r.revision)+'<label class="check"><input type="checkbox" name="confirmed" value="yes" required> I approve this saved plan and want its assignments sent to the workers.</label>',{section:'item',id:r.id},'Approve plan & assign work'):'<p>Awaiting James’s approval before work is assigned.</p>')+'</section>';
 }
 export async function changeHq(params,f,data,api,env,fetcher=fetch){

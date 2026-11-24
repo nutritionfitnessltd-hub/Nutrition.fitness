@@ -52,7 +52,9 @@ test('failed checking retains text and review note in the same editor',async()=>
  assert.match(res.body,/data-unsaved="true"/);assert.doesNotMatch(res.body,/All changes saved/);
 });
 test('one editor has save actions together and no separate check form',()=>{
- const data=fixture(),html=itemPage(params,data);
+ const data=fixture(),preview=itemPage(params,data);
+ assert.match(preview,/document-reader document-sheet/);assert.doesNotMatch(preview,/id="studio-editor-form"/);
+ const html=itemPage(new URLSearchParams({id:'training:copy',tab:'edit'}),data);
  const editor=html.match(/<form[^>]*id="studio-editor-form"[\s\S]*?<\/form>/)[0];
  for(const value of ['draft','preview'])assert.ok(editor.includes('value="'+value+'"'));
  assert.doesNotMatch(editor,/value="(?:approve|review)"/);

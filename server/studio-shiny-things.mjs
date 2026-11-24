@@ -1,3 +1,4 @@
+import {documentText,documentSection,documentEditor} from './document-reader.mjs';
 import {ideaScope,ideaTeams,canSeeIdea,canManageIdea} from './idea-visibility.mjs';
 import {randomUUID} from 'node:crypto';
 import {HttpError,uuid} from './platform.mjs';
@@ -63,29 +64,30 @@ export function shinyThingsPage(params,data,retained={},env={}){
   }
   const f={...(idea?.fields||{}),...retained},p=idea&&projectFor(data,idea.id),locked=Boolean(p||idea?.fields.state==='Converting');
   const base=hidden('id',idea?.id||retained.id||prefix+randomUUID())+hidden('revision',idea?.revision||0),state={section:'shiny-things',...(idea?{id:idea.id}:{new:'1'})};
-  let body=heading(idea?.title||'New shiny thing','Keep the idea here until it is worth an active project.',button('All ideas',url('shiny-things')));
-  if(idea&&!canManageIdea(data.actor,idea))return body+'<section class="panel"><p>'+esc(scopes[ideaScope(idea)])+' &middot; '+esc(idea.fields.team||'')+'</p><p class="prose">'+esc(idea.fields.summary||'')+'</p>'+discussionForm(idea,data,base,state)+'</section>';
-  if(p)return body+'<section class="panel"><h2>Project created</h2><p>The original idea remains here for reference.</p>'+button('Open project',url('project',{project:p.id}),true)+'</section><p class="prose">'+esc(idea.fields.summary)+'</p>';
-  if(!locked&&canAccess(data.actor,'edit'))body+=form('idea-save',base+input('title','Idea',retained.title??idea?.title??'','text','required maxlength="160"')+textarea('summary','What is the idea, and why might it matter?',f.summary||'',5)+
+  let body='<article class="document-reader document-sheet shiny-idea-document">'+heading(idea?.title||'New shiny thing','Keep the idea here until it is worth an active project.',button('All ideas',url('shiny-things')));
+  if(idea)body+='<p class="document-meta">'+esc(scopes[ideaScope(idea)])+(idea.fields.team?' &middot; '+esc(idea.fields.team):'')+' &middot; '+esc(idea.fields.state||'Saved')+'</p>'+documentSection('The idea',idea.fields.summary);
+  if(idea&&!canManageIdea(data.actor,idea))return body+discussionForm(idea,data,base,state)+'</article>';
+  if(p)return body+'<section class="document-section"><h2>Project created</h2><p>The original idea remains here for reference.</p>'+button('Open project',url('project',{project:p.id}),true)+'</section></article>';
+  if(!locked&&canAccess(data.actor,'edit')){const edit=form('idea-save',base+input('title','Idea',retained.title??idea?.title??'','text','required maxlength="160"')+textarea('summary','What is the idea, and why might it matter?',f.summary||'',5)+
     '<div class="studio-actions"><button type="button" data-idea-ai'+(!env.OPENAI_API_KEY||data.actor.role!=='admin'?' disabled':'')+'>Generate with AI</button><span role="status" aria-live="polite" data-idea-ai-status>'+(env.OPENAI_API_KEY?'Draft an explanation from your title and any notes.':'AI generation is not connected.')+'</span></div><section data-idea-ai-suggestion hidden><h3>Suggested explanation</h3><p class="prose" data-idea-ai-text></p><div class="studio-actions"><button type="button" data-idea-ai-use>Use this text</button><button type="button" data-idea-ai-dismiss>Keep my text</button></div></section>'+
     select('visibility','Who can see this?',scopes,f.visibility||'personal')+select('team','Team (for Team visibility)',{'':'Choose a team',...Object.fromEntries([...new Set(teamsFor(data).values())].filter(t=>t===teamsFor(data).get(data.actor.id)).map(t=>[t,t]))},f.team||'')+'<p class="meta">Personal: only you. Team: members of your selected team. Company: everyone in this workspace.</p>'+
-    input('category','Category',f.category||'','text','maxlength="100"')+select('urgency','How soon does this need attention?',ideaUrgencies,Object.hasOwn(ideaUrgencies,f.urgency)?f.urgency:'normal')+'<div class="studio-columns">'+input('weeks','Indicative duration in weeks',f.weeks||4,'number','min="1" max="52" required')+select('state','Keep it as',{Saved:'An idea',Parked:'Parked for later'},f.state==='Parked'?'Parked':'Saved')+'</div>',state,'Save idea');
-  if(!idea)return body;
+    input('category','Category',f.category||'','text','maxlength="100"')+select('urgency','How soon does this need attention?',ideaUrgencies,Object.hasOwn(ideaUrgencies,f.urgency)?f.urgency:'normal')+'<div class="studio-columns">'+input('weeks','Indicative duration in weeks',f.weeks||4,'number','min="1" max="52" required')+select('state','Keep it as',{Saved:'An idea',Parked:'Parked for later'},f.state==='Parked'?'Parked':'Saved')+'</div>',state,'Save idea');body+=idea?documentEditor('Edit idea',edit,{open:Object.keys(retained).length>0}):edit;}
+  if(!idea)return body+'</article>';
   body+=discussionForm(idea,data,base,state);
-  if(data.actor.role!=='admin')return body;
-  if(!locked)body+='<section class="panel"><h2>Ask Morgan to scope it</h2><p>Morgan checks overlap with existing projects and proposes an outcome, tasks, milestones, workers and open questions. The request runs in James HQ.</p>'+
+  if(data.actor.role!=='admin')return body+'</article>';
+  if(!locked)body+='<section class="document-section"><h2>Ask Morgan to scope it</h2><p>Morgan checks overlap with existing projects and proposes an outcome, tasks, milestones, workers and open questions. The request runs in James HQ.</p>'+
     form('idea-scope',base,state,'Ask Morgan for a plan')+button('Open Morgan’s HQ conversation',url('worker-chat',{worker:'morgan'}))+
     (idea.fields.requestRevision?'<p>Plan requested for saved idea version '+idea.fields.requestRevision+'. HQ replies when its worker processes the queue.</p>'+form('idea-fetch',base,state,'Check for Morgan’s plan'):'')+'</section>';
   if(idea.fields.plan&&!locked){
     const plan=idea.fields.plan;
-    body+='<section class="panel"><h2>Review the project plan</h2><p>Edit the proposal before creating the project. Editing the idea above clears this plan so Morgan can scope the changed idea.</p>'+form('idea-plan-save',base+
+    body+='<section class="document-section"><h2>Review the project plan</h2><h3>'+esc(plan.title)+'</h3>'+documentSection('Intended outcome',plan.objective,{level:3})+documentSection('Existing projects and overlaps',plan.overlap,{level:3})+documentSection('Open questions',plan.questions,{level:3})+'<h3>Tasks &amp; milestones</h3><ol class="document-stages">'+(plan.tasks||[]).map(t=>'<li><h4>'+esc(t.title)+'</h4>'+documentText(t.notes,{headingLevel:5})+'<p class="document-meta">'+esc([t.week?'Week '+t.week:'Preparation',t.due,t.worker].filter(Boolean).join(' / '))+'</p></li>').join('')+'</ol>'+documentEditor('Edit project plan',form('idea-plan-save',base+
       input('projectTitle','Project name',retained.projectTitle??plan.title,'text','required maxlength="160"')+textarea('objective','Intended outcome',retained.objective??plan.objective)+textarea('overlap','Existing projects and overlaps',retained.overlap??plan.overlap)+textarea('questions','Open questions and assumptions',retained.questions??plan.questions)+
-      textarea('tasks','Tasks: one per line — title | brief | week | due date | suggested worker | milestone (yes)',retained.tasks??planText(plan),10),state,'Save reviewed plan')+'</section>';
+      textarea('tasks','Tasks: one per line — title | brief | week | due date | suggested worker | milestone (yes)',retained.tasks??planText(plan),10),state,'Save reviewed plan'),{open:Boolean(retained.projectTitle||retained.tasks)})+'</section>';
   }
   if(idea.fields.plan)body+='<section class="panel"><h2>Create the project when ready</h2><p>This creates project tasks for review. It does not send work to workers or approve spending or publication.</p>'+form('idea-promote',base+
     (locked?hidden('creator',idea.fields.creator):select('creator','Project owner',{'':'Choose a team member',...Object.fromEntries(data.people.map(p=>[p.id,p.name]))}))+
     '<label class="check"><input type="checkbox" name="confirmed" value="yes" required> I have reviewed this plan and want to create the project.</label>',state,locked?'Retry project creation':'Create project')+'</section>';
-  return body;
+  return body+'</article>';
 }
 export async function changeShinyThing(params,f,data,api,env,fetcher=fetch){
   if(!['admin','staff'].includes(data.actor.role)||!canAccess(data.actor,'library')||!canAccess(data.actor,'edit'))throw new HttpError(403,'Idea editing is unavailable.');
@@ -170,8 +172,8 @@ export function ideaProjectPage(params,data,meta={}){
 function eligibleOwners(data,idea){return (data.ideaPeople||data.people||[]).filter(p=>ideaScope(idea)==='company'||teamsFor(data).get(p.id)?.toLowerCase()===idea.fields.team?.toLowerCase());}
 function discussionForm(idea,data,base,state){
  if(ideaScope(idea)==='personal')return '<p class="meta">Share this idea with your team or company when you are ready to discuss it.</p>';
- const f=idea.fields;
- const info='<p>Decision: '+esc(f.decision||'Awaiting discussion')+'</p><p class="prose">'+esc(f.decisionNote||'')+'</p>';
- if(!canAccess(data.actor,'edit'))return info;
- return '<section class="panel"><h2>Weekly discussion & follow-up</h2>'+form('idea-discussion',base+select('forDiscussion','Meeting agenda',{'':'Keep off the agenda',yes:'For discussion'},f.forDiscussion?'yes':'')+select('decision','Decision',{'':'Awaiting discussion',Explore:'Explore',Park:'Park',Dismiss:'Dismiss'},f.decision||'')+textarea('decisionNote','Meeting notes',f.decisionNote||'',3)+select('followUpOwner','Follow-up owner',{'':'Choose an owner',...Object.fromEntries(eligibleOwners(data,idea).map(p=>[p.id,p.name]))},f.followUpOwner||'')+input('followUpDue','Optional due date',f.followUpDue||'','date'),state,'Save discussion')+'</section>';
+ const f=idea.fields,owner=(data.ideaPeople||data.people||[]).find(p=>p.id===f.followUpOwner);
+ const info='<section class="document-section"><h2>Weekly discussion &amp; follow-up</h2><p class="document-meta">'+esc(f.forDiscussion?'For discussion':f.decision||'Awaiting discussion')+'</p>'+documentText(f.decisionNote,{headingLevel:3})+(owner||f.followUpDue?'<p>Follow-up: '+esc([owner?.name,f.followUpDue].filter(Boolean).join(' / '))+'</p>':'');
+ if(!canAccess(data.actor,'edit'))return info+'</section>';
+ return info+documentEditor('Update discussion & follow-up',form('idea-discussion',base+select('forDiscussion','Meeting agenda',{'':'Keep off the agenda',yes:'For discussion'},f.forDiscussion?'yes':'')+select('decision','Decision',{'':'Awaiting discussion',Explore:'Explore',Park:'Park',Dismiss:'Dismiss'},f.decision||'')+textarea('decisionNote','Meeting notes',f.decisionNote||'',3)+select('followUpOwner','Follow-up owner',{'':'Choose an owner',...Object.fromEntries(eligibleOwners(data,idea).map(p=>[p.id,p.name]))},f.followUpOwner||'')+input('followUpDue','Optional due date',f.followUpDue||'','date'),state,'Save discussion'))+'</section>';
 }

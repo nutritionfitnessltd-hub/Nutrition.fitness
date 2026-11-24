@@ -1,3 +1,4 @@
+import {documentText} from './document-reader.mjs';
 import {launchPackChildren} from './launch-packs.mjs';
 import {createHash} from 'node:crypto';
 import {HttpError} from './platform.mjs';
@@ -75,7 +76,7 @@ export function coursePreview(r,data,readable){
  const previewFor=id=>data.items.filter(x=>x.kind==='asset'&&x.status!=='Archived'&&x.fields?.previewOnly===true&&x.fields.courseId===r.id&&String(x.fields.lessonSourceId||'').replace(/^catalogue:/,'')===String(id).replace(/^catalogue:/,'')&&x.fields.assetUrls?.length&&canReadContent(data,x)).sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||''))[0];
  const state=plan.approved?'Structure approved':plan.review?.decision==='changes'?'Structure changes requested':'Structure awaiting approval';
  const hero=pack.hero;
- const overview=['introduction','outcome','audience'].filter(k=>text(f[k])).map(k=>'<section><h3>'+esc(coursePackFields[k])+'</h3><div class="prose">'+readable(f[k],data)+'</div></section>').join('');
+ const overview=['introduction','outcome','audience'].filter(k=>text(f[k])).map(k=>'<section><h3>'+esc(coursePackFields[k])+'</h3><div class="prose">'+(typeof f[k]==='string'?documentText(f[k],{headingLevel:4}):readable(f[k],data))+'</div></section>').join('');
  let out='<section class="panel course-overview"><h2>Course overview</h2>'+(hero?'<figure><img class="course-hero" src="'+esc(hero)+'" alt="'+esc(f.heroImageAlt||'')+'"><figcaption>'+esc(f.heroImageCredit||'Image source / rights still needed')+'</figcaption></figure>':'')+
   (overview||'<p class="studio-empty">Imogen still needs to add the course introduction, outcomes and audience. The full lesson structure is below.</p>')+'</section>';
  out+='<section class="panel course-structure"><div class="project-section-heading"><h2>Course structure</h2>'+badge(state)+'</div><p class="meta">'+plan.sections.filter(s=>s.lessons.length).length+' modules · '+plan.lessons.length+' lessons'+(plan.source?' · Order checked against the original course':'')+'</p>'+
@@ -91,7 +92,7 @@ export function coursePreview(r,data,readable){
   '<ul class="course-pack-checks">'+pack.parts.map(({label,ready,record})=>'<li><span>'+(record?'<a data-review-preview target="_blank" rel="noopener" href="'+url('review-preview',{id:record.id})+'">'+esc(label)+'</a>':esc(label))+'</span><span>'+(!ready?'Still needed':record?.status==='Approved'&&record.approval?.revision===record.revision?'Approved':record?.status==='Changes requested'?'Changes requested':record?.status==='In review'?'Needs review':'Draft ready')+'</span></li>').join('')+'</ul><p class="meta">Launch items have their own approval status. Approving the course does not approve every linked draft.</p>'+
   (pack.linked?'<p>'+button('Open supporting draft',url('item',{id:pack.linked.id}))+'</p>':'');
  if(text(f.introductionScript))out+='<section class="studio-video-tools" aria-label="Introduction script"><button type="button" data-copy-script>Copy introduction script</button><textarea hidden data-script-text>'+esc(f.introductionScript)+'</textarea><span>Estimated narration: '+Math.ceil(text(f.introductionScript).split(/\s+/).length/140*60)+' seconds at 140 words/minute</span><span role="status" data-copy-status></span></section>';
- out+=['marketingCopy','welcomeEmail','socialCopy'].filter(k=>text(f[k])).map(k=>'<details><summary>'+esc(coursePackFields[k])+'</summary><div class="prose">'+readable(f[k],data)+'</div></details>').join('')+'</section>';
+ out+=['marketingCopy','welcomeEmail','socialCopy'].filter(k=>text(f[k])).map(k=>'<details><summary>'+esc(coursePackFields[k])+'</summary><div class="prose">'+(typeof f[k]==='string'?documentText(f[k],{headingLevel:4}):readable(f[k],data))+'</div></details>').join('')+'</section>';
  return out;
 }
 export async function reviewCourseStructure(params,f,data,api){

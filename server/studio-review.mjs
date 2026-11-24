@@ -12,7 +12,7 @@ import {itemPage} from './studio-pages.mjs';
 import {isNewsletterContent} from './studio-newsletters.mjs';
 import {newsletterPublicationChoices,publishNewsletterDraft,newsletterHandoffStatus} from './studio-review-newsletter.mjs';
 import {isProductAsset,productAssetPage} from './studio-products.mjs';
-const reviewBody=(params,data)=>isProductAsset(data.byId.get(params.get('id')))?'<div class="product-space">'+productAssetPage(new URLSearchParams({id:params.get('id'),tab:'review'}),data)+'</div>':'<article class="approval-paper">'+itemPage(new URLSearchParams({...Object.fromEntries(params),document:'1'}),data)+'</article>';
+const reviewBody=(params,data)=>isProductAsset(data.byId.get(params.get('id')))?'<div class="product-space document-reader">'+productAssetPage(new URLSearchParams({id:params.get('id'),tab:'review'}),data)+'</div>':'<article class="approval-paper document-reader">'+itemPage(new URLSearchParams({...Object.fromEntries(params),document:'1'}),data)+'</article>';
 import {readerDocument} from './article-reader.mjs';
 import {articleImage} from './studio-articles.mjs';
 import {canEditContent,canReviewContent} from './library-permissions.mjs';
@@ -51,7 +51,7 @@ export function reviewWindowDocument(params,data,retained={}){
  const draftDetails=data.actor.role==='admin'&&r.kind==='article'?'<details class="review-draft-details"><summary>Draft details</summary><p>Saved submission and production notes. These are not part of the reader-facing article.</p><pre>'+esc(r.fields?.body||'')+'</pre></details>':'';
  const controls='<div class="review-window-controls">'+(notice?'<p role="status">'+esc(notice)+'</p>':'')+footer.replace('<div class="studio-actions">','<div class="studio-actions">'+publishedLink)+draftDetails+'</div>'+reviewEditorDialog(r,data);
  const page=r.kind==='article'?readerDocument(r,articleImage(r)):'<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(r.title)+'</title>'+'<link rel="stylesheet" href="/library-reader.css">'+'<link rel="stylesheet" href="/studio.css"></head><body'+(isNewsletterContent(r)?' class="newsletter-review-window"':' class="content-review-window"')+'>'+reviewBody(new URLSearchParams({id:r.id,tab:'preview'}),data)+newsletterApprovalHistory(r,data)+'</body></html>';
- return page.replace('</head>','<link rel="stylesheet" href="/product-workspace.css"><link rel="stylesheet" href="/review-window.css"><script type="module" src="/studio-review.js"></script></head>').replace('<body class="kc-page">','<body class="kc-page article-review-window">').replace('</body>',controls+'</body>');
+ return page.replace('</head>','<link rel="stylesheet" href="/product-workspace.css"><link rel="stylesheet" href="/review-window.css"><link rel="stylesheet" href="/document-reader.css"><script type="module" src="/studio-review.js"></script></head>').replace('<body class="kc-page">','<body class="kc-page article-review-window document-reader">').replace('</body>',controls+'</body>');
 }
 async function sendFeedback(r,entry,data,api,env,fetcher){
  if(entry.delivery==='sent'||!entry.workerId||data.actor.role!=='admin')return r;

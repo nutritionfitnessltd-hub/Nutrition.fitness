@@ -8,6 +8,8 @@ const root=path.resolve(import.meta.dirname,'../dist');
 const actor={role:'admin',id:'00000000-0000-4000-8000-000000000001'};
 const make=(id,kind,title,fields)=>({id,kind,title,status:'Draft',fields:{...blankFields(kind),...fields},files:[]});
 const records=[
+ {id:'studio:software-release:00000000-0000-4000-8000-000000000088',kind:'settings',title:'Consistent document reading',status:'Draft',fields:{version:'1.0',platform:'Website',stage:'Planned',items:[],notes:'## What changes\n\nUse the same hierarchy for saved proposals, ideas and review documents.\n\n### Boundaries\nKeep approval and publication separate.',testing:'Check desktop and mobile views.\n\n- Verify heading order\n- Keep permission checks',deployment:'Keep a previous deployment available for rollback.'}},
+ {id:'studio:idea:00000000-0000-4000-8000-000000000099',kind:'settings',title:'A clearer weekly idea review',status:'Draft',fields:{ownerId:actor.id,visibility:'personal',summary:'## A small weekly experiment\n\nGive each idea a clear outcome.\n\n### Before the meeting\n- Read the shared proposals\n- Choose what needs a decision',weeks:4}},
  {...make('worker:approval-index','asset','All Courses - production folders and editable-copy index',{
  brief:'Review the course setup and the remaining access exception.',
  body:'The editable course working copies have been organised into named course folders. Existing matching copies were reused and the source originals remain intact.\n\nFat Loss Course: 38 saved items\nLongevity Course: 31 saved items\nNutrition course: 21 saved items\n\nCopying and filing does not mean branding, teaching review, final video export or approval is complete.',
@@ -33,7 +35,7 @@ const records=[
 records.push({id:'catalogue:challenge',kind:'Challenge guide',group:'Challenges',title:'Six-week challenge',fields:{collection:'Six-week challenge'},files:[]});
 records.push({id:'catalogue:programme',kind:'Workout programme',group:'Programs',title:'Starter strength programme',fields:{body:'Original programme overview: three training sessions per week.'},files:[]});
 const index={records,files:{}},saved=new Map();
-for(const record of records.filter(r=>r.id.startsWith('worker:')))saved.set(record.id,{id:record.id,payload:record,revision:1,updated_at:new Date().toISOString()});
+for(const record of records.filter(r=>r.id.startsWith('worker:')||r.kind==='settings'))saved.set(record.id,{id:record.id,payload:record,revision:1,updated_at:new Date().toISOString()});
 const api=async(endpoint,opts={})=>{
  if(endpoint.includes('rpc/nufi_studio_save')){
   const p=opts.payload,old=saved.get(p.item);
@@ -52,7 +54,7 @@ http.createServer(async(req,res)=>{
   const u=new URL(req.url,'http://127.0.0.1');
   if(u.pathname==='/content-library/'){
    let raw='';for await(const chunk of req)raw+=chunk;req.body=raw?Object.fromEntries(new URLSearchParams(raw)):undefined;
-   return handleStudio(req,res,{params:u.searchParams,actor,api,load:async()=>index,env:{}});
+   return handleStudio(req,res,{params:u.searchParams,actor,api,load:async()=>index,env:{NUFI_HQ_SITE_TOKEN:'fixture-only'},fetcher:async(endpoint,options)=>{const input=JSON.parse(options.body);return new Response(JSON.stringify(input.action==='ideas'?{version:4,ideas:[{id:'fixture-proposal',title:'Can people explain the free Reset in ten seconds?',day:'2026-11-24',state:'pending',summary:'Test two mobile headline cards privately with six consenting adults.\n\n- Show the two alternatives in a different order.\n- Ask what it costs and what the first step is.\n- Record anonymous feedback.',rationale:'Check offer clarity before traffic spend or publishing. Treat this as qualitative discovery, not a conversion forecast.',sources:[{title:'The existing launch brief',url:'https://example.test/brief'}]}]}:{messages:[]}),{headers:{'Content-Type':'application/json'}});}});
   }
   if(u.pathname.startsWith('/api/')){res.writeHead(503,{'Content-Type':'application/json'});return res.end('{"error":"Local fixture service unavailable"}');}
   let file=path.resolve(root,'.'+decodeURIComponent(u.pathname));
