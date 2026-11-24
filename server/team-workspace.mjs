@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto';
+import { brandPage } from './studio-brand.mjs';
 import { canAccess } from './library-permissions.mjs';
 import { HttpError } from './platform.mjs';
 import { cleanText } from './studio-model.mjs';
@@ -16,6 +17,7 @@ export function assetsPage(data){
     '</div>'+(canAccess(data.actor,'originals')?'<section class="panel"><h2>Originals</h2><p>Your source collections and reference materials.</p>'+button('Browse originals',url('archive'))+'</section>':'');
 }
 export function brandMediaPage(data){
+  if(data.actor.role!=='admin'&&canAccess(data.actor,'shared_library'))return brandPage(data)+'<section class="panel"><h2>Shared images & files</h2>'+button('Browse shared assets',url('library',{kind:'asset'}))+'</section>';
   return heading('Brand & Media','Shared materials for consistent team work.')+'<div class="studio-cards">'+
     (data.actor.role==='admin'?card('Brand guide','Logos, fonts, colours and writing guidance.','standards'):'')+
     card('Images & files','Browse creative assets and supporting media.','library',{kind:'asset'})+

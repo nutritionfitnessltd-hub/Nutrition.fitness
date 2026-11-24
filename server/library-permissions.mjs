@@ -57,6 +57,7 @@ export function accessFromForm(fields) {
 }
 
 const routes = {
+  'brand-file': ['shared_library'],
   products: ['library'], product: ['library'], 'product-creatives': ['library'], 'product-asset': ['library'], 'product-file': ['library'], 'product-upload': ['library'],
   'shiny-things': ['library'], home: [], 'team-work': [], assets: [], 'brand-media': ['library'], 'workspace-archive': [], library: ['library'], exercises: ['library'], item: ['library'], history: ['library'], 'review-history': ['work','library'],
   'book-file': ['library'], 'article-image': ['library'], 'article-preview': ['library'], 'newsletter-preview': ['library'], 'newsletter-html': ['library'], 'mealplan-image': ['library'],

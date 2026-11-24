@@ -1,5 +1,6 @@
 import { readFile } from 'node:fs/promises';
 import { HttpError } from './platform.mjs';
+import { canAccess } from './library-permissions.mjs';
 import { esc, url, heading, button, form, hidden, textarea } from './studio-ui.mjs';
 
 export const brandKit='https://www.canva.com/brand/kAHV121Q0lU';
@@ -21,11 +22,11 @@ export function brandPage(data){
     '<div class="studio-brand-grid"><section class="panel studio-brand-logo"><h2>Our logo</h2><img src="'+url('brand-file',{file:'logo-png'})+'" alt="nutrition.fitness. Real food. Real progress. A fitter, happier you."><p>Use the navy logo with the full tagline. Keep its proportions and give it space.</p><div class="studio-actions">'+button('Download SVG',url('brand-file',{file:'logo-svg',download:'1'}))+button('Download PNG',url('brand-file',{file:'logo-png',download:'1'}))+'</div></section>'+
     '<section class="panel"><h2>Fonts & voice</h2><p class="studio-brand-font">DM Sans</p><p>Our main font for headings and body text. Use <strong>Kalam Regular</strong> for short handwritten notes.</p><p>Write in clear, friendly British English. Be practical, specific and encouraging. Explain the next useful action.</p>'+button('Open Canva brand kit',brandKit)+'</section></div>'+
     '<section class="panel"><h2>Colours by subject</h2><p>Start with a white background and navy text. Choose the colours that fit the content.</p><div class="studio-brand-themes">'+themes.map(([name,panel,pale,accent,hex])=>'<div class="studio-brand-theme"><h3>'+esc(name)+'</h3><span>'+panel+' <code>'+pale+'</code></span><span>'+accent+' <code>'+hex+'</code></span></div>').join('')+'</div><details><summary>Full colour palette</summary><div class="studio-brand-palette">'+palette.map(([name,hex],index)=>'<div><span class="studio-brand-swatch studio-brand-swatch-'+index+'" aria-hidden="true"></span><span>'+name+'<br><code>'+hex+'</code></span></div>').join('')+'</div></details></section>'+
-    '<details class="panel"><summary>Writing guidance for drafts</summary><p>The brand guide above accompanies new AI drafts. Add any extra writing guidance here.</p>'+form('standards-save',hidden('revision',r?.revision||0)+textarea('guidance','Additional guidance',r?.fields.guidance||defaultGuidance,5),{section:'standards'},'Save guidance')+'</details>'+
+    (data.actor.role==='admin'?'<details class="panel"><summary>Writing guidance for drafts</summary><p>The brand guide above accompanies new AI drafts. Add any extra writing guidance here.</p>'+form('standards-save',hidden('revision',r?.revision||0)+textarea('guidance','Additional guidance',r?.fields.guidance||defaultGuidance,5),{section:'standards'},'Save guidance')+'</details>':'')+
     '<p class="meta">Based on your supplied website style guide and current Resource Brand kit.</p>';
 }
 export async function sendBrandFile(req,res,params,actor){
-  if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
+  if(actor.role!=='admin'&&!canAccess(actor,'shared_library'))throw new HttpError(403,'Shared brand access is required.');
   if(req.method!=='GET')throw new HttpError(405,'Use GET to open a brand file.');
   const files={guide:['brand-guide.pdf','application/pdf'], 'logo-svg':['logo.svg','image/svg+xml'], 'logo-png':['logo.png','image/png']};
   const file=files[params.get('file')];if(!file)throw new HttpError(404,'Brand file unavailable.');
