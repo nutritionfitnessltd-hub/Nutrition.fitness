@@ -22,8 +22,8 @@ test('checked lessons link to the video and asset page without approving on GET'
  const {p,data,meta,pilot}=fixture();p.studio.productionTracking.pilotIds=[];
  let html=productionTrackerPanel(p,data,meta);
  assert.match(html,/href="https:\/\/nutritionfitness.sharepoint.com[^\"]+test.mp4"/);assert.match(html,/Open video/);
- assert.match(html,/studio=item&amp;id=pilot/);assert.match(html,/Open asset/);assert.doesNotMatch(html,/studio=review-preview|Review &amp; approve/);
- assert.doesNotMatch(html,/name="decision" value="approve"/);assert.equal(pilot.status,'Draft');
+ assert.match(html,/studio=item&amp;id=pilot/);assert.match(html,/Open asset/);assert.match(html,/name="action" value="review-decision"/);assert.match(html,/name="revision" value="2"/);assert.match(html,/>Approve</);
+ assert.equal(pilot.status,'Draft');
  pilot.fields.production.files[0].url='javascript:alert(1)';html=productionTrackerPanel(p,data,meta);assert.doesNotMatch(html,/javascript:|Review &amp; approve|Open video/);
 });
 test('project summaries cannot grant draft review or editing permissions',async()=>{
@@ -120,3 +120,12 @@ test('task deletion is revision guarded and restricted to owner or admin',async(
  pilot.fields.production.files=pilot.fields.production.files.filter(f=>!f.url.endsWith('.mp4'));
  html=productionTrackerPanel(p,data,meta);assert.match(html,/Open asset/);assert.doesNotMatch(html,/Open video|Open file/);
  });
+
+test('updates collapse full notes and keep actions above the short summary',()=>{
+ const {p,data,meta}=fixture();p.studio.trackingUpdates={'lesson:Fat Loss:1':{note:'Long update '.repeat(40),at:'2026-11-24T12:00:00Z'}};
+ const html=productionTrackerPanel(p,data,meta);
+ assert.match(html,/<details class="tracker-work-update"><summary>/);
+ assert.doesNotMatch(html,/<details class="tracker-work-update" open/);
+ assert.ok(html.indexOf('tracker-file-actions')<html.indexOf('tracker-work-update'));
+ assert.ok(html.includes('Long update '.repeat(40)));
+});
