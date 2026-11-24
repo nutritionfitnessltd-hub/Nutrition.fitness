@@ -20,7 +20,7 @@
 .project-document .task-schedule-summary{font-size:12px;line-height:1.5;gap:6px 12px;margin:4px 0 8px}
 .project-document .project-task-edit{margin:10px 0 0}
 .project-document summary{font-size:13px;line-height:1.5;cursor:pointer;font-weight:600}
-.project-task-edit>summary{display:inline-list-item;color:#06475e;padding:3px 0}
+.project-task-edit>summary{display:list-item;color:#06475e;padding:3px 0}
 .project-task-edit[open]{border:1px solid #d6ddd9;border-radius:7px;background:#fff;padding:16px;margin:12px 0}
 .project-document .studio-form{font-size:13px;max-width:100%;gap:12px;margin:14px 0 0}
 .project-document label,.project-document legend{font-size:13px;line-height:1.5}
