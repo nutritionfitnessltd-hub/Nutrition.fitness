@@ -1,3 +1,4 @@
+import {collectionKinds,supportKinds,supportingLibrary,collectionPlacementFields,collectionHeader} from './studio-collections.mjs';
 import {documentText} from './document-reader.mjs';
 import {schedulingInputs,taskScheduleSummary,ganttPanel} from './studio-project-schedule.mjs';
 import {productionFileLinks} from './production-file-links.mjs';
@@ -35,6 +36,7 @@ const personOptions=d=>Object.fromEntries(d.people.map(p=>[p.id,p.name]));
 const projectChoices=d=>({'':'Library only',...Object.fromEntries(d.projects.filter(p=>p.status!=='Complete').map(p=>[p.id,p.name]))});
 const contentRow=r=>'<div>'+itemLink(r)+'<small>'+esc(kinds[r.kind]||r.kind)+'</small></div>'+badge(r.publication?.status==='published'?'Published':r.status);
 const collections={
+  theme:['Themes','Collections such as Passport, with their meal plans, messages and campaign assets.','Layers'],
   programme:['Programmes','Training plans, organised by level.','Dumbbell'],
   recipe:['Recipes','Ingredients, methods and nutrition information.','Utensils'],
   mealplan:['Meal plans','Weekly menus and recipe collections.','Utensils'],
@@ -93,13 +95,14 @@ export function library(params,data,meta={}){
   data={...data,items:data.items.filter(r=>bucket==='published'?published(r):bucket==='checked'?r.status==='Approved'&&!published(r):bucket==='drafts'?!r.sourceOnly&&!published(r)&&r.status!=='Approved':true)};
   const lifecycle='<nav class="tabs" aria-label="Content status">'+[['all','All content'],['drafts','Drafts'],['checked','Checked'],['published','Published']].map(([id,title])=>'<a href="'+url('library',{bucket:id,kind:params.get('kind')||'',worker,view:mine?'mine':''})+'"'+(id===bucket?' aria-current="page"':'')+'>'+title+'</a>').join('')+'</nav>';
   const exercise=params.get('studio')==='exercises',kind=params.get('kind')||shelves[params.get('category')]?.create||'',q=(params.get('q')||'').toLowerCase(),state=params.get('state')||'';
+  if(supportKinds.has(kind)&&!q&&!state&&!worker&&!mine)return supportingLibrary(params,data,kind);
   if(!worker&&!exercise&&!kind&&!q&&!state&&!['all','mine'].includes(params.get('view'))){
     const counts=new Map();
     for(const r of data.items)if(r.status!=='Archived'){const type=isNewsletterContent(r)?'newsletter':r.kind;counts.set(type,(counts.get(type)||0)+1);}
     return heading('Content library','Your working content.',(canAccess(data.actor,'studio')?button('Add content',url('create',{view:'daily'}),true)+button('My content',url('library',{view:'mine'})):'')+(canAccess(data.actor,'originals')?button('Browse original collections',url('workspace-archive',{tab:'originals'})):''))+lifecycle+
       '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','library')+hidden('view','all')+hidden('bucket',bucket)+hidden('worker',worker)+input('q','Search all content','','search')+'<button>Search</button>'+button('Browse all content',url('library',{view:'all',bucket}))+'</form>'+
       typeCards(contentSections,counts,bucket)+
-      '<details class="panel"><summary>More content types</summary>'+typeCards(Object.entries(collections).filter(([id])=>!contentSections.some(([key])=>key===id)).map(([id,[title]])=>[id,title]),counts,bucket)+'</details>';
+      '<details class="panel"><summary>Supporting content and shared resources</summary>'+typeCards(Object.entries(collections).filter(([id])=>!contentSections.some(([key])=>key===id)).map(([id,[title]])=>[id,title]),counts,bucket)+'</details>';
 
   }
   const matchesKind=r=>!kind||(kind==='newsletter'?isNewsletterContent(r):r.kind===kind&&(kind!=='communication'||!isNewsletterContent(r)));
@@ -124,7 +127,7 @@ export function library(params,data,meta={}){
       const preview=meta.training?.[r.id]||meta.assets?.[r.id]?.preview||meta.training?.[r.parent];
       const photo=r.kind==='ebook'&&r.bookAssets?.front?bookAssetUrl(r.id,'front').replaceAll('&amp;','&'):recipeImage(r)||articleImage(r);
       const ghlAction=newsletterDraftButton(data,r);
-      return (ghlAction?'<div class="studio-linked-content-card">':'')+'<a class="studio-content-card" '+(r.kind==='article'?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+url(r.kind==='article'?'review-preview':'item',{id:r.id})+'">'+(photo?'<span class="studio-card-photo"><img src="'+esc(photo)+'" alt="" loading="lazy">'+(r.kind==='article'&&imageCaption(r)?'<span class="studio-photo-caption">'+esc(imageCaption(r))+'</span>':'')+'</span>':preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(isNewsletterContent(r)?'Newsletter':r.kind==='programme-family'?'Training programmes':kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks · '+(r.id==='training:nufi365'?'Year-round programme':'Standalone programme')+'</p>':r.kind==='programme-family'?'<p>Start · Progress · Develop · Own It</p>':'')+badge(published(r)?'Published':r.status)+'</div></a>'+(ghlAction?'<div class="studio-actions">'+ghlAction+'</div></div>':'');
+      return (ghlAction?'<div class="studio-linked-content-card">':'')+'<a class="studio-content-card" '+(r.kind==='article'?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+url(collectionKinds.has(r.kind)?'collection':r.kind==='article'?'review-preview':'item',{id:r.id})+'">'+(photo?'<span class="studio-card-photo"><img src="'+esc(photo)+'" alt="" loading="lazy">'+(r.kind==='article'&&imageCaption(r)?'<span class="studio-photo-caption">'+esc(imageCaption(r))+'</span>':'')+'</span>':preview?'<img src="'+url('media',{preview})+'" alt="" loading="lazy">':'')+'<div><small>'+esc(isNewsletterContent(r)?'Newsletter':r.kind==='programme-family'?'Training programmes':kinds[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+(r.kind==='programme'?'<p>'+esc(r.fields.weeks)+' weeks · '+(r.id==='training:nufi365'?'Year-round programme':'Standalone programme')+'</p>':r.kind==='programme-family'?'<p>Start · Progress · Develop · Own It</p>':'')+badge(published(r)?'Published':r.status)+'</div></a>'+(ghlAction?'<div class="studio-actions">'+ghlAction+'</div></div>':'');
     }).join('')+'</div>')+'</div>';
 }
 export function createPage(params,data,values={}){
@@ -247,6 +250,9 @@ function programmePage(params,data,r){
   return out;
 }
 export function itemPage(params,data){
+ const record=data.byId.get(params.get('id'));return (record&&canReadContent(data,record)&&params.get('document')!=='1'?collectionHeader(record,data):'')+itemPageBody(params,data);
+}
+function itemPageBody(params,data){
   const r=data.byId.get(params.get('id'));if(!canReadContent(data,r))return heading('Content unavailable');
   if(r.sourceOnly)return '<a class="back" href="'+url('library',{kind:'course'})+'">← Courses</a>'+heading(r.title,'Original course outline. This material has not yet been imported, branded or approved as working content.')+badge('Original material')+
     '<div class="panel">'+(r.fields.modules||[]).map(m=>'<section><h2>'+esc(m.title)+'</h2><ul>'+(m.lessons||[]).map(title=>'<li>'+esc(title)+'</li>').join('')+'</ul></section>').join('')+'</div>';
@@ -301,9 +307,9 @@ export function itemPage(params,data){
 }
 export function newItem(params,data,values={}){
   const kind=Object.hasOwn(kinds,values.kind||params.get('kind'))?(values.kind||params.get('kind')):'article';
-  if(kind==='mealplan')return mealPlanForm(data,{...values,project:values.project||params.get('project')||''});
+  if(kind==='mealplan')return mealPlanForm(data,{...values,project:values.project||params.get('project')||''}).replace(/(<form\b[^>]*>)/,'$1'+collectionPlacementFields({kind,collectionId:values.collectionId||params.get('collectionId')||'',themeId:values.themeId||params.get('themeId')||''},data));
   let fields=blankFields(kind);if(values.fields)try{fields=JSON.parse(values.fields);}catch{}
-  const r={id:values.id||'studio:'+randomUUID(),kind,title:values.title??params.get('title')??'',fields};
+  const r={id:values.id||'studio:'+randomUUID(),kind,title:values.title??params.get('title')??'',fields,collectionId:values.collectionId||params.get('collectionId')||'',themeId:values.themeId||params.get('themeId')||''};
   return '<a class="back" href="'+url('create')+'">← Create content</a>'+heading('Create '+kinds[kind].toLowerCase())+
     (data.actor.role==='admin'&&!values.fields?'<p class="studio-workbar">'+button('Start from an original with a worker',url('builder',{shelf:kind==='course'||kind==='lesson'?'Courses':kind==='challenge'?'Challenges':''}))+'</p>':'')+
     editorForm(r,data,{create:true,project:values.project||params.get('project')||'',entry:values.entry||params.get('entry')||'',unsaved:data.unsaved===true})+referenceData(data);

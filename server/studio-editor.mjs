@@ -1,3 +1,4 @@
+import {collectionPlacementFields} from './studio-collections.mjs';
 import {documentText} from './document-reader.mjs';
 import {isNewsletter,isNewsletterContent,newsletterPreview} from './studio-newsletters.mjs';
 import {isLaunchPack,launchPackPreview} from './studio-launch-pack.mjs';
@@ -21,7 +22,7 @@ export function editorForm(r,data,{create=false,project='',entry='',feedback='',
   return '<form method="post" action="'+url(create?'new':'item',create?{kind:r.kind}:{id:r.id,tab:'edit'})+'" class="studio-form content-editor" id="studio-editor-form">'+
     hidden('action',create?'content-create':'content-save')+hidden(create?'id':'revision',create?r.id:r.revision)+
     (create?hidden('kind',r.kind)+hidden('entry',entry):'')+
-    (!create?'<div class="studio-editor-preview-top"><a class="btn primary" data-review-preview target="_blank" rel="noopener" href="'+url('review-preview',{id:r.id})+'">Preview for approval</a></div>':'')+(r.source?.needsChecking?'<label class="check"><input type="checkbox" name="sourceChecked" value="yes"> I checked this content against the original</label>':'')+editorFields(r)+workerAssignment(r,data)+
+    (!create?'<div class="studio-editor-preview-top"><a class="btn primary" data-review-preview target="_blank" rel="noopener" href="'+url('review-preview',{id:r.id})+'">Preview for approval</a></div>':'')+(r.source?.needsChecking?'<label class="check"><input type="checkbox" name="sourceChecked" value="yes"> I checked this content against the original</label>':'')+editorFields(r)+workerAssignment(r,data)+collectionPlacementFields(r,data)+
     (!create&&r.kind==='article'?articleImageEditor(r):'')+
     (create?'<details class="editor-details"><summary>Assign to a project (optional)</summary><label>Project<select name="project">'+'<option value="">No project — save to Content Library</option>'+data.projects.map(p=>'<option value="'+esc(p.id)+'"'+(p.id===project?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select></label></details>':
       '<details class="editor-details"><summary>Add a review note (optional)</summary>'+textarea('feedback','Review note',feedback,3)+'</details>')+
@@ -32,7 +33,7 @@ export function editorForm(r,data,{create=false,project='',entry='',feedback='',
 function messageEditorForm(r,data,{create,project,entry,unsaved}){
   return '<form method="post" action="'+url(create?'new':'item',create?{kind:r.kind}:{id:r.id,tab:'edit'})+'" class="studio-form content-editor message-editor" id="studio-editor-form">'+
     hidden('action',create?'content-create':'content-save')+hidden(create?'id':'revision',create?r.id:r.revision)+
-    (create?hidden('kind',r.kind)+hidden('entry',entry):'')+(isNewsletter(r)?'<p>'+button('Back to design',url('item',{id:r.id}))+'</p><p class="meta">Edit the HTML layout below. Save &amp; preview to check the design.</p>':'')+(r.source?.needsChecking?'<label class="check"><input type="checkbox" name="sourceChecked" value="yes"> Checked against the original</label>':'')+editorFields(r)+workerAssignment(r,data)+
+    (create?hidden('kind',r.kind)+hidden('entry',entry):'')+(isNewsletter(r)?'<p>'+button('Back to design',url('item',{id:r.id}))+'</p><p class="meta">Edit the HTML layout below. Save &amp; preview to check the design.</p>':'')+(r.source?.needsChecking?'<label class="check"><input type="checkbox" name="sourceChecked" value="yes"> Checked against the original</label>':'')+editorFields(r)+workerAssignment(r,data)+collectionPlacementFields(r,data)+
     '<div class="studio-save-bar"><span data-editor-status'+(unsaved?' data-unsaved="true"':'')+' role="status">'+(unsaved?'Unsaved changes':create?'New message':'Saved')+'</span><div class="studio-actions">'+
       '<button type="submit" name="intent" value="preview">Save &amp; preview</button><button class="primary" type="submit" name="intent" value="draft">Save</button>'+(!create&&isNewsletterContent(r)?'<button type="submit" name="intent" value="review">Submit for Approval</button>':'')+'</div></div>'+
     '<details class="message-options"><summary>Options</summary><div id="studio-message-options"></div>'+

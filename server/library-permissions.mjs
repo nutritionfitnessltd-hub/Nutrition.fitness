@@ -45,7 +45,7 @@ export const reviewsKind = (actor, kind) => actor?.role === 'admin' ||
   (canAccess(actor,'library') && canAccess(actor,'work') && reviewOptions.some(([key,,kinds])=>kinds.includes(kind)&&canAccess(actor,key)));
 export const canReviewContent = (data, record) => Boolean(record) && !record.sourceOnly && (data.actor.role === 'admin' ||
   (record.status === 'In review' && reviewsKind(data.actor,record.kind)));
-const sharedKinds = new Set(['article','recipe','mealplan','programme','programme-family','stage','structure','session','exercise','activity','rule','review','course','lesson','learning','ebook','leadmagnet','challenge','communication','campaign','workflow','asset','product']);
+const sharedKinds = new Set(['theme','article','recipe','mealplan','programme','programme-family','stage','structure','session','exercise','activity','rule','review','course','lesson','learning','ebook','leadmagnet','challenge','communication','campaign','workflow','asset','product']);
 export const canReadSharedContent = (actor, record) => Boolean(record) && sharedKinds.has(record.kind) &&
   (canAccess(actor,'all_library') || canAccess(actor,'shared_library') && record.status !== 'Archived' &&
   (record.status === 'Approved' || record.shared === true || record.fields?.shared === true));
@@ -60,7 +60,7 @@ export function accessFromForm(fields) {
 
 const routes = {
   'brand-file': ['shared_library'],
-  task: ['work'], 'task-asset-file': ['library'], suppliers: ['library'], supplier: ['library'], products: ['library'], product: ['library'], 'product-creatives': ['library'], 'product-asset': ['library'], 'product-file': ['library'], 'product-upload': ['library'],
+  collection: ['library'], task: ['work'], 'task-asset-file': ['library'], suppliers: ['library'], supplier: ['library'], products: ['library'], product: ['library'], 'product-creatives': ['library'], 'product-asset': ['library'], 'product-file': ['library'], 'product-upload': ['library'],
   'shiny-things': ['library'], home: [], 'team-work': [], assets: [], 'brand-media': ['library'], 'workspace-archive': [], library: ['library'], exercises: ['library'], item: ['library'], history: ['library'], 'review-history': ['work','library'],
   'book-file': ['library'], 'article-image': ['library'], 'article-preview': ['library'], 'newsletter-preview': ['library'], 'newsletter-html': ['library'], 'mealplan-image': ['library'],
   archive: ['originals'], create: ['studio'], new: ['studio'], import: ['studio', 'originals'],
@@ -69,6 +69,7 @@ const routes = {
   release: ['work', 'library'], export: ['work', 'library']
 };
 const actions = {
+  'collection-link':['library','edit'],
   'idea-save': ['library','edit'], 'idea-discussion': ['library','edit'],
   'course-structure-review': ['work','library'],
   'product-save': ['library','edit'], 'product-asset-save': ['library','edit'], 'product-asset-link': ['library','edit'], 'product-asset-status': ['library','edit'], 'product-file-save': ['library','edit'],

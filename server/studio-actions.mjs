@@ -1,3 +1,4 @@
+import {applyCollectionPlacement} from './studio-collections.mjs';
 import {articleMediaIssues} from './worker-drafts.mjs';
 import {workStates} from './production-work-state.mjs';
 import {scheduleFields,validateDependencies,reorderAndSchedule} from './studio-project-schedule.mjs';
@@ -111,6 +112,7 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
     if(f.intent&&!['draft','preview'].includes(f.intent))throw new HttpError(400,'Save this new draft before checking it.');
     const record={id,title,kind:f.kind,status:'Draft',fields:f.fields?readFields(f.fields,f.kind):blankFields(f.kind),parent:null,comments:[]};
     if(record.fields.productAsset===true)throw new HttpError(400,'Add product assets from the Products area.');
+    applyCollectionPlacement(record,f,data);
     assignWorker(record,f,data);
     await createItem(record,f.project,f.entry,data,api);return {section:'item',id,tab:f.intent==='preview'?'preview':'edit'};
   }
@@ -133,6 +135,7 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
       if(r.kind==='product'||r.fields.productAsset===true)throw new HttpError(400,'Use the Products editor to update this item.');
       next.title=cleanText(f.title,200);if(!next.title)throw new HttpError(400,'Add a title.');
       if(f.intent&&!['draft','preview','approve','review'].includes(f.intent))throw new HttpError(400,'Choose a save action.');
+      applyCollectionPlacement(next,f,data);
       assignWorker(next,f,data);
       next.fields=readFields(f.fields,next.kind);
       if(next.fields.productAsset===true)throw new HttpError(400,'Link product assets from the Products area.');

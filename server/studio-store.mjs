@@ -70,6 +70,7 @@ export async function studioData(api,actor,load){
     }
   }
   const data={index,items,byId:records,projects,tasks,people,releases,assigned,actor,ideaTeams:teams,ideaPeople};
+  data.collectionLinks=items.filter(r=>r.kind==='settings'&&r.fields?.libraryCollectionLink===true&&r.fields.active===true).map(r=>({collectionId:r.fields.collectionId,contentId:r.fields.contentId}));
   // Project owners can track their worker's progress without gaining draft-body access.
   data.trackingByProject=projectTrackingSummaries(data);
   // Product assignment includes its assets, never the other products sharing an asset.

@@ -2,7 +2,7 @@ import { canAccess } from './library-permissions.mjs';
 import { icons } from './library-icons.mjs';
 
 export const contentSections=[
-  ['recipe','Recipes'],['mealplan','Meal plans'],['programme','Programmes'],['course','Courses'],['challenge','Challenges'],['article','Articles'],['ebook','Books & guides'],['newsletter','Newsletters'],['communication','Messages'],['campaign','Marketing'],['asset','Images & files'],['exercise','Exercises']
+  ['theme','Themes'],['recipe','Recipes'],['programme','Programmes'],['course','Courses'],['challenge','Challenges'],['article','Articles'],['ebook','Books & guides'],['newsletter','Newsletters'],['exercise','Exercises']
 ];
 export const referenceSections=['Recipes','Programs','Courses','Challenges','Articles','E-Books','Business','Socials','Needs sorting','Source collections','All content'];
 const href=(section,values={})=>'/content-library/?'+new URLSearchParams({work:'1',studio:section,...values}).toString().replaceAll('&','&amp;');

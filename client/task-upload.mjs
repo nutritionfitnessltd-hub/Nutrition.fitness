@@ -4,8 +4,8 @@ const base64=file=>new Promise((resolve,reject)=>{const reader=new FileReader();
 for(const panel of document.querySelectorAll('[data-task-upload]')){
  const picker=panel.querySelector('[data-task-file]'),button=panel.querySelector('[data-task-upload-button]'),cancel=panel.querySelector('[data-task-upload-cancel]'),status=panel.querySelector('[data-task-upload-status]'),progress=panel.querySelector('progress'),destination=panel.querySelector('[name=destination]');
  let uploaded,index=0,pathname,controller,idle;
- const chosen=()=>Object.fromEntries(['destination','productId','category','folderUrl'].map(k=>[k,panel.querySelector('[name='+k+']')?.value||'']));
- destination.addEventListener('change',()=>{for(const [kind,selector] of [['library','[data-library-destination]'],['product','[data-product-destination]'],['sharepoint','[data-sharepoint-destination]']])panel.querySelector(selector).hidden=destination.value!==kind;});
+ const chosen=()=>Object.fromEntries(['destination','productId','category','folderUrl','collectionId','themeId'].map(k=>[k,panel.querySelector('[name='+k+']')?.value||'']));
+ destination.addEventListener('change',()=>{for(const [kind,selector] of [['library','[data-library-destination]'],['product','[data-product-destination]'],['sharepoint','[data-sharepoint-destination]']])panel.querySelector(selector).hidden=destination.value!==kind;const placement=panel.querySelector('[data-content-destination]');if(placement)placement.hidden=!['library','product'].includes(destination.value);});
  picker.addEventListener('change',()=>{uploaded=null;index=0;pathname=null;button.textContent='Upload files';status.textContent='';});
  cancel.addEventListener('click',()=>controller?.abort());
  function watchdog(){clearTimeout(idle);idle=setTimeout(()=>controller.abort('stalled'),45000);}
@@ -43,4 +43,6 @@ for(const panel of document.querySelectorAll('[data-task-upload]')){
   finally{clearTimeout(idle);button.disabled=false;cancel.hidden=true;for(const el of controls)el.disabled=false;}
  });
 }
+
+
 

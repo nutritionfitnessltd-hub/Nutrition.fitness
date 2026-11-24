@@ -3,6 +3,7 @@ import { HttpError } from './platform.mjs';
 import {isNewsletterContent} from './studio-newsletter-type.mjs';
 
 export const kinds = {
+  theme:'Theme',
   programme:'Training programme', stage:'Training stage', structure:'Weekly schedule', session:'Workout',
   exercise:'Exercise', activity:'Activity or drill', recipe:'Recipe', mealplan:'Meal plan',
   course:'Course', lesson:'Lesson', article:'Knowledge Centre article', ebook:'Book', leadmagnet:'Lead magnet', challenge:'Challenge',
@@ -20,6 +21,7 @@ export const templates={
 };
 export function blankFields(kind){
   const fields={
+    theme:{introduction:'',body:''},
     programme:{purpose:'',audience:'',outcome:'',weeks:12,scheduleIds:[]},
     stage:{description:'',entryCriteria:'',exitCriteria:'',weeks:12,frequencies:[3,4,5],equipment:[],stageNotes:''},
     structure:{frequency:3,spacing:'',restRules:'',weeks:[{number:1,title:'',message:'',progression:'',sessionIds:[]}],busyWeek:{explanation:'',sessionIds:[]}},

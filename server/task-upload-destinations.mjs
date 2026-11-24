@@ -1,3 +1,4 @@
+import {applyCollectionPlacement} from './studio-collections.mjs';
 import {HttpError} from './platform.mjs';
 import {canAccess,canEditContent,canReadContent} from './library-permissions.mjs';
 import {saveRecord} from './studio-store.mjs';
@@ -16,12 +17,13 @@ export function uploadDestination(f,data){
   let folder;try{folder=new URL(f.folderUrl);}catch{throw new HttpError(400,'Paste the SharePoint folder link.');}
   if(folder.protocol!=='https:'||folder.hostname!=='nutritionfitness.sharepoint.com'||folder.username||folder.password)throw new HttpError(400,'Choose a folder in the nutrition.fitness SharePoint site.');
  }
- return {destination,...(destination==='product'?{productId:f.productId}:{}),...(destination==='library'?{category:f.category||'Images & files'}:{}),...(destination==='sharepoint'?{folderUrl:f.folderUrl}:{})};
+ const placement=['library','product'].includes(destination)?applyCollectionPlacement({id:'new-upload',kind:'asset'},{...f,organisationVersion:'1'},data):{};
+ return {...(placement.collectionId?{collectionId:placement.collectionId}:{}),...(placement.themeId?{themeId:placement.themeId}:{}),destination,...(destination==='product'?{productId:f.productId}:{}),...(destination==='library'?{category:f.category||'Images & files'}:{}),...(destination==='sharepoint'?{folderUrl:f.folderUrl}:{})};
 }
 export async function saveLibraryUpload(task,file,target,data,api){
  const id='studio:product:'+file.id,[existing]=await api('/rest/v1/nufi_studio_items?id=eq.'+encodeURIComponent(id)+'&select=payload,revision',{service:true});
  if(existing){if(existing.payload.fields?.taskFileId!==file.id||existing.payload.fields?.taskThreadId!==task.threadId)throw new HttpError(409,'This file belongs to another asset.');return id;}
- const record={id,title:file.name,kind:'asset',status:'Draft',shared:true,createdBy:data.actor.id,comments:[],fields:{productAsset:true,productIds:target.productId?[target.productId]:[],assetRole:target.destination==='product'?'product':'advert',type:target.category==='Packaging & labels'?'Packaging & labels':file.type.startsWith('image/')?'Photography':file.type.startsWith('video/')?'Video':'Other',category:target.category||'Supporting document',channel:'Unspecified',altText:file.name,taskThreadId:task.threadId,taskFileId:file.id,url:'https://team.nutrition.fitness'+url('task-asset-file',{id,file:file.id}).replaceAll('&amp;','&')}};
+ const record={id,collectionId:target.collectionId||'',themeId:target.themeId||'',title:file.name,kind:'asset',status:'Draft',shared:true,createdBy:data.actor.id,comments:[],fields:{productAsset:true,productIds:target.productId?[target.productId]:[],assetRole:target.destination==='product'?'product':'advert',type:target.category==='Packaging & labels'?'Packaging & labels':file.type.startsWith('image/')?'Photography':file.type.startsWith('video/')?'Video':'Other',category:target.category||'Supporting document',channel:'Unspecified',altText:file.name,taskThreadId:task.threadId,taskFileId:file.id,url:'https://team.nutrition.fitness'+url('task-asset-file',{id,file:file.id}).replaceAll('&amp;','&')}};
  await saveRecord(api,data.actor,record,0);return id;
 }
 async function graphToken(env,fetcher){

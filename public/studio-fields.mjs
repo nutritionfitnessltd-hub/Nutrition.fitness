@@ -1,5 +1,6 @@
 // The everyday editor shows content first. All other saved fields remain editable.
 export const primaryFields = {
+  theme:['introduction','body'],
   campaign:['headline','body','callToAction','assetIds'],
   communication:['subject','body'],
   article:['introduction','body','marginNote','takeaway'], learning:['body','takeaway'],

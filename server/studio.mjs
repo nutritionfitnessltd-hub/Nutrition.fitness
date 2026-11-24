@@ -1,3 +1,4 @@
+import {collectionPage,linkCollection,applyCollectionPlacement} from './studio-collections.mjs';
 import {peopleTaskModal,peopleTaskAction,linkedPeopleTasks} from './people-tasks.mjs';
 import {taskUploadToken,attachTaskFile,sendTaskFile,uploadSmallTaskFile,taskTransportData,sendUploadedAsset} from './task-files.mjs';
 import {taskPage,changeTaskPage} from './task-messages.mjs';
@@ -162,6 +163,10 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       }
       return write(res,status,await taskPage(params,data,api,retained,error),section,actor,meta);
     }
+    if(section==='collection'){
+      if(req.method==='POST'){const id=await linkCollection(f,data,api);res.statusCode=303;res.setHeader('Location',url('collection',{id}).replaceAll('&amp;','&'));return res.end();}
+      return write(res,200,collectionPage(params,data),section,actor,meta);
+    }
     data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';
     data.publicationDestination=publicationDestination(env);
     if(section==='newsletter-preview'||section==='newsletter-html')return await sendNewsletter(req,res,readable(data,params.get('id')),section,env);
@@ -233,6 +238,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         const result=await generateMealPlan({env,data,options:mealPlanOptions(f),fetcher});
         const draft={...current,id,kind:'mealplan',title:result.title,fields:result.fields,status:'Draft',parent:current?.parent||null,comments:[...(current?.comments||[]),{id:randomUUID(),body:result.notes||'Meal plan drafted from the recipe library for review.',author:'Drafting assistant',at:new Date().toISOString()}]};
         delete draft.approval;delete draft.revision;delete draft.updatedAt;
+        applyCollectionPlacement(draft,f,data);
         if(current)await saveRecord(api,actor,draft,current.revision);
         else await createItem(draft,f.project,f.entry,data,api);
         res.statusCode=303;res.setHeader('Location',url('item',{id}).replaceAll('&amp;','&'));return res.end();
