@@ -1,3 +1,6 @@
+import {courseEditorRecord} from './studio-courses.mjs';
+import {editorForm,referenceData} from './studio-editor.mjs';
+import {canEditContent} from './library-permissions.mjs';
 import {loadNewsletterDraftLinks} from './newsletter-draft-links.mjs';
 import {saveNewsletterConnection} from './newsletter-sync.mjs';
 import {productsPage,productPage,creativesPage,productAssetPage,changeProducts,productErrorForm,isProductAsset} from './studio-products.mjs';
@@ -121,6 +124,15 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     ]);
     if(['home','team-work','library','review-preview'].includes(section))await loadNewsletterDraftLinks(data,api).catch(()=>{});
     data.aiReady=Boolean(env.OPENAI_API_KEY)&&canAccess(actor,'ai');
+    if(section==='item'&&params.get('reviewEditor')==='1'&&req.method==='GET'){
+      const r=readable(data,params.get('id'));
+      if(!canEditContent(data,r.id))throw new HttpError(403,'Editing is not enabled for this content.');
+      res.setHeader('Content-Security-Policy',"default-src 'none'; script-src 'self'; worker-src 'self' blob:; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' blob:; frame-src 'self'; form-action 'self'; base-uri 'none'; frame-ancestors 'self'");
+      res.setHeader('X-Frame-Options','SAMEORIGIN');
+      res.statusCode=200;res.setHeader('Content-Type','text/html; charset=utf-8');res.setHeader('Cache-Control','private, no-store');
+      return res.end('<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Edit '+esc(r.title)+'</title><link rel="stylesheet" href="/studio.css"><link rel="stylesheet" href="/review-window.css"><script type="module" src="/studio.js"></script></head><body class="review-editor-page" data-review-editor>'+editorForm(r.kind==='course'?courseEditorRecord(r,data):r,data)+referenceData(data)+'</body></html>');
+    }
+
     data.livePublishingReady=env.NUFI_STUDIO_LIVE_READY==='true';
     data.publicationDestination=publicationDestination(env);
     if(section==='newsletter-preview'||section==='newsletter-html')return await sendNewsletter(req,res,readable(data,params.get('id')),section,env);

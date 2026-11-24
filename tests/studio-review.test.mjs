@@ -23,11 +23,13 @@ test('review list opens accessible preview with saved revision and two clear dec
  assert.match(preview,/Website preview/);assert.match(preview,/>Approve</);assert.match(preview,/>Request changes</);
  assert.match(preview,/What needs changing/);assert.match(preview,/Remember for future work/);assert.match(preview,/Nina/);
 });
-test('article review window has one article and persistent controls without manager navigation or nested frames',()=>{
+test('article review window has one article and persistent controls without manager navigation and with a deferred editor',()=>{
  const f=fixture(),html=reviewWindowDocument(params,f.data);
  assert.match(html,/article-review-window/);assert.match(html,/review-window-controls/);
  for(const label of ['Approve','Edit','Request changes'])assert.ok(html.includes('>'+label+'<'));
- assert.doesNotMatch(html,/<iframe|Studio navigation|review-popup-header/);
+ assert.doesNotMatch(html,/Studio navigation|review-popup-header/);
+ assert.match(html,/<iframe title="Edit content form" data-review-edit-frame><\/iframe>/);
+ assert.match(html,/data-review-edit-dialog/);
  assert.equal((html.match(/<h1>/g)||[]).length,1);
 });
 test('staff article window offers Edit only for assigned content with editing access',()=>{
@@ -140,4 +142,20 @@ test('Vercel destination publishes and schedules to the existing website without
  const scheduled={...result.record,publicationPlan:{...result.record.publicationPlan,scheduledAt:'2026-01-01T09:00:00Z'}};
  const published=[];const api=async(path,o)=>path.includes('nufi_studio_items')?[{id:scheduled.id,revision:2,payload:scheduled}]:o?.method==='POST'?(published.push(o.payload.target),[]):[];
  assert.equal((await runScheduledPublications({api,env:{NUFI_STUDIO_PUBLISH_TARGET:'vercel'}})).published,1);assert.deepEqual(published,['test']);
+});
+
+test('asset approval reads the report before named folders and omits empty detail boxes',()=>{
+ const f=fixture(),r={...f.data.items[0],kind:'asset',title:'Course production index',fields:{brief:'Course copies ready for review',body:'The course setup is ready.\n\nOne source still needs access.',courseFolders:{'Fat Loss Course':{url:'https://www.canva.com/folder/fatloss'},'Sleep Mastery':{url:'https://www.canva.com/folder/sleep'}},assetUrls:['https://www.canva.com/folder/fatloss','https://www.canva.com/folder/sleep'],ownedSourceCount:2,canvaSourceCount:3,ownedWorkingCopies:[{title:'Sleep basics',collection:'Sleep Mastery',canvaUrl:'https://www.canva.com/design/sleep/edit',pageCount:12}]}};
+ f.data.items=[r];f.data.byId.set(r.id,r);
+ const html=reviewWindowDocument(params,f.data);
+ assert.match(html,/approval-paper/);assert.ok(html.indexOf('The course setup is ready.')<html.indexOf('Files &amp; editable copies'));
+ assert.match(html,/>Fat Loss Course</);assert.match(html,/>Sleep Mastery</);assert.match(html,/Browse 1 working copy/);assert.match(html,/Sleep basics/);
+ assert.doesNotMatch(html,/>More details<|History, feedback &amp; other actions|Copy verification/);
+ assert.equal((html.match(/href="https:\/\/www.canva.com\/folder\/fatloss"/g)||[]).length,1);
+});
+
+test('boxed editor requires editing access and does not approve on open',async()=>{
+ const f=fixture(),out=()=>({headers:{},setHeader(k,v){this.headers[k]=v;},end(body){this.body=body;}}),opts={params:new URLSearchParams({studio:'item',id:'worker:sample',tab:'edit',reviewEditor:'1'}),actor:f.data.actor,api:f.api,load:async()=>({records:[]}),env:{}};
+ let res=out();await handleStudio({method:'GET'},res,opts);assert.equal(res.statusCode,200);assert.match(res.body,/data-review-editor/);assert.match(res.headers['Content-Security-Policy'],/frame-ancestors 'self'/);assert.equal(res.headers['X-Frame-Options'],'SAMEORIGIN');assert.match(res.body,/id="studio-editor-form"/);assert.doesNotMatch(res.body,/Studio navigation/);assert.equal(f.writes,0);
+ res=out();await handleStudio({method:'GET'},res,{...opts,actor:{role:'staff',id:'reviewer',access:{library:true,work:true,edit:false,review_articles:true}}});assert.equal(res.statusCode,403);assert.doesNotMatch(res.body,/id="studio-editor-form"/);assert.equal(f.writes,0);
 });

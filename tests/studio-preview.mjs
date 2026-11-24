@@ -8,6 +8,15 @@ const root=path.resolve(import.meta.dirname,'../dist');
 const actor={role:'admin',id:'00000000-0000-4000-8000-000000000001'};
 const make=(id,kind,title,fields)=>({id,kind,title,status:'Draft',fields:{...blankFields(kind),...fields},files:[]});
 const records=[
+ {...make('worker:approval-index','asset','All Courses - production folders and editable-copy index',{
+ brief:'Review the course setup and the remaining access exception.',
+ body:'The editable course working copies have been organised into named course folders. Existing matching copies were reused and the source originals remain intact.\n\nFat Loss Course: 38 saved items\nLongevity Course: 31 saved items\nNutrition course: 21 saved items\n\nCopying and filing does not mean branding, teaching review, final video export or approval is complete.',
+ ownedSourceCount:166,canvaSourceCount:167,archiveRecordCount:198,
+ courseFolders:Object.fromEntries(['Fat Loss Course','Longevity Course','Nutrition course','Sports Nutrition Course','Stress Management Course','Keto Bundle','Overcoming Emotional Eating','The Burnout Cure','Sleep Mastery Course','Yoga Journey course','Habit Blueprint Course'].map((name,i)=>[name,{url:'https://www.canva.com/folder/fixture-'+i}])),
+ ownedWorkingCopies:[{title:'How do we lose fat?',collection:'Fat Loss Course',canvaUrl:'https://www.canva.com/design/fixture-one/edit',pageCount:14},{title:'Understanding nutrition basics',collection:'Sports Nutrition Course',canvaUrl:'https://www.canva.com/design/fixture-two/edit',pageCount:21}],
+ blockedSources:[{title:'Keto for Beginners',reason:'Access needs restoring by the Canva team administrator.'}]
+ }),status:'In review',workerId:'imogen'},
+
  {...make('worker:review-demo','article','Can magnesium help if your vitamin D stays low?',{bodyFormat:'html',shortAnswer:'A clear explanation for review.',body:'<h2>A useful question</h2><p>This is a local review fixture. It does not change live content.</p>',imageUrl:'/assets/photos/knowledge-1.jpg'}),status:'In review',workerId:'nina'},
  make('training:workout-plan','programme','Workout day editing',{weeks:2}),
  {...make('training:workout-days','structure','3 days',{frequency:3,weeks:[1,2].map(number=>({number,sessionIds:['workout-a','workout-b','workout-c']}))}),parent:'training:workout-plan'},

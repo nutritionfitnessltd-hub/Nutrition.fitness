@@ -39,12 +39,13 @@ function messageEditorForm(r,data,{create,project,entry,unsaved}){
       '<div class="studio-actions">'+(!isNewsletterContent(r)?(data.actor.role==='admin'?'<button class="primary" type="submit" name="intent" value="approve">Approve content</button>':'<button class="primary" type="submit" name="intent" value="review">Submit for Approval</button>'):'')+button('History',url('history',{id:r.id}))+'</div>')+
     '</details></form>';
 }
-export function contentPreview(r,data,readable){
+export function contentPreview(r,data,readable,{document=false}={}){
   if(isLaunchPack(r))return launchPackPreview(r,data);
   if(isNewsletter(r))return newsletterPreview(r);
   if(r.kind==='communication')return '<article class="studio-content-preview message-preview">'+
     (r.fields.subject?'<h2>'+esc(r.fields.subject)+'</h2>':'')+'<div class="prose">'+readable(r.fields.body,data)+'</div>'+
     (r.fields.callToAction?'<p class="message-link-text">'+esc(r.fields.callToAction)+'</p>':'')+'</article>';
+  if(document)return documentContent(r,data,readable);
   const main=primaryFields[r.kind]||Object.keys(r.fields),has=v=>v!==null&&v!==undefined&&v!==''&&(!Array.isArray(v)||v.length);
   const draw=key=>has(r.fields[key])?'<section><h2>'+esc(fieldLabel(key))+'</h2><div class="prose">'+readable(r.fields[key],data)+'</div></section>':'';
   return '<article class="studio-content-preview">'+main.filter(k=>!['videoUrl','script','durationSeconds'].includes(k)&&!(r.kind==='course'&&k==='lessonIds')).map(draw).join('')+'</article>'+
@@ -59,4 +60,16 @@ export function videoTools(r){
   return '<section class="studio-video-tools" aria-label="Video and script">'+(safe?button('Open video',esc(video)):'')+
     (script?'<button type="button" data-copy-script>Copy script</button><textarea hidden data-script-text>'+esc(script)+'</textarea>':'<span>Script not added</span>')+
     '<span>'+(time?'Video length: '+time:'Video length not recorded')+'</span><span role="status" data-copy-status></span></section>';
+}
+
+// The approval reader shows narrative first. Production indexes have named file lists.
+function documentContent(r,data,readable){
+ const fields=r.fields||{},has=v=>v!==null&&v!==undefined&&v!==''&&(!Array.isArray(v)||v.length)&&(!(v&&typeof v==='object'&&!Array.isArray(v))||Object.keys(v).length);
+ const technical=new Set(['workerId','previewOnly','production','assetUrls','url','nativePreviewUrl','canvaUrl','canvaHomeUrl','courseFolders','ownedWorkingCopies','blockedSources','copyVerification','copySetupStatus','productionOwner','archiveRecordCount','canvaSourceCount','ownedSourceCount','sourceText','sourceRecordId']);
+ const keys=[...new Set([...(r.kind==='asset'?['body','brief']:primaryFields[r.kind]||[]),'body','description','summary',...Object.keys(fields)])].filter(k=>!technical.has(k)&&has(fields[k]));
+ const render=(value)=>typeof value==='string'?value.split(/\n\s*\n/).filter(Boolean).map(p=>'<p>'+readable(p,data).replaceAll('\n','<br>')+'</p>').join(''):readable(value,data);
+ const counts=[['Working copies',fields.ownedSourceCount],['Canva sources',fields.canvaSourceCount],['Archive records',fields.archiveRecordCount]].filter(([,n])=>Number.isFinite(n));
+ const summary=counts.length?'<dl class="approval-summary">'+counts.map(([label,n])=>'<div><dt>'+label+'</dt><dd>'+n+'</dd></div>').join('')+'</dl>':'';
+ const blocked=(Array.isArray(fields.blockedSources)?fields.blockedSources:[]).map(source=>'<li><strong>'+esc(source.title||'Source needing attention')+'</strong><p>'+esc(source.reason||'Access needs checking.')+'</p></li>').join('');
+ return summary+'<article class="studio-content-preview approval-reading">'+keys.map(k=>'<section>'+(keys.length===1||k==='body'?'':'<h2>'+esc(fieldLabel(k))+'</h2>')+'<div class="prose">'+render(fields[k])+'</div></section>').join('')+(blocked?'<aside class="approval-attention"><h2>Needs attention</h2><ul>'+blocked+'</ul></aside>':'')+(!keys.length&&!counts.length&&!blocked?'<p class="meta">No written description has been added. Review the attached files below.</p>':'')+'</article>';
 }
