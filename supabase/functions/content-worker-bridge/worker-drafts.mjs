@@ -68,12 +68,28 @@ export function draftResult(row,website){
     status:({'Draft':'draft','In review':'review','Changes requested':'changes_requested','Approved':'approved','Archived':'archived'})[r.status]||'draft',
     feedback:r.comments||[],reviewFeedback:r.reviewFeedback||[],
     updatedAt:row.updated_at,programmeId:r.workerSource.programmeId,sourceId:r.workerSource.sourceId,
+    ...(r.kind==='article'&&(r.workerId||r.workerSource.workerId)==='nina'?{articleMedia:{required:true,ready:articleMediaIssues(r).length===0,missing:articleMediaIssues(r)}}:{}),
     imageUploaded:Boolean(r.workerImage||r.articleImage),reviewUrl:website+'/content-library/?work=1&studio=item&id='+encodeURIComponent(r.id)};
 }
 // Only owner-authored review entries become reusable guidance. Ordinary source text is not policy.
 export function reviewGuidance(records,workerId){
- return records.filter(r=>r.status!=='Archived').flatMap(r=>(r.reviewFeedback||[])
+ return [...(workerId==='nina'?[{id:'nina-article-image-requirement',guidance:ninaImageGuidance,sourceTitle:'Article image and label requirement',at:''}]:[]),...records.filter(r=>r.status!=='Archived').flatMap(r=>(r.reviewFeedback||[])
   .filter(f=>f.workerId===workerId&&f.guidance?.trim())
   .map(f=>({id:f.id,guidance:f.guidance,sourceId:r.id,sourceTitle:r.title,at:f.at})))
-  .sort((a,b)=>(b.at||'').localeCompare(a.at||''));
+  .sort((a,b)=>(b.at||'').localeCompare(a.at||''))];
+}
+
+export const ninaImageGuidance='Every Nina article must include a relevant, correctly licensed photograph uploaded to the draft with upload_content_image, descriptive alt text, an accurate image credit, and a short article-specific handwritten label in fields.marginNote. A proposed photo, source-page link or assetUrls entry is not an uploaded image. Save the text draft first, upload the photograph, then reopen the saved review preview to verify both photograph and label display. If the image cannot be uploaded, report the missing image and keep the article incomplete rather than presenting it as ready for review.';
+export function articleMediaIssues(r){
+ if(r.kind!=='article'||(r.workerId||r.fields?.workerId||r.workerSource?.workerId)!=='nina')return [];
+ const f=r.fields||{},out=[];
+ const uploaded=r.workerImage?.bucket==='worker-content'&&/^content-manager\/[a-f0-9-]{36}\.(jpg|png|webp)$/.test(r.workerImage.path||'')&&['image/jpeg','image/png','image/webp'].includes(r.workerImage.type);
+ const article=r.articleImage?.type==='image/webp'&&/^nutrition-library\/article-images\/v1\/[a-f0-9-]{36}\.webp$/.test(r.articleImage.pathname||'');
+ const local=typeof f.imageUrl==='string'&&/^\/assets\/(?:photos\/knowledge-\d+\.jpg|phone-in-hand\.webp)$/.test(f.imageUrl);
+ if(!uploaded&&!article&&!local)out.push('Upload a relevant article photograph. A source link alone is not an image.');
+ const caption=typeof f.marginNote==='string'?f.marginNote:typeof f.imageCaption==='string'?f.imageCaption:'';
+ if(!caption.trim())out.push('Add the handwritten image label (margin note).');
+ if(!String(f.imageAlt||'').trim())out.push('Describe the article image for accessibility.');
+ if(!String(f.imageCredit||'').trim())out.push('Add an accurate image credit.');
+ return out;
 }

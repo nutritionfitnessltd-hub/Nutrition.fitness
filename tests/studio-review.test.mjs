@@ -7,7 +7,7 @@ import {draftDocument,draftResult,reviewGuidance} from '../server/worker-drafts.
 import {handleStudio} from '../server/studio.mjs';
 
 const fixture=()=>{
- const record={id:'worker:sample',kind:'article',title:'Vitamin D questions',status:'In review',workerId:'nina',revision:1,parent:null,fields:{body:'Read the evidence.',shortAnswer:'A useful explanation.'},comments:[]};
+ const record={id:'worker:sample',kind:'article',title:'Vitamin D questions',status:'In review',workerId:'nina',revision:1,parent:null,fields:{body:'Read the evidence.',shortAnswer:'A useful explanation.',imageAlt:'A relevant photograph',imageCredit:'Fixture photographer',marginNote:'Look a little closer.'},comments:[],workerImage:{bucket:'worker-content',path:'content-manager/00000000-0000-4000-8000-000000000001.jpg',type:'image/jpeg'}};
  const data={actor:{role:'admin',id:'owner',name:'James'},items:[record],byId:new Map([[record.id,record]]),assigned:new Set(),projects:[],people:[]};
  let stored=structuredClone(record),writes=0;
  const api=async(path,opts={})=>{
@@ -57,7 +57,7 @@ test('change request is versioned, persists guidance and survives an unavailable
  assert.equal(result.record.reviewFeedback[0].reviewedRevision,1);assert.equal(result.record.reviewFeedback[0].delivery,'pending');assert.match(result.record.comments[0].body,/technical words/);
  f.data.byId.set(result.id,result.record);await reviewDecision(params,{action:'review-decision',decision:'changes',revision:'1',reviewId},f.data,f.api);
  assert.equal(f.writes,1,'A repeated POST must not duplicate feedback');
- assert.equal(reviewGuidance([f.stored],'nina').length,1);assert.equal(reviewGuidance([f.stored],'imogen').length,0);
+ assert.equal(reviewGuidance([f.stored],'nina').length,2);assert.equal(reviewGuidance([f.stored],'imogen').length,0);
  const input={id:'sample',kind:'article',revision:2,title:'Revised draft',body:'Revised text.'};
  const revised=draftDocument(input,{payload:f.stored,revision:2},'worker:');
  assert.equal(revised.reviewFeedback[0].id,reviewId);assert.equal(revised.status,'Draft');

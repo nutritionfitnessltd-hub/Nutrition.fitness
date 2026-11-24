@@ -29,7 +29,7 @@ test('newsletters, recipes, courses, programmes and video assets share the draft
  // Newsletter approval happens in its review window, which also offers the GHL handoff.
  assert.doesNotMatch(editorForm({...newsletter,status:'In review'},data),/value="approve"/);
 });
-function fixture(){const record={...draftDocument(input,null,namespace),revision:1};const actor={role:'admin',id:'human'};return {record,data:{actor,byId:new Map([[record.id,record]]),items:[record],assigned:new Set([record.id]),projects:[],releases:[]},params:new URLSearchParams({id:record.id})};}
+function fixture(){const record={...draftDocument(input,null,namespace),revision:1,workerImage:{bucket:'worker-content',path:'content-manager/00000000-0000-4000-8000-000000000001.jpg',type:'image/jpeg'}};Object.assign(record.fields,{imageAlt:'A relevant photograph',imageCredit:'Fixture photographer',marginNote:'Look a little closer.'});const actor={role:'admin',id:'human'};return {record,data:{actor,byId:new Map([[record.id,record]]),items:[record],assigned:new Set([record.id]),projects:[],releases:[]},params:new URLSearchParams({id:record.id})};}
 test('submit for approval and approval are separate and preserve the saved article',async()=>{
  const {record,data,params}=fixture();let saved;const api=async(_,o)=>{saved=o.payload.document;return [{revision:o.payload.expected+1}];};
  const form=editorForm(record,data);assert.match(form,/Approve content/);assert.doesNotMatch(form,/Submit for Approval/);
