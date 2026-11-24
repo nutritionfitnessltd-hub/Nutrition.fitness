@@ -65,6 +65,27 @@ export function teamWorkRows(data){
     }
     for(const [id,idea] of Object.entries(data.hqIdeas||{}))if(idea?.title?.trim()&&!['rejected','superseded'].includes(idea.state))rows.push({id:'idea:'+id,title:idea.title,...worker(id),project:'',projectName:'Daily ideas',state:stateFor(idea.state),status:({pending:'Awaiting your approval',scoped:'Scope ready',scoping:'Preparing scope',active:'Plan in progress',done:'Completed'})[idea.state]||'Requested',updated:date(idea.updatedAt||idea.createdAt),note:'Idea & plan update',href:url('worker-chat',{worker:id}),action:'Open idea'});
   }
+  // The native production checkpoint can be newer than the separate HQ job.
+  const checkpoint=data.items.filter(r=>r.fields?.courseProductionIndex&&r.fields.runner&&(admin||recordRows.has(r.id)))
+    .sort((a,b)=>date(b.fields.runner.updatedAt).localeCompare(date(a.fields.runner.updatedAt)))[0];
+  if(checkpoint){
+    const run=checkpoint.fields.runner,updated=date(run.updatedAt);
+    const existing=rows.find(r=>r.owner==='worker:imogen'&&r.id.startsWith('production:'));
+    if(updated&&(!existing||updated>=existing.updated)){
+      if(existing)rows.splice(rows.indexOf(existing),1);
+      const source=String(run.currentSourceId||'').replace(/^catalogue:/,'');
+      const original=data.index?.records?.find(r=>r.id==='catalogue:'+source);
+      const current=source&&data.items.find(r=>String(r.sourceId||r.fields?.production?.sourceId||'').replace(/^catalogue:/,'')===source&&!r.fields?.courseProductionIndex);
+      const fresh=Date.now()-Date.parse(updated)>=0&&Date.now()-Date.parse(updated)<15*60*1000;
+      const running=run.status==='working'&&fresh;
+      rows.push({id:'production:native:'+checkpoint.id,recordId:checkpoint.id,title:'Course and content production',...worker('imogen'),
+        project:run.projectId||'',projectName:'Ongoing course production',state:run.status==='done'?'completed':run.status==='needs_input'?'attention':'progress',
+        status:running?'In progress':run.status==='done'?'Production completed':run.status==='needs_input'?'Needs attention':'Last saved progress',updated,
+        note:(original?.title||current?.title||source?'Latest lesson: '+(original?.title||current?.title||source)+'. ':'')+
+          (/brand/.test(run.stage||'')?'Branding and preparing the next lesson.':/narrat|title/.test(run.stage||'')?'Updating lesson narration.':'Continuing the existing production work.'),
+        href:run.projectId&&data.projects.some(p=>p.id===run.projectId)?url('project',{project:run.projectId}):url('item',{id:checkpoint.id}),action:'Open course work'});
+    }
+  }
   for(const f of data.reviewHistory||[])rows.push({id:'review:'+f.id,title:f.title,...person(f.authorId||data.actor.id),ownerName:f.author||person(f.authorId||data.actor.id).ownerName,project:'',projectName:'Review history',state:'completed',status:f.decision==='approve'?'Approved':'Changes requested',updated:date(f.at),note:'Reviewed version '+f.reviewedRevision,href:url('review-history',{id:f.recordId,review:f.id}),action:'Read review'});
   return rows.filter(row=>{const id=row.recordId||tasks.find(t=>'task:'+t.id===row.id)?.record_id;return !launchPackParent(data.byId.get(id),data);}).map(row=>{
     const parent=data.byId.get(row.recordId);if(parent?.fields?.coursePack!==true)return row;
@@ -78,12 +99,28 @@ function workList(rows){
   if(!rows.length)return '<p class="studio-empty">No work matches this view.</p>';
   return '<ul class="team-work-list">'+rows.map(r=>'<li class="team-work-row" data-work-id="'+esc(r.id)+'"><div class="team-work-owner"><span class="team-work-avatar" aria-hidden="true">'+esc((r.ownerName||'?').slice(0,1))+'</span><div><strong>'+esc(r.ownerName)+'</strong><small>'+esc(r.type==='ai'?'AI worker':'Team member')+'</small></div></div><div class="team-work-detail"><a '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.title)+'</a><small>'+esc(r.projectName)+'</small>'+(r.note?'<p>'+esc(r.note.length>180?r.note.slice(0,177)+'…':r.note)+'</p>':'')+(r.related?'<p><a href="'+r.related.href+'">'+esc(r.related.label)+'</a></p>':'')+(r.ghlAction?'<div class="studio-actions">'+r.ghlAction+'</div>':'')+'</div><div class="team-work-status">'+badge(r.status)+(r.due?'<small>Due '+esc(stamp(date(r.due)))+'</small>':'')+(r.updated?'<small>Updated '+esc(stamp(r.updated))+'</small>':'')+'</div><a class="btn" '+(r.review?'data-review-preview target="_blank" rel="noopener" ':'')+'href="'+r.href+'">'+esc(r.action)+'</a></li>').join('')+'</ul>';
 }
+export function teamWorkCards(data,rows=teamWorkRows(data)){
+  const groups=new Map();
+  for(const row of rows){if(!groups.has(row.owner))groups.set(row.owner,[]);groups.get(row.owner).push(row);}
+  return [...groups.values()].map(own=>{
+    const sorted=[...own].sort((a,b)=>b.updated.localeCompare(a.updated)||a.title.localeCompare(b.title));
+    const active=sorted.filter(r=>r.state!=='completed'),recent=sorted.filter(r=>r.state==='completed'&&Date.parse(r.updated)>=Date.now()-7*86400000);
+    const focus=active.find(r=>r.id.startsWith('production:'))||active[0]||recent[0]||sorted[0];
+    return {...focus,activeCount:active.length,attentionCount:active.filter(r=>r.state==='attention').length,completedCount:recent.length,rows:sorted};
+  }).sort((a,b)=>a.ownerName.localeCompare(b.ownerName));
+}
+function workerCards(cards){
+  if(!cards.length)return '<p class="studio-empty">No work matches this view.</p>';
+  return '<div class="team-worker-grid">'+cards.map(c=>'<article class="team-worker-card" data-worker-card="'+esc(c.owner)+'">'+
+    '<header><div class="team-work-owner"><span class="team-work-avatar" aria-hidden="true">'+esc(c.ownerName.slice(0,1))+'</span><div><h3>'+esc(c.ownerName)+'</h3><small>'+esc(c.type==='ai'?'AI worker':'Team member')+'</small></div></div>'+badge(c.status)+'</header>'+
+    '<div class="team-worker-focus"><h4>'+esc(c.title)+'</h4>'+(c.note?'<p>'+esc(c.note.length>210?c.note.slice(0,207)+'…':c.note)+'</p>':'')+'</div>'+
+    '<div class="team-worker-counts">'+(c.attentionCount?'<span>'+c.attentionCount+' need attention</span>':'')+(c.completedCount?'<span>'+c.completedCount+' completed this week</span>':'')+'</div>'+
+    '<footer>'+(c.updated?'<small>Latest update '+esc(stamp(c.updated))+'</small>':'')+'<div class="studio-actions">'+button(c.action,c.href)+button('Work & history',url('team-work',{owner:c.owner,view:'history'}))+'</div></footer></article>').join('')+'</div>';
+}
 export function teamWorkDashboard(data){
-  const rows=teamWorkRows(data),recent=Date.now()-7*86400000;
-  const active=rows.filter(r=>r.state!=='completed').sort((a,b)=>(a.state==='attention'?-1:0)-(b.state==='attention'?-1:0)).slice(0,8);
-  const completed=rows.filter(r=>r.state==='completed'&&Date.parse(r.updated)>=recent).slice(0,3),shown=[...active,...completed];
-  if(!shown.length)return '<div data-worker-updates="cards" hidden></div>';
-  return '<section data-worker-updates="cards" class="dashboard-team" aria-labelledby="team-work-title"><div class="dashboard-section-heading"><div><h2 id="team-work-title">Team work</h2><p>'+(data.actor.role==='admin'?'People and AI workers · active work and completions from the last 7 days.':'Your assignments and relevant reviews.')+'</p></div>'+button('View all team work',url('team-work'))+'</div><nav class="tabs" aria-label="Team work status">'+Object.entries(workStates).map(([key,label])=>button(label+' ('+rows.filter(r=>r.state===key).length+')',url('team-work',{state:key}))).join('')+'</nav>'+(active.length?workList(active):'')+(completed.length?'<h3>Recently completed</h3>'+workList(completed):'')+(rows.length>shown.length?'<p class="meta">Showing '+shown.length+' recent items. Open all team work for the full history.</p>':'')+'</section>';
+  const rows=teamWorkRows(data),cards=teamWorkCards(data,rows).filter(c=>c.activeCount||c.completedCount);
+  if(!cards.length)return '<div data-worker-updates="cards" hidden></div>';
+  return '<section data-worker-updates="cards" class="dashboard-team" aria-labelledby="team-work-title"><div class="dashboard-section-heading"><div><h2 id="team-work-title">Team work</h2><p>Current work and latest progress, grouped by person and worker.</p></div>'+button('View all team work',url('team-work'))+'</div><nav class="tabs" aria-label="Team work status">'+Object.entries(workStates).map(([key,label])=>button(label+' ('+rows.filter(r=>r.state===key).length+')',url('team-work',{state:key}))).join('')+'</nav>'+workerCards(cards)+'</section>';
 }
 function groupedTeamWork(rows){
   if(!rows.length)return workList(rows);
@@ -101,5 +138,5 @@ export function teamWorkPage(params,data){
   const filtered=all.filter(r=>(!state||r.state===state)&&(!type||r.type===type)&&(!owner||r.owner===owner)&&(!project||r.project===project));
   const owners=Object.fromEntries(all.map(r=>[r.owner,r.ownerName])),projects=Object.fromEntries(all.filter(r=>r.project).map(r=>[r.project,r.projectName]));
   return heading('Team work',data.actor.role==='admin'?'Requested, active and completed work across your team.':'Your assigned work and submissions within your review responsibilities.')+
-    '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','team-work')+select('state','Status',{'':'All statuses',...workStates},state)+select('type','Team',{'':'All team',people:'People',ai:'AI workers'},type)+select('owner','Person or worker',{'':'Everyone',...owners},owner)+select('project','Project',{'':'All projects',...projects},project)+'<button>Apply filters</button>'+button('Clear',url('team-work'))+'</form><section data-worker-updates="work-list">'+pages(params,filtered,groupedTeamWork)+'</section><script type="module" src="/studio-review.js"></script>';
+    '<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','team-work')+hidden('view',params.get('view')==='history'?'history':'')+select('state','Status',{'':'All statuses',...workStates},state)+select('type','Team',{'':'All team',people:'People',ai:'AI workers'},type)+select('owner','Person or worker',{'':'Everyone',...owners},owner)+select('project','Project',{'':'All projects',...projects},project)+'<button>Apply filters</button>'+button('Clear',url('team-work'))+'</form><section data-worker-updates="work-list">'+(params.get('view')==='history'?pages(params,filtered,groupedTeamWork):workerCards(teamWorkCards(data,filtered)))+'</section><script type="module" src="/studio-review.js"></script>';
 }
