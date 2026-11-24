@@ -37,6 +37,7 @@ test('fresh matching worker checkpoints update the row and counts while an old e
  const {p,data,meta,pilot,add}=fixture();p.studio.productionTracking.pilotIds=[];
  const index=add('index','imogen',{kind:'asset',fields:{courseProductionIndex:true,runner:{projectId:p.id,status:'working',currentSourceId:'s1',stage:'Correcting colours',updatedAt:new Date().toISOString(),completedSourceIds:[]}}});
  let model=productionTracking(p,data,meta);assert.equal(model.counts['Imogen working'],1);assert.equal(model.counts['Awaiting review'],0);
+ index.fields.runner.currentSourceId='catalogue:s1';model=productionTracking(p,data,meta);assert.equal(model.counts['Imogen working'],1);assert.equal(model.rows[0].working,true);
  let html=productionTrackerPanel(p,data,meta);assert.match(html,/Latest production update/);assert.match(html,/Correcting colours/);assert.match(html,/Open previous export/);assert.doesNotMatch(html,/Review &amp; approve/);
  index.fields.runner.updatedAt='2020-01-01T00:00:00Z';model=productionTracking(p,data,meta);assert.equal(model.counts['Imogen working'],0);
  index.fields.runner.projectId='different-project';html=productionTrackerPanel(p,data,meta);assert.doesNotMatch(html,/Latest production update|Correcting colours/);
