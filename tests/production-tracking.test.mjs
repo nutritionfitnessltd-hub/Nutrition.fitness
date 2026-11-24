@@ -42,6 +42,7 @@ test('checked lessons link to the video and asset page without approving on GET'
  let html=productionTrackerPanel(p,data,meta);
  assert.match(html,/href="https:\/\/nutritionfitness.sharepoint.com[^\"]+test.mp4"/);assert.match(html,/Open video/);
  assert.match(html,/studio=item&amp;id=pilot/);assert.match(html,/Open asset/);assert.match(html,/name="action" value="review-decision"/);assert.match(html,/name="revision" value="2"/);assert.match(html,/>Approve</);
+ assert.match(html,/data-production-video/);assert.match(html,/data-video-approval-source hidden/);assert.match(html,/name="videoSha256" value="a{64}"/);assert.match(html,/studio=video-source/);
  assert.equal(pilot.status,'Draft');
  pilot.fields.production.files[0].url='javascript:alert(1)';html=productionTrackerPanel(p,data,meta);assert.doesNotMatch(html,/javascript:|Review &amp; approve|Open video/);
 });
@@ -50,7 +51,7 @@ test('project summaries cannot grant draft review or editing permissions',async(
  const api=async path=>path.includes('nufi_studio_items')?[{id:pilot.id,payload:pilot,revision:pilot.revision}]:path.includes('nufi_library_projects')?[p]:[];
  const actor={role:'staff',id:'kasia',access:{work:true,library:true,originals:true,edit:true}};
  const data=await studioData(api,actor,async()=>({records:[]}));
- const html=productionTrackerPanel(p,data,meta);assert.match(html,/Open video/);assert.doesNotMatch(html,/Review &amp; approve|studio=review-preview|studio=item/);
+ const html=productionTrackerPanel(p,data,meta);assert.doesNotMatch(html,/Open video|Review &amp; approve|studio=review-preview|studio=item/);
 });
 test('fresh matching worker checkpoints update the row and counts while an old export is being redone',()=>{
  const {p,data,meta,pilot,add}=fixture();p.studio.productionTracking.pilotIds=[];

@@ -1,4 +1,5 @@
 import {collectionPage,linkCollection,applyCollectionPlacement} from './studio-collections.mjs';
+import {productionVideoSource} from './production-video.mjs';
 import {peopleTaskModal,peopleTaskAction,linkedPeopleTasks} from './people-tasks.mjs';
 import {taskUploadToken,attachTaskFile,sendTaskFile,uploadSmallTaskFile,taskTransportData,sendUploadedAsset} from './task-files.mjs';
 import {taskPage,changeTaskPage} from './task-messages.mjs';
@@ -59,9 +60,9 @@ function write(res,status,body,section,actor,meta){
 }
 function planPreview(f,data){
   const {project}=projectDraft(f,data);
-  return heading('Your plan',project.name+' · '+project.weeks+' weeks')+
+  return heading('Your plan',project.name+' Â· '+project.weeks+' weeks')+
     '<p>'+esc(project.brief)+'</p>'+form('project-create',Object.entries(f).filter(([k])=>k!=='action').map(([k,v])=>hidden(k,v)).join('')+
-      '<div class="panel"><p>Creator: '+esc(data.people.find(p=>p.id===project.creator_id)?.name||'Assigned creator')+' · '+project.entries.length+' tasks</p><details><summary>See the steps</summary>'+list(project.entries,e=>'<div><strong>'+esc(e.title)+'</strong><small>'+(e.week?'Week '+e.week:'Preparation')+' · '+esc(e.notes)+'</small></div>')+'</details></div>',
+      '<div class="panel"><p>Creator: '+esc(data.people.find(p=>p.id===project.creator_id)?.name||'Assigned creator')+' Â· '+project.entries.length+' tasks</p><details><summary>See the steps</summary>'+list(project.entries,e=>'<div><strong>'+esc(e.title)+'</strong><small>'+(e.week?'Week '+e.week:'Preparation')+' Â· '+esc(e.notes)+'</small></div>')+'</details></div>',
       {section:'create'},'Start this work');
 }
 async function history(params,data,api){
@@ -69,7 +70,7 @@ async function history(params,data,api){
   const versions=await api('/rest/v1/nufi_studio_versions?item_id=eq.'+encodeURIComponent(r.id)+'&select=revision,payload,created_at&order=revision.desc&limit=50',{service:true});
   for(const version of versions)version.payload=mergeStudioRecord(data.index.records.find(x=>x.id===r.id),version.payload);
   return heading('Version history',r.title,button('Back to content',url('item',{id:r.id})))+
-    list(versions,v=>'<div><strong>Version '+v.revision+'</strong><small>'+esc(v.created_at.slice(0,16).replace('T',' '))+' · '+esc(v.payload.status)+'</small><details><summary>Read this version</summary><pre class="source-text">'+esc(JSON.stringify(v.payload.fields,null,2))+'</pre></details></div>','The original imported version is available. Saving changes will begin the version history.');
+    list(versions,v=>'<div><strong>Version '+v.revision+'</strong><small>'+esc(v.created_at.slice(0,16).replace('T',' '))+' Â· '+esc(v.payload.status)+'</small><details><summary>Read this version</summary><pre class="source-text">'+esc(JSON.stringify(v.payload.fields,null,2))+'</pre></details></div>','The original imported version is available. Saving changes will begin the version history.');
 }
 function exportPackage(params,data,res){
   const p=projectFor(data,params.get('project')),approved=params.get('mode')==='approved';
@@ -120,6 +121,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         readable(data,r.id);res.statusCode=303;res.setHeader('Location',url(r.kind==='product'?'product':'product-asset',{id:r.id,...(params.get('tab')==='edit'?{tab:'edit'}:{})}).replaceAll('&amp;','&'));return res.end();
       }
     }
+    if(section==='video-source')return await productionVideoSource(req,res,params,data,env,fetcher);
     if(section==='product-file')return await sendProductFile(req,res,params,data,env);
     if(req.method==='POST'&&(section==='product-upload'||f.action==='product-file-save')){
       const result=section==='product-upload'?await productUploadToken(req,params,data,env):await attachProductFile(params,f,data,api,env);
