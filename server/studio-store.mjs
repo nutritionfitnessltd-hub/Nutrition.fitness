@@ -46,6 +46,12 @@ export async function studioData(api,actor,load){
   }
   const records=new Map(index.records.filter(r=>r.id.startsWith('training:')||r.fields?.recipeText).map(r=>[r.id,canonical(r)]));
   for(const row of overlays.filter(row=>row.payload.kind!=='account-preview'&&(actor.role==='admin'||row.payload.kind!=='worker-request')))records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
+  // Course outlines remain reference material until explicitly imported as working content.
+  const courseNames=new Set([...records.values()].filter(r=>r.kind==='course'&&r.status!=='Archived').flatMap(r=>[r.title,r.fields?.production?.collection].filter(Boolean).map(n=>n.trim().toLowerCase())));
+  for(const source of index.records.filter(r=>r.kind==='Course outline'&&r.id.startsWith('course:'))){
+    if(courseNames.has(source.title.trim().toLowerCase())||records.has(source.id))continue;
+    records.set(source.id,{id:source.id,title:source.title,kind:'course',status:'Original material',sourceOnly:true,shared:true,revision:0,fields:{modules:(source.fields?.modules||[]).map(m=>({title:m.title,lessons:(m.lessons||[]).map(id=>index.records.find(r=>r.id===id)?.title||id)}))}});
+  }
   const teams=ideaTeams([...records.values()]);
   for(const [id,r] of records)if(isIdea(r)&&!canSeeIdea(actor,r,teams))records.delete(id);
   const items=[...records.values()].filter(r=>r.kind!=='worker-request');
@@ -96,7 +102,7 @@ export function readable(data,id){
 }
 export function editable(data,id){
   if(data.actor.role!=='admin'&&!data.assigned.has(id))throw new HttpError(403,'This item is outside your assigned work.');
-  const r=data.byId.get(id);if(!r)throw new HttpError(404,'This content is unavailable.');return r;
+  const r=data.byId.get(id);if(!r)throw new HttpError(404,'This content is unavailable.');if(r.sourceOnly)throw new HttpError(403,'Original material is read-only. Import it before editing.');return r;
 }
 export function projectFor(data,id){
   const p=data.projects.find(p=>p.id===id);

@@ -40,7 +40,7 @@ const collections={
   activity:['Activities & drills','Running, swimming, cycling and fitness practice.','Dumbbell'],
   session:['Workouts','Warm-up, main work and cool-down.','ClipboardList'],
   challenge:['Challenges','Guided journeys with a clear finish line.','CheckCheck'],
-  course:['Courses','Structured learning and practical activities.','BookOpen'],
+  course:['Courses','Working courses and original course outlines.','BookOpen'],
   lesson:['Lessons','Individual lessons to use in your courses.','BookOpen'],
   article:['Articles','Helpful advice and educational content.','FileText'],
   ebook:['Books & guides','Recipe books, workout books and other guides.','Book'],
@@ -88,7 +88,7 @@ export function library(params,data,meta={}){
   if(mine)data={...data,items:data.items.filter(r=>r.createdBy===data.actor.id)};
   const bucket=['published','drafts','checked'].includes(params.get('bucket'))?params.get('bucket'):'all';
   const published=r=>r.publication?.status==='published';
-  data={...data,items:data.items.filter(r=>bucket==='published'?published(r):bucket==='checked'?r.status==='Approved'&&!published(r):bucket==='drafts'?!published(r)&&r.status!=='Approved':true)};
+  data={...data,items:data.items.filter(r=>bucket==='published'?published(r):bucket==='checked'?r.status==='Approved'&&!published(r):bucket==='drafts'?!r.sourceOnly&&!published(r)&&r.status!=='Approved':true)};
   const lifecycle='<nav class="tabs" aria-label="Content status">'+[['all','All content'],['drafts','Drafts'],['checked','Checked'],['published','Published']].map(([id,title])=>'<a href="'+url('library',{bucket:id,kind:params.get('kind')||'',worker,view:mine?'mine':''})+'"'+(id===bucket?' aria-current="page"':'')+'>'+title+'</a>').join('')+'</nav>';
   const exercise=params.get('studio')==='exercises',kind=params.get('kind')||shelves[params.get('category')]?.create||'',q=(params.get('q')||'').toLowerCase(),state=params.get('state')||'';
   if(!worker&&!exercise&&!kind&&!q&&!state&&!['all','mine'].includes(params.get('view'))){
@@ -242,6 +242,8 @@ function programmePage(params,data,r){
 }
 export function itemPage(params,data){
   const r=data.byId.get(params.get('id'));if(!canReadContent(data,r))return heading('Content unavailable');
+  if(r.sourceOnly)return '<a class="back" href="'+url('library',{kind:'course'})+'">← Courses</a>'+heading(r.title,'Original course outline. This material has not yet been imported, branded or approved as working content.')+badge('Original material')+
+    '<div class="panel">'+(r.fields.modules||[]).map(m=>'<section><h2>'+esc(m.title)+'</h2><ul>'+(m.lessons||[]).map(title=>'<li>'+esc(title)+'</li>').join('')+'</ul></section>').join('')+'</div>';
   if(r.kind==='article'&&params.get('tab')!=='edit')return articlePage(r,data);
   if(r.kind==='mealplan'&&r.fields.plannerVersion===1&&params.get('tab')!=='edit')return mealPlanPage(params,data,r);
   if(r.kind==='ebook'&&r.bookAssets&&params.get('tab')!=='edit')return bookPage(r,data);

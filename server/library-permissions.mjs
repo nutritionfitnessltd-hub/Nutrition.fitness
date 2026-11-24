@@ -37,8 +37,8 @@ export const canAccess = (actor, key) => actor?.role === 'admin' || accessFor(ac
 export function requireAccess(actor, ...keys) {
   if (keys.some(key => !canAccess(actor, key))) throw new HttpError(403, 'Your account does not have access to this feature. Ask your administrator to update your access.');
 }
-export const canEditContent = (data, id) => data.actor.role === 'admin' ||
-  (canAccess(data.actor, 'library') && canAccess(data.actor, 'edit') && data.assigned.has(id));
+export const canEditContent = (data, id) => !data.byId?.get(id)?.sourceOnly && (data.actor.role === 'admin' ||
+  (canAccess(data.actor, 'library') && canAccess(data.actor, 'edit') && data.assigned.has(id)));
 export const reviewsKind = (actor, kind) => actor?.role === 'admin' ||
   (canAccess(actor,'library') && canAccess(actor,'work') && reviewOptions.some(([key,,kinds])=>kinds.includes(kind)&&canAccess(actor,key)));
 export const canReviewContent = (data, record) => Boolean(record) && (data.actor.role === 'admin' ||
