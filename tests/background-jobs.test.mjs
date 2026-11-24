@@ -8,6 +8,12 @@ const now=new Date('2026-11-24T16:00:00Z');
 const actor={id:'admin',role:'admin'};
 const taskUrl='https://chatgpt.com/c/6b05bd61-cb80-83eb-bb49-d1e6bae60c50';
 function control(extra={}){return {id:backgroundControlId(project.id),kind:'asset',title:'Cloud control',fields:{body:'Preserve the checkpoint',backgroundJobControl:true,backgroundJob:{projectId:project.id,runtime:'chatgpt-cloud',taskUrl,wakeEnabled:true,state:'working',heartbeatAt:now.toISOString(),...extra}}};}
+
+test('projects without background setup retain no empty cloud controls',()=>{
+ for(const r of [undefined,{fields:{backgroundJobControl:true,backgroundJob:null}},control({projectId:'other'}),control({runtime:'removed'})]){
+  assert.equal(backgroundJobPanel(project,{actor,backgroundControls:new Map(r?[[project.id,r]]:[])},+now),'');
+ }
+});
 test('whole-library counts reconcile before display and handoff links stay in the established tenant folder',()=>{
  const base='https://nutritionfitness.sharepoint.com/sites/Nutrition.fitness/Shared%20Documents/Content%20Library/Courses/Cloud%20production%20handover/';
  const progress={total:167,readyForPC:2,preparationOutstanding:159,blocked:1,finalQa:1,finished:4,referenceOnly:0};
