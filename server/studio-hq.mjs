@@ -16,8 +16,8 @@ export async function hqRequest(env,input,fetcher=fetch){
 export async function workerChatPage(params,data,env,fetcher=fetch,retained={}){
  if(data.actor.role!=='admin')throw new HttpError(403,'Only the administrator can message HQ workers.');
  const key=params.get('worker');if(!Object.hasOwn(workers,key))throw new HttpError(400,'Choose a worker.');
- const w=workers[key];let chat,error;try{chat=await hqRequest(env,{action:'chat',worker:key},fetcher);}catch(e){error=e.message;}
- const ideas=await workerIdeasPanel(key,env,fetcher);
+ const w=workers[key];let error;
+ const [chat,ideas]=await Promise.all([hqRequest(env,{action:'chat',worker:key},fetcher).catch(e=>{error=e.message;return null;}),workerIdeasPanel(key,env,fetcher)]);
  const state=chat?.task?.status,label={queued:'Message queued in James HQ',working:w.name+' is working on a reply',ready:'Reply received',needs_input:'Waiting for your reply',done:'Conversation ready'}[state]||'Start a conversation';
  return heading(['alex','andy','martina'].includes(key)?w.name+': ideas & conversation':'Message '+w.name,'This conversation is saved with the real employee in James HQ.',button('Dashboard',url()))+
  ideas+'<section class="panel worker-chat-profile">'+workerPortrait(w)+'<div><h2>'+esc(w.name)+'</h2><p>'+esc(w.role)+'</p><p>AI worker · James HQ</p></div></section>'+

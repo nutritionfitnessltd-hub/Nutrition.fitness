@@ -2,7 +2,7 @@ const dialog=document.querySelector('[data-people-task-modal]');
 if(dialog){
  const trigger=document.querySelector('[data-new-people-task]');let opener=trigger;
  const open=()=>{dialog.showModal();dialog.querySelector('input[name=title]')?.focus();};
- trigger?.addEventListener('click',()=>open());
+ document.addEventListener('click',event=>{const button=event.target.closest?.('[data-new-people-task]');if(button){opener=button;open();}});
  dialog.querySelectorAll('[data-people-task-close]').forEach(b=>b.addEventListener('click',()=>{dialog.close();opener?.focus();}));
  if(dialog.hasAttribute('data-open-on-load'))open();
  const repeat=dialog.querySelector('[name=repeat]');

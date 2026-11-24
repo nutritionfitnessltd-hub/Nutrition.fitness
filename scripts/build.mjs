@@ -2,6 +2,7 @@ import {membershipPage} from '../src/membership-page.mjs';
 import {bookPage,bookFeature,bookGuidance} from '../src/cookbook-pages.mjs';
 import {collectionBooks,collectionBookPage} from '../src/collection-books.mjs';
 import fs from 'node:fs/promises';
+import {build as bundle} from 'esbuild';
 import path from 'node:path';
 import { site,products,programmes,courses,recipes,journal } from '../src/data.mjs';
 import {buildExperience} from '../src/experience.mjs';
@@ -11,6 +12,8 @@ const membership=products.find(p=>p.id==='nufi-membership');
 const root=path.resolve(import.meta.dirname,'..'),out=path.join(root,'dist');
 await fs.rm(out,{recursive:true,force:true});await fs.mkdir(out,{recursive:true});
 await fs.cp(path.join(root,'public'),out,{recursive:true});
+// One module download instead of a serial graph on every workspace page.
+await bundle({entryPoints:[path.join(root,'public/studio.js')],outfile:path.join(out,'studio.js'),bundle:true,minify:true,format:'esm',target:'es2022',legalComments:'none'});
 const pdfAssets=path.join(out,'studio-pdf');
 await fs.mkdir(pdfAssets,{recursive:true});
 for(const file of ['pdf.mjs','pdf.worker.mjs']){
