@@ -1,3 +1,4 @@
+import {documentText} from './document-reader.mjs';
 import {isNewsletter,isNewsletterContent,newsletterPreview} from './studio-newsletters.mjs';
 import {isLaunchPack,launchPackPreview} from './studio-launch-pack.mjs';
 import { workerNames, contentWorker } from './studio-worker-content.mjs';
@@ -67,9 +68,9 @@ function documentContent(r,data,readable){
  const fields=r.fields||{},has=v=>v!==null&&v!==undefined&&v!==''&&(!Array.isArray(v)||v.length)&&(!(v&&typeof v==='object'&&!Array.isArray(v))||Object.keys(v).length);
  const technical=new Set(['workerId','previewOnly','production','assetUrls','url','nativePreviewUrl','canvaUrl','canvaHomeUrl','courseFolders','ownedWorkingCopies','blockedSources','copyVerification','copySetupStatus','productionOwner','archiveRecordCount','canvaSourceCount','ownedSourceCount','sourceText','sourceRecordId']);
  const keys=[...new Set([...(r.kind==='asset'?['body','brief']:primaryFields[r.kind]||[]),'body','description','summary',...Object.keys(fields)])].filter(k=>!technical.has(k)&&has(fields[k]));
- const render=(value)=>typeof value==='string'?value.split(/\n\s*\n/).filter(Boolean).map(p=>'<p>'+readable(p,data).replaceAll('\n','<br>')+'</p>').join(''):readable(value,data);
+ const render=(value)=>typeof value==='string'?documentText(value,{headingLevel:2}):readable(value,data);
  const counts=[['Working copies',fields.ownedSourceCount],['Canva sources',fields.canvaSourceCount],['Archive records',fields.archiveRecordCount]].filter(([,n])=>Number.isFinite(n));
  const summary=counts.length?'<dl class="approval-summary">'+counts.map(([label,n])=>'<div><dt>'+label+'</dt><dd>'+n+'</dd></div>').join('')+'</dl>':'';
  const blocked=(Array.isArray(fields.blockedSources)?fields.blockedSources:[]).map(source=>'<li><strong>'+esc(source.title||'Source needing attention')+'</strong><p>'+esc(source.reason||'Access needs checking.')+'</p></li>').join('');
- return summary+'<article class="studio-content-preview approval-reading">'+keys.map(k=>'<section>'+(keys.length===1||k==='body'?'':'<h2>'+esc(fieldLabel(k))+'</h2>')+'<div class="prose">'+render(fields[k])+'</div></section>').join('')+(blocked?'<aside class="approval-attention"><h2>Needs attention</h2><ul>'+blocked+'</ul></aside>':'')+(!keys.length&&!counts.length&&!blocked?'<p class="meta">No written description has been added. Review the attached files below.</p>':'')+'</article>';
+ return summary+'<article class="studio-content-preview approval-reading">'+keys.map(k=>'<section>'+(keys.length===1||k==='body'?'':'<h2>'+esc(fieldLabel(k))+'</h2>')+'<div class="prose">'+(typeof fields[k]==='string'?documentText(fields[k],{headingLevel:keys.length===1||k==='body'?2:3}):render(fields[k]))+'</div></section>').join('')+(blocked?'<aside class="approval-attention"><h2>Needs attention</h2><ul>'+blocked+'</ul></aside>':'')+(!keys.length&&!counts.length&&!blocked?'<p class="meta">No written description has been added. Review the attached files below.</p>':'')+'</article>';
 }
