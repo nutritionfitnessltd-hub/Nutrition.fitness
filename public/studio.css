@@ -36,7 +36,7 @@
 .project-count-note{font-size:11px;color:var(--muted);margin:10px 0 18px}
 .project-task-panel{background:white;border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:0 0 14px}
 .project-task-row{border-top:1px solid var(--line);padding:0!important}.project-task-row summary{cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;list-style:none}
-.project-task-row summary::-webkit-details-marker{display:none}.project-task-row summary:before{content:'â€º';font-size:19px;color:var(--muted)}.project-task-row[open] summary:before{transform:rotate(90deg)}
+.project-task-row summary::-webkit-details-marker{display:none}.project-task-row summary:before{content:'›';font-size:19px;color:var(--muted)}.project-task-row[open] summary:before{transform:rotate(90deg)}
 .project-task-row summary>span:first-child{flex:1}.project-task-row summary small{display:block;font-size:11px;color:var(--muted)}
 .project-task-row .studio-form{margin:12px 0;gap:12px;max-width:100%}.project-task-row .studio-form label{font-size:12px}
 .project-task-fields{display:grid;grid-template-columns:100px 1fr 1fr;gap:12px}
