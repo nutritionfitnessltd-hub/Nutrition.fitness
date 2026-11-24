@@ -225,3 +225,7 @@ document.querySelectorAll('form[method=post]').forEach(form=>{
     if(submit){submit.setAttribute('aria-disabled','true');submit.textContent='Saving…';}
   });
 });
+
+function syncDependencyPicker(el){const field=el.closest('fieldset')?.querySelector('[data-dependency-value]');if(field)field.value=[...el.selectedOptions].map(o=>o.value).join(',');}
+document.addEventListener('change',e=>{if(e.target.matches('[data-dependency-picker]'))syncDependencyPicker(e.target);});
+document.addEventListener('submit',e=>e.target.querySelectorAll('[data-dependency-picker]').forEach(syncDependencyPicker),true);
