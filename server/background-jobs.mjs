@@ -33,6 +33,7 @@ export function backgroundJobState(control,now=Date.now()){
 export function backgroundJobPanel(project,data,now=Date.now()){
  if(!project?.studio?.productionTracking)return '';
  const control=data.backgroundControls?.get(project.id),f=control?.fields?.backgroundJob||{},status=backgroundJobState(control,now),href=taskLink(f.taskUrl);
+ if(!control?.fields?.backgroundJobControl||f.projectId!==project.id||f.runtime!=='chatgpt-cloud')return '';
  const enabled=data.actor.role==='admin'&&f.wakeEnabled===true&&Boolean(href)&&!status.pending;
  const time=Date.parse(f.heartbeatAt||f.reportedAt||'');
  const stamp=Number.isFinite(time)?new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/London',dateStyle:'medium',timeStyle:'short'}).format(time)+' London time':'No cloud heartbeat received';
