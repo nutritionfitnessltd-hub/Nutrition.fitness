@@ -12,10 +12,10 @@ export async function productionVideoSource(req,res,params,data,env,fetcher=fetc
  if(!tenant||!client||!secret)throw new HttpError(503,'The SharePoint playback connection is not configured.');
  const tokenResponse=await fetcher('https://login.microsoftonline.com/'+encodeURIComponent(tenant)+'/oauth2/v2.0/token',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({client_id:client,client_secret:secret,grant_type:'client_credentials',scope:'https://graph.microsoft.com/.default'}),signal:AbortSignal.timeout(15000)}),token=await tokenResponse.json();
  if(!tokenResponse.ok||!token.access_token)throw new HttpError(503,'SharePoint playback authentication could not be confirmed.');
- const get=async path=>{const response=await fetcher('https://graph.microsoft.com/v1.0'+path,{headers:{Authorization:'Bearer '+token.access_token},signal:AbortSignal.timeout(15000)});if(!response.ok)throw new HttpError(503,'SharePoint could not open this video. Check that the playback connection has access.');return response.json();};
+ const get=async path=>{const response=await fetcher('https://graph.microsoft.com/v1.0'+path,{headers:{Authorization:'Bearer '+token.access_token},signal:AbortSignal.timeout(15000)});if(!response.ok)throw new HttpError(503,'SharePoint could not open this video (Microsoft '+response.status+'). Check that the playback connection has access.');return response.json();};
  const u=new URL(file.url),match=/^\/sites\/([^/]+)\/Shared Documents\/(.+)$/i.exec(decodeURIComponent(u.pathname));
  let item;
- if(match){const site=await get('/sites/'+u.hostname+':/sites/'+encodeURIComponent(match[1])+'?$select=id');item=await get('/sites/'+encodeURIComponent(site.id)+'/drive/root:/'+match[2].split('/').map(encodeURIComponent).join('/'));}
+ if(match){try{const site=await get('/sites/'+u.hostname+':/sites/'+encodeURIComponent(match[1])+'?$select=id');item=await get('/sites/'+encodeURIComponent(site.id)+'/drive/root:/'+match[2].split('/').map(encodeURIComponent).join('/'));}catch(error){if(!(error instanceof HttpError))throw error;item=await get('/shares/u!'+Buffer.from(file.url).toString('base64url')+'/driveItem');}}
  else item=await get('/shares/u!'+Buffer.from(file.url).toString('base64url')+'/driveItem');
  if(item.size!==file.bytes)throw new HttpError(409,'The SharePoint file changed. Ask the producer to refresh this checked export.');
  let download;try{download=new URL(item['@microsoft.graph.downloadUrl']);}catch{throw new HttpError(503,'SharePoint did not supply a playback link.');}

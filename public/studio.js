@@ -54,7 +54,7 @@ if(fieldsInput&&editor){
       const available=refs.filter(r=>!kind||r.kind===kind||(key==='referenceId'&&r.kind==='activity'));
       function render(){
         results.replaceChildren();const matches=available.filter(r=>r.title.toLowerCase().includes(search.value.toLowerCase()));
-        count.textContent=matches.length?matches.length+' items'+(matches.length>60?' Â· Type a name to narrow the list':''):'No matching items.';
+        count.textContent=matches.length?matches.length+' items'+(matches.length>60?' · Type a name to narrow the list':''):'No matching items.';
         for(const r of matches.slice(0,60)){
           const b=element('button',undefined,'studio-picker-card');b.type='button';
           if(r.image&&/^(https?:\/\/|\/(?!\/))/.test(r.image)){const img=element('img');img.src=r.image;img.alt='';img.loading='lazy';b.append(img);}
@@ -76,7 +76,7 @@ if(fieldsInput&&editor){
           row.append(draw(key.endsWith('Ids')?key.slice(0,-1):key,v,next=>value[i]=next,depth+1));
           const controls=element('div',undefined,'array-controls');
           for(const [name,delta] of [['Move earlier',-1],['Move later',1]]){
-            const b=element('button',delta<0?'â†‘':'â†“');b.type='button';b.title=name;b.setAttribute('aria-label',name+' '+labelFor(key)+' '+(i+1));
+            const b=element('button',delta<0?'↑':'↓');b.type='button';b.title=name;b.setAttribute('aria-label',name+' '+labelFor(key)+' '+(i+1));
             b.disabled=i+delta<0||i+delta>=value.length;b.addEventListener('click',()=>{[value[i],value[i+delta]]=[value[i+delta],value[i]];markChanged();redraw();});controls.append(b);
           }
           const remove=element('button','Remove');remove.type='button';remove.addEventListener('click',()=>{value.splice(i,1);markChanged();redraw();});controls.append(remove);row.append(controls);box.append(row);
@@ -152,7 +152,7 @@ if(fieldsInput&&editor){
     const popup=embedded?null:window.open('about:blank','_blank','popup,width=1200,height=900,scrollbars=yes,resizable=yes');
     if(popup)popup.opener=null;
     const status=form.querySelector('[data-editor-status]'),submit=event.submitter,label=submit.textContent;
-    form.dataset.saving='true';submit.disabled=true;submit.textContent='Savingâ€¦';status.textContent='Saving content for previewâ€¦';
+    form.dataset.saving='true';submit.disabled=true;submit.textContent='Saving…';status.textContent='Saving content for preview…';
     try{
       const body=new URLSearchParams(new FormData(form));body.set('intent','preview');body.set('previewWindow','yes');
       const response=await fetch(form.getAttribute('action'),{method:'POST',body,credentials:'same-origin',headers:{Accept:'application/json'}});
@@ -164,7 +164,7 @@ if(fieldsInput&&editor){
       dirty=false;form.dataset.dirty='false';submitting=false;status.textContent='All changes saved';
       if(embedded){window.parent.postMessage({type:'nufi-review-saved',id:result.record.id},location.origin);return;}
       if(popup&&!popup.closed)popup.location.replace(target.href);
-      else{const link=document.createElement('a');link.href=target.href;link.target='_blank';link.rel='noopener';link.dataset.reviewPreview='';link.textContent='Open content preview';status.append(' Â· ',link);}
+      else{const link=document.createElement('a');link.href=target.href;link.target='_blank';link.rel='noopener';link.dataset.reviewPreview='';link.textContent='Open content preview';status.append(' · ',link);}
     }catch(error){popup?.close();submitting=false;status.textContent=error.message||'Could not save. Your edits are still here.';}
     finally{form.dataset.saving='false';submit.disabled=false;submit.textContent=label;}
   });
@@ -192,7 +192,7 @@ if(fileInput){
   document.querySelector('#studio-pdf-next').addEventListener('click',async()=>{currentPage++;await renderPage();});
   fileInput.addEventListener('change',async()=>{
     const file=fileInput.files[0];if(!file)return;
-    status.textContent='Reading '+file.name+'â€¦';
+    status.textContent='Reading '+file.name+'…';
     try{
       if(file.size>30*1024*1024)throw Error('Choose a file smaller than 30 MB.');
       let text;
@@ -226,7 +226,7 @@ document.querySelectorAll('form[method=post]').forEach(form=>{
     if(event.defaultPrevented||form.hasAttribute('data-team-welcome')||event.submitter?.hasAttribute('data-account-preview'))return;
     // Keep the clicked button's name/value in the request (disabled buttons are omitted).
     const submit=event.submitter;
-    if(submit){submit.setAttribute('aria-disabled','true');submit.textContent='Savingâ€¦';}
+    if(submit){submit.setAttribute('aria-disabled','true');submit.textContent='Saving…';}
   });
 });
 
