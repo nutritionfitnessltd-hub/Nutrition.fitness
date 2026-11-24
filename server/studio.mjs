@@ -1,3 +1,4 @@
+import {suppliersPage,supplierPage,saveSupplier} from './studio-suppliers.mjs';
 import {courseEditorRecord} from './studio-courses.mjs';
 import {editorForm,referenceData} from './studio-editor.mjs';
 import {canEditContent} from './library-permissions.mjs';
@@ -161,6 +162,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='article-image'){const r=data.byId.get(params.get('id'));if(r?.workerImage&&!r.articleImage)return await sendWorkerImage(res,r,env,fetcher);return await sendArticleImage(req,res,params,data);}
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
+      if(f.action==='supplier-save'){const next=await saveSupplier(f,data,api);res.statusCode=303;res.setHeader('Location',url('supplier',{id:next}).replaceAll('&amp;','&'));return res.end();}
       if(f.action?.startsWith('product-')){
         const next=await changeProducts(params,f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();
       }
@@ -238,6 +240,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       }
       if(f.action==='ai-draft'){
         const r=editable(data,params.get('id'));
+        if(r.kind==='supplier')throw new HttpError(400,'Use the Suppliers editor to update this item.');
         if(r.kind==='product'||isProductAsset(r))throw new HttpError(400,'Use the Products editor to update this item.');
         if(r.kind==='mealplan')throw new HttpError(400,'Use the meal plan settings to generate a complete menu with library recipes.');
         if(r.revision!==Number(f.revision))throw new HttpError(409,'Reopen the latest version before drafting.');
@@ -259,6 +262,8 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }
     let body;
     switch(section){
+      case 'suppliers':body=suppliersPage(params,data);break;
+      case 'supplier':body=supplierPage(params,data);break;
       case 'products':body=productsPage(params,data);break;
       case 'product':body=productPage(params,data);break;
       case 'product-creatives':body=creativesPage(params,data);break;
@@ -316,7 +321,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       default:throw new HttpError(404,'This studio page is unavailable.');
     }
     if(params.get('notification')==='pending')body='<p role="status">Your changes were saved, but an email needs attention. '+(actor.role==='admin'?button('Check email activity',url('connections')):'Please ask your administrator to check Connections.')+'</p>'+body;
-    if(['products','product','product-creatives','product-asset'].includes(section))body='<div class="product-space">'+body+'</div>';
+    if(['suppliers','supplier','products','product','product-creatives','product-asset'].includes(section))body='<div class="product-space">'+body+'</div>';
     return write(res,200,body,section,actor,meta);
   }catch(error){
     if(req.method==='POST'&&(section==='product-upload'||f.action==='product-file-save')){
@@ -343,6 +348,8 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       }catch{body+='<details><summary>Unsaved content</summary><pre class="source-text">'+esc(f.fields||'')+'</pre></details>';}
     }else if(req.method==='POST'&&f.action==='course-structure-review'&&data){
       body+=button('Reopen the course',url('item',{id:params.get('id')}));
+    }else if(req.method==='POST'&&f.action==='supplier-save'&&data?.actor.role==='admin'){
+      try{body+=supplierPage(params,data,f);}catch{body+=button('Back to suppliers',url('suppliers'));}
     }else if(req.method==='POST'&&f.action?.startsWith('product-')&&data){
       try{body+=productErrorForm(params,f,data);}catch{body+=button('Back to products',url('products'));}
     }else if(req.method==='POST'&&f.action?.startsWith('idea-')&&data?.actor.role==='admin'){
@@ -372,7 +379,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }else if(req.method==='POST'&&['import-preview','import-save'].includes(f.action)&&data){
       body+=importPage(params,data,'',f);
     }else body+=button('Return to the studio',url());
-    if(['products','product','product-creatives','product-asset'].includes(section))body='<div class="product-space">'+body+'</div>';
+    if(['suppliers','supplier','products','product','product-creatives','product-asset'].includes(section))body='<div class="product-space">'+body+'</div>';
     return write(res,error instanceof HttpError?error.status:503,body,section,actor,meta);
   }
 }

@@ -49,7 +49,7 @@ const sharedKinds = new Set(['article','recipe','mealplan','programme','programm
 export const canReadSharedContent = (actor, record) => Boolean(record) && sharedKinds.has(record.kind) &&
   (canAccess(actor,'all_library') || canAccess(actor,'shared_library') && record.status !== 'Archived' &&
   (record.status === 'Approved' || record.shared === true || record.fields?.shared === true));
-export const canReadContent = (data, record) => Boolean(record) && (data.actor.role === 'admin' || data.assigned.has(record.id) || canReadSharedContent(data.actor,record) || canReviewContent(data,record) || data.reviewSupport?.has(record.id) || data.reviewedNow === record.id);
+export const canReadContent = (data, record) => Boolean(record) && (data.actor.role === 'admin' || (record.kind === 'supplier' && canAccess(data.actor,'library')) || data.assigned.has(record.id) || canReadSharedContent(data.actor,record) || canReviewContent(data,record) || data.reviewSupport?.has(record.id) || data.reviewedNow === record.id);
 
 export function accessFromForm(fields) {
   if (fields.accessVersion !== '1') throw new HttpError(400, 'Reopen the team settings before saving access.');
@@ -60,7 +60,7 @@ export function accessFromForm(fields) {
 
 const routes = {
   'brand-file': ['shared_library'],
-  products: ['library'], product: ['library'], 'product-creatives': ['library'], 'product-asset': ['library'], 'product-file': ['library'], 'product-upload': ['library'],
+  suppliers: ['library'], supplier: ['library'], products: ['library'], product: ['library'], 'product-creatives': ['library'], 'product-asset': ['library'], 'product-file': ['library'], 'product-upload': ['library'],
   'shiny-things': ['library'], home: [], 'team-work': [], assets: [], 'brand-media': ['library'], 'workspace-archive': [], library: ['library'], exercises: ['library'], item: ['library'], history: ['library'], 'review-history': ['work','library'],
   'book-file': ['library'], 'article-image': ['library'], 'article-preview': ['library'], 'newsletter-preview': ['library'], 'newsletter-html': ['library'], 'mealplan-image': ['library'],
   archive: ['originals'], create: ['studio'], new: ['studio'], import: ['studio', 'originals'],
