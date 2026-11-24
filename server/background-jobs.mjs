@@ -13,7 +13,7 @@ export function backgroundJobState(control,now=Date.now()){
  const pending=Boolean(f.requestId&&f.requestId!==f.acknowledgedRequestId);
  const age=now-Date.parse(f.heartbeatAt||'');
  const fresh=Number.isFinite(age)&&age>=0&&age<10*60*1000;
- const active=f.state==='working'&&fresh;
+ const active=!pending&&f.state==='working'&&fresh;
  const label=pending?'Restart requested':active?'Working in ChatGPT cloud':({blocked:'Blocked — needs attention',completed:'Completed',waiting:'Waiting for next cloud run',paused:'Paused',preflight:'Cloud setup in progress'})[f.state]||(f.state==='working'?'No recent heartbeat — activity unconfirmed':'Cloud job not connected');
  return {label,active,pending,fresh};
 }

@@ -46,7 +46,7 @@ export async function studioData(api,actor,load){
     }
   }
   const sourceById=new Map(index.records.map(r=>[r.id,r]));
-  const backgroundControls=new Map(overlays.filter(r=>r.payload?.fields?.backgroundJobControl&&projects.some(p=>p.id===r.payload.fields.backgroundJob?.projectId)).map(r=>[r.payload.fields.backgroundJob.projectId,{...r.payload,id:r.id,revision:r.revision}]));
+  const backgroundControls=new Map(overlays.filter(r=>r.payload?.fields?.backgroundJobControl&&r.id==='worker:content-manager:background-control-'+r.payload.fields.backgroundJob?.projectId&&projects.some(p=>p.id===r.payload.fields.backgroundJob?.projectId)).map(r=>[r.payload.fields.backgroundJob.projectId,{...r.payload,id:r.id,revision:r.revision}]));
   const records=new Map(index.records.filter(r=>r.id.startsWith('training:')||r.fields?.recipeText).map(r=>[r.id,canonical(r)]));
   for(const row of overlays.filter(row=>!row.payload.fields?.backgroundJobControl&&row.payload.kind!=='task-thread'&&row.payload.kind!=='account-preview'&&(actor.role==='admin'||row.payload.kind!=='worker-request')))records.set(row.id,{...mergeStudioRecord(records.get(row.id),row.payload),id:row.id,revision:row.revision,updatedAt:row.updated_at});
   applyProgrammeResets(records);
