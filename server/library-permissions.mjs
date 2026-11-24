@@ -60,7 +60,7 @@ export function accessFromForm(fields) {
 
 const routes = {
   'brand-file': ['shared_library'],
-  task: ['work'], suppliers: ['library'], supplier: ['library'], products: ['library'], product: ['library'], 'product-creatives': ['library'], 'product-asset': ['library'], 'product-file': ['library'], 'product-upload': ['library'],
+  task: ['work'], 'task-asset-file': ['library'], suppliers: ['library'], supplier: ['library'], products: ['library'], product: ['library'], 'product-creatives': ['library'], 'product-asset': ['library'], 'product-file': ['library'], 'product-upload': ['library'],
   'shiny-things': ['library'], home: [], 'team-work': [], assets: [], 'brand-media': ['library'], 'workspace-archive': [], library: ['library'], exercises: ['library'], item: ['library'], history: ['library'], 'review-history': ['work','library'],
   'book-file': ['library'], 'article-image': ['library'], 'article-preview': ['library'], 'newsletter-preview': ['library'], 'newsletter-html': ['library'], 'mealplan-image': ['library'],
   archive: ['originals'], create: ['studio'], new: ['studio'], import: ['studio', 'originals'],
@@ -79,7 +79,7 @@ const actions = {
   'import-preview': ['studio', 'originals', 'edit'], 'import-save': ['studio', 'originals', 'edit'],
   'ai-draft': ['library', 'edit', 'ai'], 'mealplan-generate': ['library', 'edit', 'ai'],
   'mealplan-image-generate': ['library', 'edit', 'ai'],
-  'task-message': ['work'], 'task-note': ['work','edit'], 'task-file-save': ['work','edit'], 'assignment-status': ['work','edit'], 'task-save': ['work', 'edit'], 'task-add': ['work', 'edit'],
+  'task-message': ['work'], 'task-note': ['work','edit'], 'task-file-save': ['work','edit'], 'task-file-upload': ['work','edit'], 'assignment-status': ['work','edit'], 'task-save': ['work', 'edit'], 'task-add': ['work', 'edit'],
   'task-delete': ['work', 'edit'], 'task-restore': ['work', 'edit'], 'tracking-update': ['work', 'edit'],
   'task-attach': ['work', 'library', 'edit'], 'project-save': ['work', 'edit']
 };
