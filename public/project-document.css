@@ -1,0 +1,38 @@
+/* Project reading view: one hierarchy, no form column or task cards. */
+.project-document{max-width:1080px;margin:0 auto;color:#173b49;font-size:14px;line-height:1.6;overflow-wrap:anywhere}
+.project-document .studio-heading{margin:0 0 12px;gap:16px;align-items:flex-start}
+.project-document h1,.project-document .studio-heading h1{font-size:28px;line-height:1.25;letter-spacing:-.5px;margin:0 0 8px}
+.project-document h2{font-size:20px;line-height:1.35;margin:24px 0 12px;letter-spacing:-.2px}
+.project-document h3{font-size:16px;line-height:1.45;margin:0;font-weight:650}
+.project-document h4,.project-document h5,.project-document h6{font-size:14px;margin:14px 0 6px}
+.project-document p{font-size:14px;line-height:1.6;max-width:80ch;margin:8px 0}
+.project-document .studio-project-meta,.project-document .project-task-meta{font-size:12px;color:#536572;margin:4px 0 8px}
+.project-document .studio-status{font-size:11px;padding:3px 8px;white-space:nowrap}
+.project-document .project-columns{display:block;grid-template-columns:none}
+.project-document .project-columns>section{padding:0}
+.project-document .studio-task-group{padding:0;margin:0}
+.project-task-document{border:0;border-top:1px solid #dce3df;border-radius:0;background:transparent;padding:16px 0;margin:0;box-shadow:none}
+.project-task-document>header{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.project-task-brief{max-width:80ch;margin:10px 0}
+.project-task-brief p{margin:6px 0}
+.project-task-brief ul,.project-task-brief ol{padding-left:20px;margin:8px 0}
+.project-task-brief li{margin:4px 0;font-size:14px;line-height:1.6}
+.project-document .task-schedule-summary{font-size:12px;line-height:1.5;gap:6px 12px;margin:4px 0 8px}
+.project-document .project-task-edit{margin:10px 0 0}
+.project-document summary{font-size:13px;line-height:1.5;cursor:pointer;font-weight:600}
+.project-task-edit>summary{display:list-item;color:#06475e;padding:3px 0}
+.project-task-edit[open]{border:1px solid #d6ddd9;border-radius:7px;background:#fff;padding:16px;margin:12px 0}
+.project-document .studio-form{font-size:13px;max-width:100%;gap:12px;margin:14px 0 0}
+.project-document label,.project-document legend{font-size:13px;line-height:1.5}
+.project-document input,.project-document select,.project-document textarea{font-size:14px;min-height:38px;padding:8px 10px}
+.project-document button,.project-document .btn{font-size:13px;padding:8px 12px;min-height:36px}
+.project-document form[data-task-delete]{margin:12px 0 0}
+.project-document form[data-task-delete] button{background:transparent;color:#8e3935;border:1px solid #c7b0ab}
+.project-document .project-gantt{border:0;border-block:1px solid #dce3df;border-radius:0;background:transparent;padding:10px 0;margin:18px 0}
+.project-document .project-tools{border-top:1px solid #dce3df;margin:20px 0;padding:0}
+.project-tools>details{margin:8px 0;padding:8px 0}
+.project-tools>details[open]{padding:16px;background:#fff;border:1px solid #d6ddd9;border-radius:7px}
+.project-tools .deleted-tasks{padding:8px 0;border:0;background:transparent}
+.project-document .studio-list>li{background:transparent;border:0;border-top:1px solid #dce3df;border-radius:0;padding:14px 0;box-shadow:none}
+.project-document .studio-list h3{margin:0 0 6px}
+@media(max-width:650px){.project-document h1,.project-document .studio-heading h1{font-size:24px}.project-document h2{font-size:18px}.project-task-document>header{align-items:flex-start}.project-document .studio-heading{flex-wrap:wrap}.project-task-edit[open]{padding:12px}.project-document .studio-columns{grid-template-columns:1fr}.project-document .studio-heading .studio-actions{flex-wrap:wrap}}

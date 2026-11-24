@@ -1,4 +1,5 @@
-import {schedulingInputs,taskScheduleSummary,ganttPanel,taskForecastLabel} from './studio-project-schedule.mjs';
+import {documentText} from './document-reader.mjs';
+import {schedulingInputs,taskScheduleSummary,ganttPanel} from './studio-project-schedule.mjs';
 import {productionFileLinks} from './production-file-links.mjs';
 import {newsletterDraftButton} from './newsletter-draft-links.mjs';
 import {isLaunchPack} from './studio-launch-pack.mjs';
@@ -156,33 +157,36 @@ export function projectList(params,data){
     pages(params,selected,rows=>list(rows,p=>'<div><a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a><small>'+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+(p.studio.productionTracking||p.studio.type==='blank'?'':' · '+p.weeks+' weeks')+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</small>'+projectProductionSummary(p,data)+'</div>'+badge(p.status),'No projects of this type yet.'));
 }
 export function projectPage(params,data){
+ return '<div class="project-document">'+projectDocumentPage(params,data)+'</div>';
+}
+function projectNotes(value){
+ const lines=String(value||'').trim().split(/\r?\n/).filter(line=>line.trim());
+ const text=lines.length>1&&!lines.some(line=>/^\s*(?:#{1,6}\s|[-*•]\s|\d+[.)]\s|```)/.test(line))?lines.map(line=>'- '+line).join('\n'):value;
+ return documentText(text,{headingLevel:4});
+}
+function projectDocumentPage(params,data){
   const p=projectFor(data,params.get('project')),week=Math.max(0,Math.min(p.weeks,Number(params.get('week'))||0)),admin=data.actor.role==='admin';
-  if(p.assignmentOnly)return heading(p.name,'Linked to your assignment',button('My assignments','/content-library/?work=1&assignments=1'))+'<p>'+badge(p.status)+'</p><section class="panel"><h2>Project brief</h2><p class="prose">'+esc(p.brief||'No project brief recorded.')+'</p><h2>Project plan</h2>'+list(p.entries||[],e=>'<div><strong>'+esc(e.title)+'</strong><small>'+esc(e.week?'Week '+e.week:'Preparation')+'</small></div>'+badge(e.status),'No project tasks recorded yet.')+'</section>';
+  if(p.assignmentOnly)return heading(p.name,'Linked to your assignment',button('My assignments','/content-library/?work=1&assignments=1'))+'<p>'+badge(p.status)+'</p><section><h2>Project brief</h2>'+documentText(p.brief||'No project brief recorded.',{headingLevel:3})+'<h2>Project plan</h2>'+list(p.entries||[],e=>'<div><h3>'+esc(e.title)+'</h3><small>'+esc(e.week?'Week '+e.week:'Preparation')+'</small></div>'+badge(e.status),'No project tasks recorded yet.')+'</section>';
 
-  if(!canAccess(data.actor,'edit'))return heading(p.name,p.brief)+badge(p.status)+'<section class="panel">'+list(p.entries,e=>'<div><small>'+(e.week?'Week '+e.week:'Preparation')+'</small><h3>'+esc(e.title)+'</h3><p>'+esc(e.notes||'')+'</p>'+(e.record&&canAccess(data.actor,'library')?button('Open content',url('item',{id:e.record})):'' )+'</div>'+badge(e.status))+'</section>';
+  if(!canAccess(data.actor,'edit'))return heading(p.name,'')+badge(p.status)+(p.brief?'<section><h2>Project brief</h2>'+documentText(p.brief,{headingLevel:3})+'</section>':'')+'<section><h2>Tasks</h2>'+list(p.entries,e=>'<div><small>'+(e.week?'Week '+e.week:'Preparation')+'</small><h3>'+esc(e.title)+'</h3><div>'+projectNotes(e.notes||'')+'</div>'+(e.record&&canAccess(data.actor,'library')?button('Open content',url('item',{id:e.record})):'' )+'</div>'+badge(e.status))+'</section>';
   const state={section:'project',project:p.id,week},base=hidden('projectRevision',p.revision);
   const blank=p.studio.type==='blank',root=data.byId.get(p.studio.rootId);
   const nav=blank?'':'<form class="studio-filters" action="/content-library/">'+hidden('work','1')+hidden('studio','project')+hidden('project',p.id)+select('week','Week',Object.fromEntries(Array.from({length:p.weeks+1},(_,w)=>[w,w?'Week '+w:'Preparation'])),week)+'<button>Open week</button></form>';
   const tasks=p.entries.filter(e=>blank||e.week===week);
-  const taskRows=new Map();
-  for(const e of tasks){
-    const type=e.kind==='Task'?'task':data.byId.get(e.record)?.kind||Object.keys(kinds).find(k=>kinds[k]===e.kind)||({'PT WhatsApp message':'communication','Content to create':'article'})[e.kind]||'article';
-    if(!taskRows.has('task'))taskRows.set('task',[]);taskRows.get('task').push(e);
-  }
-  const rows=[...taskRows].map(([type,entries])=>'<section class="studio-task-group">'+entries.map(e=>{
+  const rows='<section class="studio-task-group">'+tasks.map(e=>{
     const r=data.byId.get(e.record);
-    return '<details class="project-task-row simple-planner-task"><summary><span><strong>'+esc(e.title)+'</strong><small>'+esc(data.people.find(person=>person.id===(e.assignee||p.creator_id))?.name||'Team member')+' · '+esc(taskForecastLabel(p,e,data))+(e.due?' · Deadline '+esc(e.due):'')+'</small></span>'+badge(e.status==='Ready for review'?'Needs review':e.status)+'</summary>'+taskScheduleSummary(p,e,data)+'<p class="prose">'+esc(e.notes||'')+'</p>'+
+    return '<article class="project-task-document"><header><h3>'+esc(e.title)+'</h3>'+badge(e.status==='Ready for review'?'Needs review':e.status)+'</header><p class="project-task-meta">'+esc(data.people.find(person=>person.id===(e.assignee||p.creator_id))?.name||'Team member')+(e.due?' · Deadline '+esc(e.due):'')+'</p>'+taskScheduleSummary(p,e,data)+'<div class="project-task-brief">'+projectNotes(e.notes||'')+'</div>'+
       (r?(canAccess(data.actor,'library')?button('Open content',url('item',{id:r.id})):'' ):canAccess(data.actor,'studio')&&e.kind!=='Task'?button('Create this content',url('new',{project:p.id,entry:e.id,kind:e.kind==='PT WhatsApp message'?'communication':e.kind==='Creative asset'?'asset':e.kind==='GHL workflow'?'workflow':'article',title:e.title})):'' )+
-      (admin||ownsTask(p,e,data.actor.id)?form('task-save',base+hidden('entry',e.id)+
+      (admin||ownsTask(p,e,data.actor.id)?'<details class="project-task-edit"><summary>Edit task</summary>'+form('task-save',base+hidden('entry',e.id)+
       (admin?select('assignee','Assign to',{'':'Project owner',...personOptions(data)},e.assignee||''):'')+input('title','Task',e.title,'text','required maxlength="160"')+textarea('notes','Brief and feedback',e.notes||'',3)+
       select('status','Progress',Object.fromEntries((admin?['To do','In progress','Ready for review','Changes requested','Done']:['To do','In progress','Ready for review','Changes requested']).map(x=>[x,x==='Ready for review'?'Needs review':x])),e.status)+
-      (blank?hidden('week',e.week):'<details class="task-extra"><summary>Programme details</summary>'+input('week','Week (0 is preparation)',e.week,'number','min="0" max="'+p.weeks+'"')+'</details>')+input('due','Deadline (optional)',e.due||'','date')+schedulingInputs(p,e,data),state,'Save task'):'')+deleteTaskControl(p,e,data)+'</details>';
-  }).join('')+'</section>').join('');
+      (blank?hidden('week',e.week):'<details class="task-extra"><summary>Programme details</summary>'+input('week','Week (0 is preparation)',e.week,'number','min="0" max="'+p.weeks+'"')+'</details>')+input('due','Deadline (optional)',e.due||'','date')+schedulingInputs(p,e,data),state,'Save task')+deleteTaskControl(p,e,data)+'</details>':deleteTaskControl(p,e,data)?'<details class="project-task-edit"><summary>Manage task</summary>'+deleteTaskControl(p,e,data)+'</details>':'')+'</article>';
+  }).join('')+'</section>';
   const candidates=data.items.filter(r=>(r.title+' '+r.kind).toLowerCase().includes((params.get('find')||'').toLowerCase())).slice(0,35);
-  return heading(p.name,p.studio.audience||p.brief,canAccess(data.actor,'library')&&(!blank||p.entries.some(e=>e.record))?button('Preview journey',url('journey',{project:p.id}))+button('Export',url('release',{project:p.id})):'' )+
-    '<p class="studio-project-meta">'+esc(p.status)+' · '+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</p>'+ganttPanel(p,data)+
-    (root&&canAccess(data.actor,'library')?'<p>Programme content · '+itemLink(root)+'</p>':'')+nav+'<div class="studio-columns project-columns"><section><h2>'+(blank?'Tasks':week?'Week '+week:'Preparation')+'</h2>'+(rows||(blank?'<p>No tasks yet. Add your first task to get started.</p>':'<p>No tasks in this week yet.</p>'))+'</section>'+
-    '<aside class="panel">'+deletedTasksPanel(p,data)+'<details'+(blank?' open':'')+'><summary>Add work</summary>'+form('task-add',base+input('title','What needs doing?','','text','required maxlength="160"')+
+  return heading(p.name,p.studio.audience||'',button('Add task',url('project',{project:p.id,week,add:'1'})+'#project-tools')+(canAccess(data.actor,'library')&&(!blank||p.entries.some(e=>e.record))?button('Preview journey',url('journey',{project:p.id}))+button('Export',url('release',{project:p.id})):''))+
+    '<p class="studio-project-meta">'+esc(p.status)+' · '+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</p>'+(p.brief?'<section class="project-brief"><h2>Project brief</h2>'+documentText(p.brief,{headingLevel:3})+'</section>':'')+ganttPanel(p,data)+
+    (root&&canAccess(data.actor,'library')?'<p>Programme content · '+itemLink(root)+'</p>':'')+nav+'<div class="studio-columns project-columns"><section><h2>'+(blank?'Tasks':week?'Week '+week:'Preparation')+'</h2>'+(tasks.length?rows:(blank?'<p>No tasks yet. Add your first task to get started.</p>':'<p>No tasks in this week yet.</p>'))+'</section>'+
+    '<aside class="project-tools" id="project-tools"><h2>Manage project</h2>'+deletedTasksPanel(p,data)+'<details'+(params.get('add')==='1'?' open':'')+'><summary>Add work</summary>'+form('task-add',base+input('title','What needs doing?','','text','required maxlength="160"')+
     (admin?select('assignee','Assign to',{'':'Project owner',...personOptions(data)}):'')+input('due','Deadline (optional)','','date')+schedulingInputs(p,{},data)+'<details class="task-extra"><summary>More details</summary>'+select('kind',blank?'Task type':'Content type',{...(blank?{Task:'Task'}:{}),'Content to create':'Content to create','PT WhatsApp message':'PT WhatsApp message','GHL workflow':'GHL workflow','Creative asset':'Creative asset','Marketing content':'Marketing content'})+textarea('notes','What does a finished result need?')+'</details>',state,'Add task')+'</details>'+
     (canAccess(data.actor,'library')?'<details><summary>Attach existing content</summary><form action="/content-library/">'+hidden('work','1')+hidden('studio','project')+hidden('project',p.id)+hidden('week',week)+input('find','Find content',params.get('find')||'')+'<button>Find</button></form>'+
     (params.has('find')?form('task-attach',base+select('record','Library item',Object.fromEntries(candidates.map(r=>[r.id,r.title]))),state,'Attach to this week'):'')+'</details>':'')+
