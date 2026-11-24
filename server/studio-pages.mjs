@@ -248,12 +248,12 @@ export function itemPage(params,data){
       '<div class="studio-cards">'+programmes.map(p=>card(p.title,p.fields.weeks+' weeks · '+(p.fields.audience||''),url('item',{id:p.id}))).join('')+'</div>'+
       '<details class="panel"><summary>Shared content & files</summary>'+list(data.items.filter(x=>x.parent===r.id&&x.kind!=='programme'&&x.status!=='Archived'),contentRow)+'</details>';
   }
-  const admin=data.actor.role==='admin',canEdit=canEditContent(data,r.id),state={section:'item',id:r.id,tab:'edit'};
+  const document=params.get('document')==='1',admin=data.actor.role==='admin',canEdit=canEditContent(data,r.id),state={section:'item',id:r.id,tab:'edit'};
   const children=data.items.filter(x=>(x.parent===r.id||(r.fields.sharedContentIds||[]).includes(x.id))&&x.status!=='Archived'),refs=references(r,data.byId).map(id=>data.byId.get(id)).filter(Boolean);
   const parents=data.items.filter(x=>x.id!==r.id&&(x.id===r.parent||references(x,data.byId).includes(r.id)));
   const checks=issues(r,data.items),preview=params.get('tab')==='preview'||!canEdit||(!params.has('tab')&&(['course','recipe','session'].includes(r.kind)||isNewsletter(r)||isLaunchPack(r))),schedule=r.kind==='structure'&&params.get('tab')!=='edit'&&!preview;
   let out='<a class="back" href="'+(r.kind==='programme'?url('item',{id:r.id}):url('library',{kind:r.kind}))+'">← '+esc(r.kind==='programme'?'Programme overview':collections[r.kind]?.[0]||'Content library')+'</a>'+
-    heading(r.title,isNewsletter(r)?'Newsletter':kinds[r.kind]||r.kind,preview||schedule?(canEdit?button(isNewsletter(r)?'Edit HTML & text':'Edit content',url('item',{id:r.id,tab:'edit'}),true):''):'')+
+    heading(r.title,isNewsletter(r)?'Newsletter':kinds[r.kind]||r.kind,preview||schedule?(canEdit&&!document?button(isNewsletter(r)?'Edit HTML & text':'Edit content',url('item',{id:r.id,tab:'edit'}),true):''):'')+
     '<p>'+badge(isNewsletterContent(r)&&r.status==='Approved'?'Approved for GHL':r.publication?.status==='published'?'Published':r.status)+' <span class="meta">'+(r.updatedAt?'Saved '+esc(new Date(r.updatedAt).toLocaleDateString('en-GB')):'')+'</span></p>';
   if(schedule){
     const frequencies=data.items.filter(x=>x.kind==='structure'&&x.parent===r.parent&&x.status!=='Archived');
@@ -261,7 +261,7 @@ export function itemPage(params,data){
     return out+weeklyPlan(selected,data,frequencies);
   }
   if(preview){
-    out+=videoTools(r)+(r.kind==='course'?coursePreview(r,data,readable):r.kind==='recipe'?recipePreview(r):r.kind==='session'?workoutSession(r,data,{standalone:true}):contentPreview(r,data,readable));
+    out+=videoTools(r)+(r.kind==='course'?coursePreview(r,data,readable):r.kind==='recipe'?recipePreview(r):r.kind==='session'?workoutSession(r,data,{standalone:true}):contentPreview(r,data,readable,{document}));
     const included=r.kind==='course'?(r.fields.lessonIds||[]).map(id=>data.byId.get(id)||data.byId.get('training:'+id)).filter(Boolean):children;
     const unique=[...new Map([...included,...children].map(x=>[x.id,x])).values()];
     if(unique.length&&r.kind!=='course')out+='<section class="panel"><h2>Included content</h2>'+list(unique,contentRow)+'</section>';
@@ -270,9 +270,9 @@ export function itemPage(params,data){
     if(checks.length&&r.kind!=='communication')out+='<details class="editor-checks"><summary>'+checks.length+' '+(checks.length===1?'thing':'things')+' to complete before checking</summary><ul>'+checks.map(c=>'<li>'+esc(c)+'</li>').join('')+'</ul></details>';
     out+=videoTools(r)+editorForm(r.kind==='course'&&!data.unsaved?courseEditorRecord(r,data):r,data,{feedback:data.unsavedFeedback||'',unsaved:data.unsaved===true})+referenceData(data);
   }
-  out+=productionFileLinks(r);
+  out+=productionFileLinks(r,{document});
   if(r.kind==='communication')return out;
-  if(canEdit){
+  if(canEdit&&!document){
     out+='<details class="panel"><summary>History, feedback & other actions</summary><div class="studio-actions">'+button('Version history',url('history',{id:r.id}))+
       (r.sourceId&&canAccess(data.actor,'sources')?button('Original files','/content-library/?work=1&assets='+encodeURIComponent(r.sourceId)):'')+
       (admin?button('Assign work',url('project-from',{id:r.id})):'')+'</div>'+
@@ -283,7 +283,7 @@ export function itemPage(params,data){
   }
   if(refs.length&&!preview)out+='<details class="panel"><summary>Linked content ('+refs.length+')</summary>'+list(refs,contentRow)+'</details>';
   if(parents.length)out+='<details class="panel"><summary>Used in ('+parents.length+')</summary>'+list(parents,contentRow)+'</details>';
-  if(r.source)out+='<details class="panel"><summary>Original source</summary><p>'+esc(r.source.name||r.sourceId||'Imported content')+'</p><pre class="source-text">'+esc(r.source.text||'')+'</pre></details>';
+  if(r.source&&!document)out+='<details class="panel"><summary>Original source</summary><p>'+esc(r.source.name||r.sourceId||'Imported content')+'</p><pre class="source-text">'+esc(r.source.text||'')+'</pre></details>';
   return out;
 }
 export function newItem(params,data,values={}){

@@ -14,7 +14,7 @@ export const primaryFields = {
   activity:['type','notes','durationMinutes','distanceMetres','repetitions'],
   session:['introduction','duration','warmup','blocks','cooldown'],
   structure:['frequency','weeks'], stage:['description','weeks'],
-  asset:['url','brief','altText'], leadmagnet:['headline','introduction','contentIds','callToAction'],
+  asset:['brief','body','url','altText'], leadmagnet:['headline','introduction','contentIds','callToAction'],
   workflow:['trigger','steps'], rule:['instructions','repeatWhen','progressWhen'], review:['questions','nextStep']
 };
 export const fieldLabels = {
