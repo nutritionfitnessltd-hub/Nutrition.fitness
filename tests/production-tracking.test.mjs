@@ -13,6 +13,25 @@ function fixture(scope='courses'){
  const add=(id,workerId,extra={})=>{const r={id,title:id,kind:'article',workerId,status:'Draft',revision:1,fields:{},...extra};data.items.push(r);data.byId.set(id,r);return r;};
  return {p,data,meta,pilot,add};
 }
+
+test('checked replacement exports supersede older in-production tracker notes',()=>{
+ const {p,data,meta,pilot}=fixture();p.studio.productionTracking.pilotIds=[];
+ pilot.fields.production.checkedAt='2026-11-24T12:40:56Z';pilot.updatedAt='2026-11-24T12:40:57Z';
+ p.studio.trackingUpdates={'lesson:Fat Loss:1':{status:'Imogen working',workState:'Stopped',at:'2026-11-24T12:20:06Z',note:'Opening title amendment is next.',nextStep:'Amend title',blocker:'Old blocker'}};
+ const model=productionTracking(p,data,meta),row=model.rows[0];assert.equal(row.status,'Awaiting review');assert.equal(row.work.label,'Completed');assert.equal(model.counts['Awaiting review'],1);assert.equal(pilot.status,'Draft');
+ const html=productionTrackerPanel(p,data,meta);assert.match(html,/>Approve</);assert.match(html,/Earlier update \(before checked export\)/);assert.doesNotMatch(html,/<b>Next step:<\/b> Amend title|<b>Blocker:<\/b> Old blocker/);
+});
+
+test('rework requested after the checked export stays in production',()=>{
+ const {p,data,meta,pilot}=fixture();p.studio.productionTracking.pilotIds=[];pilot.fields.production.checkedAt='2026-11-24T12:40:56Z';
+ p.studio.trackingUpdates={'lesson:Fat Loss:1':{status:'Imogen working',workState:'Blocked',at:'2026-11-24T13:00:00Z',note:'New correction required.',blocker:'Waiting for source'}};
+ const row=productionTracking(p,data,meta).rows[0];assert.equal(row.status,'Imogen working');assert.equal(row.work.label,'Blocked');assert.equal(row.supersededUpdate,false);
+});
+
+test('checkedAt alone never finishes a draft without an evidenced export',()=>{
+ const {p,data,meta,pilot}=fixture();p.studio.productionTracking.pilotIds=[];pilot.fields.production.checkedAt='2026-11-24T12:40:56Z';pilot.fields.production.files=[];
+ assert.equal(productionTracking(p,data,meta).rows[0].status,'Imogen working');
+});
 test('course tracker includes untouched lessons in order and does not count pilot export as finished',()=>{
  const {p,data,meta,add}=fixture();add('other','imogen');const m=productionTracking(p,data,meta);
  assert.deepEqual(m.rows.map(r=>r.title),['First','Second']);assert.deepEqual(m.rows.map(r=>r.status),['Imogen working','To do']);assert.equal(m.approved,0);

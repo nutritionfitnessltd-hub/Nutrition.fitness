@@ -18,3 +18,9 @@ test('production completion is distinct from review approval',()=>{
  for(const status of ['Awaiting review','Approved','Saved to SharePoint'])assert.equal(productionWorkState({status},null).label,'Completed');
  assert.equal(productionWorkState({status:'To do'},null).label,'Not started');
 });
+
+test('a checked completion supersedes an older stale or stopped runner checkpoint',()=>{
+ const row={sourceId:'s',status:'Awaiting review',working:false,completedAt:'2026-11-24T12:40:56Z'};
+ for(const status of ['working','stopped','blocked'])assert.equal(productionWorkState(row,{currentSourceId:'s',status,updatedAt:'2026-11-24T12:20:00Z'}).label,'Completed');
+ assert.equal(productionWorkState(row,{currentSourceId:'s',status:'blocked',updatedAt:'2026-11-24T13:00:00Z'}).label,'Blocked');
+});
