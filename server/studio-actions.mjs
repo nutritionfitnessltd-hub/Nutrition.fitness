@@ -1,3 +1,4 @@
+import {articleMediaIssues} from './worker-drafts.mjs';
 import {workStates} from './production-work-state.mjs';
 import {scheduleFields,validateDependencies,reorderAndSchedule} from './studio-project-schedule.mjs';
 import {requireAccess} from './library-permissions.mjs';
@@ -63,6 +64,7 @@ function reviewRecord(next,status,f,data,revision){
   if(!['In review','Changes requested','Approved','Archived'].includes(status))throw new HttpError(400,'Choose a review status.');
   if(status!=='In review')adminOnly(data);
   const missing=issues(next,data.items.map(r=>r.id===next.id?next:r));
+  if(status==='In review'&&articleMediaIssues(next).length)throw new HttpError(400,articleMediaIssues(next).join(' '));
   if(status==='Approved'&&missing.length)throw new HttpError(400,missing.join(' '));
   next.status=status;delete next.approval;delete next.ghlDraftPlan;
   if(status==='Approved')next.approval={by:data.actor.id,at:new Date().toISOString(),revision:revision+1};

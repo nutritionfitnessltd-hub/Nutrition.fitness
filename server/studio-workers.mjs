@@ -35,7 +35,7 @@ export const outputs={
   scripts:{label:'Lesson scripts',worker:'imogen',brief:'Prepare copyable narration for each evidenced lesson. Preserve the teaching points. Report measured video duration only when supplied; label spoken timing estimates separately.'},
   newsletter:{label:'Newsletter',worker:'nina',brief:'Prepare subject line, preview text, newsletter body and one clear call to action. Protect paid content; do not reproduce a whole paid book.'},
   emails:{label:'Welcome & follow-up emails',worker:'nina',brief:'Prepare the welcome and follow-up emails with subject lines, purpose and suggested timing.'},
-  article:{label:'Website article',worker:'nina',brief:'Prepare a useful website article, introduction and clear headings. Preserve source evidence and flag claims requiring verification.'},
+  article:{label:'Website article',worker:'nina',brief:'Prepare a useful website article, introduction and clear headings. Preserve source evidence and flag claims requiring verification. Deliver a relevant licensed photograph uploaded to the draft, descriptive alt text, accurate credit and a short handwritten label in fields.marginNote. Verify the image and label in the saved preview; a proposed image link alone is incomplete.'},
   landing:{label:'Landing page copy',worker:'nina',brief:'Prepare headline, introduction, benefits, what is included and a clear call to action. Do not invent prices or promises.'},
   socials:{label:'Social posts',worker:'rory',brief:'Prepare a small set of distinct social posts with captions and suggested visuals.'},
   video:{label:'Short video scripts',worker:'rory',brief:'Prepare short video scripts with a hook, narration, shot notes and estimated spoken timing. Do not claim that videos have been created.'}

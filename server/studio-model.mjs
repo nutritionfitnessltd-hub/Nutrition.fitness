@@ -1,3 +1,4 @@
+import {articleMediaIssues} from './worker-drafts.mjs';
 import { HttpError } from './platform.mjs';
 import {isNewsletterContent} from './studio-newsletter-type.mjs';
 
@@ -120,6 +121,7 @@ export function issues(record,records){
     }
   }
   if(record.source?.needsChecking)out.push('Compare the imported content with its source and confirm the check.');
+  out.push(...articleMediaIssues(record));
   return [...new Set(out)];
 }
 export function makeProjectPlan(kind,weeks){
