@@ -60,7 +60,7 @@ export function productionRowLinks(row,data,{pilot=false,working=false}={}){
  const video=checkedVideo(r),canApprove=!pilot&&!working&&row.status==='Awaiting review'&&r.status!=='Approved'&&canReviewContent(data,r);
  const links=video&&canReadContent(data,r)?['<a class="btn" data-production-video data-video-title="'+esc(r.title)+'" data-video-src="'+url('video-source',{id:r.id,sha:video.sha256,revision:r.revision})+'" href="'+esc(productionFileUrl(video.url))+'" target="_blank" rel="noopener noreferrer" title="'+esc((pilot||working?'Previous export; replacement in progress. ':'')+(video.name||'Checked video export'))+'">Open video</a>']:[];
  if(canApprove&&files.length){
-  const approval=form('review-decision',hidden('revision',r.revision)+hidden('decision','approve')+hidden('reviewId',randomUUID())+(video?hidden('videoSha256',video.sha256):''),{section:'review-preview',id:r.id,...(video?{fragment:'1'}:{})},'Approve',video?'data-video-approval':'');
+  const approval=form('review-decision',hidden('revision',r.revision)+hidden('decision','approve')+hidden('reviewId',randomUUID())+(video?hidden('videoSha256',video.sha256)+(r.source?.needsChecking?'<label class="video-source-check"><input type="checkbox" name="sourceChecked" value="yes" data-video-source-check required> I have checked this video against the original source.</label>':''):''),{section:'review-preview',id:r.id,...(video?{fragment:'1'}:{})},'Approve',video?'data-video-approval':'');
   if(video&&links.length)links.push('<div data-video-approval-source hidden>'+approval+'</div>');else if(!video)links.unshift(approval);
  }
  if(canReadContent(data,r))links.push('<a class="btn" href="'+url('item',{id:r.id})+'">Open asset</a>');

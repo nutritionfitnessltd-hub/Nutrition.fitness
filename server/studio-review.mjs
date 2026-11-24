@@ -95,12 +95,14 @@ export async function reviewDecision(params,f,data,api,env={},fetcher=fetch){
   const changes=cleanText(f.feedback||'',4000),guidance=cleanText(f.guidance||'',2000),workerId=contentWorker(r,data.byId);
   if(f.decision==='changes'&&!changes.trim())throw new HttpError(400,'Describe what needs changing.');
   if(f.decision==='approve'&&f.videoSha256&&!checkedVideo(r,f.videoSha256))throw new HttpError(409,'This video export changed. Reopen and watch the current version before approving.');
-  const reviewed=f.decision==='approve'&&r.kind==='course'?courseApprovalRecord(r,data):r;
+  const sourceChecked=f.decision==='approve'&&f.videoSha256&&f.sourceChecked==='yes'&&r.source?.needsChecking;
+  const checked=sourceChecked?{...r,source:{...r.source,needsChecking:false}}:r;
+  const reviewed=f.decision==='approve'&&r.kind==='course'?courseApprovalRecord(checked,data):checked;
   if(f.decision==='submit'&&articleMediaIssues(reviewed).length)throw new HttpError(400,articleMediaIssues(reviewed).join(' '));
   if(f.decision==='approve'){const missing=issues(reviewed,data.items);if(missing.length)throw new HttpError(400,missing.join(' '));}
   next=withoutVersion(reviewed);next.status=f.decision==='approve'?'Approved':f.decision==='submit'?'In review':'Changes requested';delete next.approval;delete next.ghlDraftPlan;
   const at=new Date().toISOString(),entry={id:f.reviewId,decision:f.decision,reviewedRevision:r.revision,workerId,changes,guidance,author:data.actor.name||'James',authorId:data.actor.id,reviewedTitle:r.title,at,delivery:f.decision==='changes'&&workerId?'pending':'not-required'};
-  if(f.decision==='approve'&&f.videoSha256)entry.videoReview={sha256:f.videoSha256,filename:checkedVideo(r,f.videoSha256).name||'Video export'};
+  if(f.decision==='approve'&&f.videoSha256)entry.videoReview={sha256:f.videoSha256,filename:checkedVideo(r,f.videoSha256).name||'Video export',...(sourceChecked?{sourceChecked:true}:{})};
   next.reviewFeedback=[...(r.reviewFeedback||[]),entry];
   next.comments=[...(r.comments||[]),{id:entry.id,body:f.decision==='approve'?'Approved saved version '+r.revision+'.':f.decision==='submit'?'Submitted saved version '+r.revision+' for review.':changes+(guidance?'\n\nRemember for future work: '+guidance:''),author:entry.author,at}];
   if(f.decision==='approve'){next.approval={by:data.actor.id,at,revision:r.revision+1};if(next.publicationPlan?.state==='scheduled')delete next.publicationPlan;}
