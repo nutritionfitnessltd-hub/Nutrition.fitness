@@ -126,6 +126,7 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
     const r=editable(data,params.get('id'));verifyRevision(r,f.revision);
     let next=structuredClone(r);delete next.revision;delete next.updatedAt;
     if(action==='content-save'){
+      if(r.kind==='supplier')throw new HttpError(400,'Use the Suppliers editor to update this item.');
       if(r.kind==='product'||r.fields.productAsset===true)throw new HttpError(400,'Use the Products editor to update this item.');
       next.title=cleanText(f.title,200);if(!next.title)throw new HttpError(400,'Add a title.');
       if(f.intent&&!['draft','preview','approve','review'].includes(f.intent))throw new HttpError(400,'Choose a save action.');
