@@ -11,6 +11,7 @@ async function updateUnread(){
   const response=await fetch(pollUrl,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
   if([401,403].includes(response.status)){stopped=true;return;}
   if(!response.ok)return;const data=await response.json();
+  dispatchEvent(new CustomEvent('team-working-hours',{detail:data.workingHours??null}));
   for(const item of document.querySelectorAll('[data-team-presence]')){const status=data.presence?.find(p=>p.id===item.dataset.teamPresence)?.status||'unknown',label={online:'Online',away:'Away',offline:'Offline',unknown:'Status unavailable'}[status]||'Status unavailable';item.dataset.status=status;item.setAttribute('aria-label',label);item.title=label;item.querySelector('small').textContent=label;}
   for(const badge of document.querySelectorAll('[data-message-unread]')){badge.hidden=!data.unread;badge.textContent=String(data.unread);badge.setAttribute('aria-label',data.unread+' unread messages'+(data.mentions?', '+data.mentions+' mentions':''));}
   if(embedded)parent.postMessage({type:'team-message-unread',unread:data.unread,mentions:data.mentions},location.origin);
@@ -89,7 +90,7 @@ if(embedded){
   else if(!u.searchParams.has('file')){link.target='_blank';link.rel='noopener';}
  }
  for(const form of document.forms){const u=new URL(form.getAttribute('action'),location.href);if(u.origin!==location.origin||u.searchParams.get('studio')!=='messages')continue;u.searchParams.set('panel','1');form.setAttribute('action',u.href);if(form.method==='get'){const input=document.createElement('input');input.type='hidden';input.name='panel';input.value='1';form.append(input);}}
- const focusable=()=>[...document.querySelectorAll('a[href],button,input:not([type=hidden]),select,textarea,summary')].filter(x=>!x.disabled&&!x.closest('[hidden]')&&(!x.closest('details:not([open])')||x.tagName==='SUMMARY'));
+ const focusable=()=>[...document.querySelectorAll('a[href],button,input:not([type=hidden]),select,textarea,summary')].filter(x=>!x.disabled&&!x.closest('[hidden]')&&!x.closest('dialog:not([open])')&&(!x.closest('details:not([open])')||x.tagName==='SUMMARY'));
  addEventListener('message',event=>{
   if(event.origin!==location.origin||event.source!==parent)return;
   if(event.data?.type==='team-message-panel-visibility'){suspended=event.data.visible!==true;if(!suspended){updateUnread();for(const mark of readDisplayed)mark();}}
