@@ -440,7 +440,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }else if(req.method==='POST'&&f.action==='supplier-save'&&data?.actor.role==='admin'){
       try{body+=supplierPage(params,data,f);}catch{body+=button('Back to suppliers',url('suppliers'));}
     }else if(req.method==='POST'&&f.action?.startsWith('product-')&&data){
-      try{body+=['product-quote-save','product-quote-archive','product-cost-scenario'].includes(f.action)?productCostsPage(params,data,readable(data,f.productId),f):productErrorForm(params,f,data);}catch{body+=button('Back to products',url('products'));}
+      try{body+=['product-quote-save','product-quote-archive','product-cost-scenario'].includes(f.action)?(f.returnTo==='product-figures'?productFiguresPage(params,data,f):productCostsPage(params,data,readable(data,f.productId),f)):productErrorForm(params,f,data);}catch{body+=button('Back to products',url('products'));}
     }else if(req.method==='POST'&&f.action?.startsWith('idea-')&&data?.actor.role==='admin'){
       body+=shinyThingsPage(params,data,f,env);
     }else if(req.method==='POST'&&f.action==='workout-days-save'&&data){
