@@ -161,7 +161,7 @@ export function projectList(params,data){
   const kind=params.get('kind')||'',categories={...collections,other:['Other projects','Projects without a content type.','Briefcase']};
   const projectKind=p=>data.byId.get(p.studio?.rootId)?.kind||templates[p.studio?.type]?.kind||'other';
   const selected=data.projects.filter(p=>!kind||projectKind(p)===kind);
-  return heading(kind?(categories[kind]?.[0]||'All')+' projects':'Projects','',data.actor.role==='admin'?button('Create a project',url('project-create'),true):'')+
+  return heading(kind?(categories[kind]?.[0]||'All')+' projects':'Projects','',data.actor.role==='admin'?button('Manage templates',url('project-templates'))+button('Create a project',url('project-create'),true):'')+
     pages(params,selected,rows=>list(rows,p=>'<div><a href="'+url('project',{project:p.id})+'">'+esc(p.name)+'</a><small>'+esc(data.people.find(s=>s.id===p.creator_id)?.name||'Assigned creator')+(p.studio.productionTracking||p.studio.type==='blank'?'':' · '+p.weeks+' weeks')+(p.studio.launchDate?' · Launch '+esc(p.studio.launchDate):'')+'</small>'+projectProductionSummary(p,data)+'</div>'+badge(p.status),'No projects of this type yet.'));
 }
 export function projectPage(params,data){

@@ -43,9 +43,9 @@ export function offeringDetails(f){
  if(out.salesRoute&&!['online','booking','enquiry'].includes(out.salesRoute))throw new HttpError(400,'Choose a valid sales route.');
  return out;
 }
-export function offeringTasks(sections){
+export function offeringTasks(sections,definition=offeringSections){
  const selected=new Set(sections),tasks=[];let previous=[];
- for(const [key,label,rows] of offeringSections){
+ for(const [key,label,rows] of definition){
   if(!selected.has(key))continue;
   const current=rows.map(([title,notes])=>({id:randomUUID(),title:label+': '+title,notes,dependsOn:[...previous]}));
   // Tasks within a section can run together; the next stage waits for this section.
