@@ -1,4 +1,5 @@
 import {randomUUID} from 'node:crypto';
+import {supplierCostLinks} from './studio-product-costs.mjs';
 import {HttpError,uuid} from './platform.mjs';
 import {cleanText} from './studio-model.mjs';
 import {readable,saveRecord} from './studio-store.mjs';
@@ -25,7 +26,7 @@ export function supplierPage(params,data,values){
   const f=values||{id:r?.id||randomUUID(),revision:r?.revision||0,title:r?.title||'',...r?.fields};
   return button('← Suppliers',url('suppliers'))+heading(r?'Edit supplier':'Add supplier','Keep contact details and services up to date.')+'<section class="panel">'+form('supplier-save',hidden('id',f.id)+hidden('revision',f.revision)+input('title','Supplier / company name',f.title,'text','required maxlength="200"')+textarea('services','What they do / supply',f.services||'',4)+'<div class="product-form-grid">'+input('contact','Contact person',f.contact||'','text','maxlength="200"')+input('email','Email',f.email||'','email','maxlength="254"')+input('phone','Phone',f.phone||'','tel','maxlength="100"')+input('website','Website',f.website||'','url','placeholder="https://…" maxlength="2000"')+select('stage','Status',states,f.stage||'Active')+'</div>'+textarea('address','Address',f.address||'',3)+textarea('notes','Working notes',f.notes||'',4),{section:'supplier',id:id||'new'},'Save supplier')+'<p>'+button('Cancel',r?url('supplier',{id:r.id}):url('suppliers'))+'</p></section>';
  }
- return button('← Suppliers',url('suppliers'))+'<article class="document-sheet document-reader">'+heading(r.title,'Supplier',data.actor.role==='admin'?button('Edit supplier',url('supplier',{id:r.id,tab:'edit'})):'')+'<h2>What they do</h2>'+documentText(r.fields.services||'Services have not been added yet.')+'<h2>Contact details</h2>'+facts(r.fields)+(r.fields.notes?'<h2>Working notes</h2>'+documentText(r.fields.notes):'')+'</article>';
+ return button('← Suppliers',url('suppliers'))+'<article class="document-sheet document-reader">'+heading(r.title,'Supplier',data.actor.role==='admin'?button('Edit supplier',url('supplier',{id:r.id,tab:'edit'})):'')+'<h2>What they do</h2>'+documentText(r.fields.services||'Services have not been added yet.')+'<h2>Contact details</h2>'+facts(r.fields)+supplierCostLinks(r,data)+(r.fields.notes?'<h2>Working notes</h2>'+documentText(r.fields.notes):'')+'</article>';
 }
 export async function saveSupplier(f,data,api){
  if(data.actor.role!=='admin')throw new HttpError(403,'An administrator can manage suppliers.');

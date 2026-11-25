@@ -8,6 +8,7 @@ import {taskUploadToken,attachTaskFile,sendTaskFile,uploadSmallTaskFile,taskTran
 import {taskPage,changeTaskPage} from './task-messages.mjs';
 import {notifyProjectTasks,notifyAssignment} from './task-notifications.mjs';
 import {suppliersPage,supplierPage,saveSupplier} from './studio-suppliers.mjs';
+import {productCostsPage,productFiguresPage,changeProductCosts} from './studio-product-costs.mjs';
 import {loadPlanner} from './studio-planner-context.mjs';
 import {courseEditorRecord} from './studio-courses.mjs';
 import {editorForm,referenceData} from './studio-editor.mjs';
@@ -96,6 +97,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
   const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
   try{
     authorizeStudioRequest(actor,section,req.method,f,params);
+    if(actor.role!=='admin'&&(section==='product-figures'||section==='product'&&params.get('tab')==='costs'))throw new HttpError(403,'An administrator can manage supplier costs.');
     if(Buffer.byteLength(JSON.stringify(f))>((section==='task'&&f.action==='task-file-upload'||section==='messages'&&f.action==='message-file-upload')?2900000:1200000))throw new HttpError(413,'Import a smaller section of this document.');
     if(section==='messages')return await handleTeamMessages(req,res,{params,actor,api,env,fetcher,fileStore:taskFileStore});
     if(req.method==='POST'&&f.action==='idea-generate-summary'){
@@ -242,6 +244,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       }
       if(f.action==='recipe-photo-review'){await saveRecipePhotoReview(params,f,data,api);res.statusCode=303;res.setHeader('Location',url('library',{kind:'recipe',bucket:'staging',...Object.fromEntries([...params].filter(([k])=>['q','book','photo','match','page'].includes(k)))}).replaceAll('&amp;','&'));return res.end();}
       if(f.action==='supplier-save'){const next=await saveSupplier(f,data,api);res.statusCode=303;res.setHeader('Location',url('supplier',{id:next}).replaceAll('&amp;','&'));return res.end();}
+      if(['product-quote-save','product-quote-archive','product-cost-scenario'].includes(f.action)){const next=await changeProductCosts(f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();}
       if(f.action?.startsWith('product-')){
         const next=await changeProducts(params,f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();
       }
@@ -346,6 +349,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       case 'suppliers':body=suppliersPage(params,data);break;
       case 'supplier':body=supplierPage(params,data);break;
       case 'products':body=productsPage(params,data);break;
+      case 'product-figures':body=productFiguresPage(params,data);break;
       case 'product':body=productPage(params,data);break;
       case 'product-creatives':body=creativesPage(params,data);break;
       case 'product-asset':body=productAssetPage(params,data);break;
@@ -403,7 +407,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }
     if(section==='project')body=button('Team conversation',url('messages',{new:'1',project:params.get('project')}))+body;
     if(params.get('notification')==='pending')body='<p role="status">Your changes were saved, but an email needs attention. '+(actor.role==='admin'?button('Check email activity',url('connections')):'Please ask your administrator to check Connections.')+'</p>'+body;
-    if(['suppliers','supplier','products','product','product-creatives','product-asset'].includes(section))body='<div class="product-space">'+body+'</div>';
+    if(['suppliers','supplier','products','product','product-figures','product-creatives','product-asset'].includes(section))body='<div class="product-space">'+body+'</div>';
     return write(res,200,body,section,actor,meta);
   }catch(error){
     if(req.method==='POST'&&(section==='product-upload'||f.action==='product-file-save')){
@@ -436,7 +440,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }else if(req.method==='POST'&&f.action==='supplier-save'&&data?.actor.role==='admin'){
       try{body+=supplierPage(params,data,f);}catch{body+=button('Back to suppliers',url('suppliers'));}
     }else if(req.method==='POST'&&f.action?.startsWith('product-')&&data){
-      try{body+=productErrorForm(params,f,data);}catch{body+=button('Back to products',url('products'));}
+      try{body+=['product-quote-save','product-quote-archive','product-cost-scenario'].includes(f.action)?productCostsPage(params,data,readable(data,f.productId),f):productErrorForm(params,f,data);}catch{body+=button('Back to products',url('products'));}
     }else if(req.method==='POST'&&f.action?.startsWith('idea-')&&data?.actor.role==='admin'){
       body+=shinyThingsPage(params,data,f,env);
     }else if(req.method==='POST'&&f.action==='workout-days-save'&&data){
@@ -467,7 +471,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       const retainedParams=new URLSearchParams(f.action==='role-task-save'?{roleTask:'studio:role-task:'+f.id}:f.action==='people-task-edit'?{editTask:f.id}:{newTask:'1'});
       body+=peopleTaskModal(data,retainedParams,f);
     }else body+=button('Return to the studio',url());
-    if(['suppliers','supplier','products','product','product-creatives','product-asset'].includes(section))body='<div class="product-space">'+body+'</div>';
+    if(['suppliers','supplier','products','product','product-figures','product-creatives','product-asset'].includes(section))body='<div class="product-space">'+body+'</div>';
     return write(res,error instanceof HttpError?error.status:503,body,section,actor,meta);
   }
 }

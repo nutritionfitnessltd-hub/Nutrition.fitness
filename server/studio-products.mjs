@@ -1,6 +1,7 @@
 import {randomUUID,createHash} from 'node:crypto';
 import {unifiedProductPage} from './studio-product-page.mjs';
 import {workerImagePath} from './worker-images.mjs';
+import {productCostsPage} from './studio-product-costs.mjs';
 import {HttpError,uuid} from './platform.mjs';
 import {cleanText} from './studio-model.mjs';
 import {readable,editable,saveRecord,projectFor} from './studio-store.mjs';
@@ -80,6 +81,7 @@ export function productPage(params,data,values){
  if(params.get('id')==='new'){if(data.actor.role!=='admin')throw new HttpError(403,'An administrator can add products.');return productForm(params,data,values);}
  const r=readable(data,params.get('id'));if(r.kind!=='product')throw new HttpError(404,'Product unavailable.');
  if(params.get('tab')==='edit'||values)return productForm(params,data,values);
+ if(params.get('tab')==='costs')return productCostsPage(params,data,r);
  const tab=params.get('tab')||'overview';
  if(!['overview','assets','creatives','work'].includes(tab))throw new HttpError(404,'Product tab unavailable.');
  return unifiedProductPage(r,data,{linked,productPhoto,productAssetPreview,productAssetImage,productWork,productUploader});
