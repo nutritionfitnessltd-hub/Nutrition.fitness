@@ -60,6 +60,18 @@ test('one login protects all entry points and admin-created team users share it'
     assert.equal(login.status,303);const adminCookie=cookieOf(login);
     assert.match(login.headers.get('location'),/studio=home/);
     const landing=await request('',null,adminCookie);assert.equal(landing.status,303);assert.match(landing.headers.get('location'),/studio=home/);
+    for(const path of ['?view=library','?view=library&utm_source=team']){
+      const entry=await request(path,null,adminCookie);assert.equal(entry.status,303);assert.match(entry.headers.get('location'),/studio=home/);
+      const signedIn=await request(path,{action:'sign-in',email:'admin@example.test',password:'fixture-admin-password'});
+      assert.equal(signedIn.status,303);assert.match(signedIn.headers.get('location'),/studio=home/);
+    }
+    for(const path of ['?view=library&item=training%3Asample','?view=library&shelf=Training']){
+      const entry=await request(path,null,adminCookie);assert.equal(entry.status,303);assert.match(entry.headers.get('location'),/studio=archive/);
+      const signedIn=await request(path,{action:'sign-in',email:'admin@example.test',password:'fixture-admin-password'});
+      assert.equal(signedIn.status,303);assert.match(signedIn.headers.get('location'),/studio=archive/);
+    }
+    const explicitHome=await request('?view=library&studio=home',null,adminCookie);
+    assert.match(explicitHome.headers.get('location'),/studio=home/);
     for(const path of ['?work=1','?work=1&studio=home']){
       const dashboard=await request(path,null,adminCookie);assert.equal(dashboard.status,200);assert.match(await dashboard.text(),/<h1>Your team space/);
     }
