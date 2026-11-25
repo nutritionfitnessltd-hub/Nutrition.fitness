@@ -1,3 +1,4 @@
+import {workspaceRows} from './workspace-data.mjs';
 import {teamEmailEditor,teamIdentityPanel} from './team-contact.mjs';
 import {roleTasksPanel} from './people-tasks.mjs';
 import {isIdea,ideaTeams,canSeeIdea} from './idea-visibility.mjs';
@@ -18,7 +19,7 @@ export async function teamWorkSnapshot(api){
   const results=await Promise.allSettled([
     allRows(api,'/rest/v1/nufi_library_projects?select=*&order=created_at.desc,id'),
     allRows(api,'/rest/v1/nufi_library_tasks?select=*&order=created_at.desc,id'),
-    allRows(api,'/rest/v1/nufi_studio_items?select=id,payload,revision,updated_at&order=id&id=not.like.studio:notification:*')
+    workspaceRows(api,'/rest/v1/nufi_studio_items?select=id,payload,revision,updated_at&order=id&id=not.like.studio:notification:*&and=(id.not.like.studio:task-thread:*,id.not.like.studio:account-preview:*)',allRows)
   ]);
   const [projects,tasks,rows]=results.map(r=>r.status==='fulfilled'?r.value:[]);
   const items=rows.filter(r=>r.payload).map(r=>({...r.payload,id:r.id,revision:r.revision,updatedAt:r.updated_at}));

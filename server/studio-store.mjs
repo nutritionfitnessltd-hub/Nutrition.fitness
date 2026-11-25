@@ -1,3 +1,4 @@
+import {workspaceRows} from './workspace-data.mjs';
 import {applyProgrammeResets} from './studio-programme-reset.mjs';
 import {isIdea,ideaTeams,canSeeIdea} from './idea-visibility.mjs';
 import {ownsTask} from './studio-project-tasks.mjs';
@@ -20,15 +21,21 @@ export function mergeStudioRecord(base,payload){
   return record;
 }
 export async function allRows(api,url){
-  const rows=[];
-  for(let offset=0;;offset+=500){
-    const batch=await api(url+'&limit=500&offset='+offset,service);
-    rows.push(...batch);if(batch.length<500)return rows;
+  const first=await api(url+'&limit=500&offset=0',{...service,headers:{Prefer:'count=exact'}});
+  if(Number.isInteger(first.totalRows)){
+    const rows=[...first],offsets=[];for(let n=500;n<first.totalRows;n+=500)offsets.push(n);
+    for(let i=0;i<offsets.length;i+=4){
+      const pages=await Promise.all(offsets.slice(i,i+4).map(offset=>api(url+'&limit=500&offset='+offset,service)));
+      for(const page of pages)rows.push(...page);
+    }
+    return rows;
   }
+  const rows=[...first];if(first.length<500)return rows;
+  for(let offset=500;;offset+=500){const batch=await api(url+'&limit=500&offset='+offset,service);rows.push(...batch);if(batch.length<500)return rows;}
 }
 export async function studioData(api,actor,load){
   let [index,overlays,projects,tasks,people,releases]=await Promise.all([
-    load(),allRows(api,itemTable+'?select=id,payload,revision,updated_at&order=id&id=not.like.studio:notification:*&and=(id.not.like.studio:task-thread:*,id.not.like.studio:account-preview:*)'),
+    load(),workspaceRows(api,itemTable+'?select=id,payload,revision,updated_at&order=id&id=not.like.studio:notification:*&and=(id.not.like.studio:task-thread:*,id.not.like.studio:account-preview:*)',allRows),
     allRows(api,projectTable+'?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&or=(creator_id.eq.'+actor.id+',entries.cs.'+encodeURIComponent(JSON.stringify([{assignee:actor.id}]))+')')),
     allRows(api,'/rest/v1/nufi_library_tasks?select=*&order=created_at.desc,id'+(actor.role==='admin'?'':'&staff_id=eq.'+actor.id)),
     api('/rest/v1/nufi_library_staff?select=id,name'+(actor.role==='admin'?',email':'')+'&order=name',service),
