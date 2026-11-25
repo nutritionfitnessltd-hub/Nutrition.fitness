@@ -91,7 +91,7 @@ function exportPackage(params,data,res){
   res.setHeader('Content-Disposition','attachment; filename="nutrition-fitness-'+(approved?'release':'review')+'.json"');
   res.statusCode=200;res.end(JSON.stringify(payload,null,2));
 }
-export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fetch,imageStore,taskFileStore}){
+export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fetch,imageStore,taskFileStore,readImageFile}){
   const section=params.get('studio')||'home';
   const live=params.get('live')==='1';params.delete('live');
   let data,meta;
@@ -111,12 +111,20 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     // Image grids must not rebuild the full workspace for every picture.
     // Broad read/review grants can be checked against one saved record;
     // assigned-only readers continue through the existing assignment loader.
-    if(req.method==='GET'&&['product-image','article-image'].includes(section)){
+    if(req.method==='GET'&&['product-image','article-image','book-file','mealplan-image'].includes(section)){
       const id=params.get('id')||'';
       if(!id||id.length>240)throw new HttpError(404,'Product image unavailable.');
       const rows=await api('/rest/v1/nufi_studio_items?id=eq.'+encodeURIComponent(id)+'&select=id,payload,revision&limit=1',{service:true});
       const row=rows[0],r=row&&{...row.payload,id:row.id,revision:row.revision};
       const scoped={actor,assigned:new Set(),byId:new Map(r?[[r.id,r]]:[])};
+      if(actor.role==='admin'||r&&canReadContent(scoped,r)){
+        if(section==='book-file')return await sendBookFile(req,res,params,scoped,readImageFile);
+        if(section==='mealplan-image')return await sendMealPhoto(req,res,params,scoped,readImageFile);
+        if(section==='article-image'){
+          if(r?.workerImage&&!r.articleImage)return await sendWorkerImage(res,r,env,fetcher);
+          return await sendArticleImage(req,res,params,scoped,readImageFile);
+        }
+      }
       if(isProductAsset(r)&&r.workerImage&&canReadContent(scoped,r))return await sendWorkerImage(res,r,env,fetcher);
       if(section==='product-image'&&(!isProductAsset(r)||!r.workerImage))throw new HttpError(404,'Product image unavailable.');
     }
@@ -245,7 +253,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       }
       if(f.action==='recipe-photo-review'){await saveRecipePhotoReview(params,f,data,api);res.statusCode=303;res.setHeader('Location',url('library',{kind:'recipe',bucket:'staging',...Object.fromEntries([...params].filter(([k])=>['q','book','photo','match','page'].includes(k)))}).replaceAll('&amp;','&'));return res.end();}
       if(f.action==='supplier-save'){const next=await saveSupplier(f,data,api);res.statusCode=303;res.setHeader('Location',url('supplier',{id:next}).replaceAll('&amp;','&'));return res.end();}
-      if(['product-quote-save','product-quote-archive','product-cost-scenario'].includes(f.action)){const next=await changeProductCosts(f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();}
+      if(['product-cost-basic','product-quote-save','product-quote-archive','product-cost-scenario'].includes(f.action)){const next=await changeProductCosts(f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();}
       if(f.action?.startsWith('product-')){
         const next=await changeProducts(params,f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();
       }
@@ -445,7 +453,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }else if(req.method==='POST'&&f.action==='supplier-save'&&data?.actor.role==='admin'){
       try{body+=supplierPage(params,data,f);}catch{body+=button('Back to suppliers',url('suppliers'));}
     }else if(req.method==='POST'&&f.action?.startsWith('product-')&&data){
-      try{body+=['product-quote-save','product-quote-archive','product-cost-scenario'].includes(f.action)?(f.returnTo==='product-figures'?productFiguresPage(params,data,f):productCostsPage(params,data,readable(data,f.productId),f)):productErrorForm(params,f,data);}catch{body+=button('Back to products',url('products'));}
+      try{body+=['product-cost-basic','product-quote-save','product-quote-archive','product-cost-scenario'].includes(f.action)?(f.returnTo==='product-figures'?productFiguresPage(params,data,f):productCostsPage(params,data,readable(data,f.productId),f)):productErrorForm(params,f,data);}catch{body+=button('Back to products',url('products'));}
     }else if(req.method==='POST'&&f.action?.startsWith('idea-')&&data?.actor.role==='admin'){
       body+=shinyThingsPage(params,data,f,env);
     }else if(req.method==='POST'&&f.action==='workout-days-save'&&data){

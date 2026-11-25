@@ -1,7 +1,7 @@
 export const extraUnitCosts=['packaging','label','scoop','seal','outerPackaging','blending','filling','labour','other'];
 const number=v=>v!==null&&v!==''&&v!==undefined&&Number.isFinite(Number(v))?Number(v):null;
 export function calculateProductCosts(quote,scenario){
- if(!quote)return {complete:false,reason:'Select a buying option.'};
+ if(!quote)return {complete:false,reason:'Enter a supplier cost to calculate your figures.'};
  const quantity=number(scenario.quantity),price=number(scenario.sellingPrice),vat=number(scenario.vatRate),materialPrice=number(quote.materialPrice),materialPerUnit=quote.mode==='ready'?1:number(quote.materialPerUnit);
  if(!Number.isSafeInteger(quantity)||quantity<=0)return {complete:false,reason:'Enter a whole-number order quantity.'};
  if(price===null||price<=0||vat===null||vat<0||vat>100)return {complete:false,reason:'Enter a selling price and VAT rate (enter 0 if applicable).'};
@@ -18,3 +18,6 @@ export function calculateProductCosts(quote,scenario){
  const grossProfit=netSellingPrice-repeatUnitCost,contribution=grossProfit-sellingFees;
  return {complete:true,quantity,purchaseQuantity,materialUsed,unusedMaterial:Math.max(0,purchaseQuantity-materialUsed),materialOrderCost,extraPerUnit,repeatUnitCost,setup,initialCash,firstOrderCostPerUnit:initialCash/quantity,netSellingPrice,sellingFees,grossProfit,grossMargin:grossProfit/netSellingPrice*100,contribution,contributionMargin:contribution/netSellingPrice*100,orderContribution:contribution*quantity,contributionAfterSetup:contribution*quantity-setup};
 }
+
+export function sellingPackBasis(size){const m=/^\s*(\d+(?:\.\d+)?)\s*(kg|g|ml|litres?|l|capsules?|caps|softgels?|tablets?|units?|items?)\s*$/i.exec(size||'');if(!m||Number(m[1])<=0)return null;const u=m[2].toLowerCase();return {unit:['kg','g'].includes(u)?'kg':/^(ml|l|litre)/.test(u)?'litre':'unit',amount:Number(m[1])/(['g','ml'].includes(u)?1000:1)};}
+export function basicCostEstimate(fields,quotes=[]){const old=quotes.find(q=>q.id===fields.quoteId)||{},bulk=fields.mode==='self'?(number(fields.supplierPackAmount)??1):1,price=number(fields.materialPrice),basis=sellingPackBasis(fields.packSize);return {...old,mode:fields.mode,unit:fields.mode==='ready'?'unit':fields.unit,materialPrice:bulk>0&&price!==null?price/bulk:null,materialPerUnit:fields.mode==='ready'?1:basis?.unit===fields.unit?basis.amount:fields.materialPerUnit,packaging:fields.packaging,delivery:fields.delivery,...(old.mode&&old.mode!==fields.mode?{minimumOrder:0,purchaseStep:1,wastePercent:0}:{}),...(fields.mode==='self'&&fields.supplierPackAmount!==undefined?{purchaseStep:bulk,minimumOrder:bulk}:{})};}

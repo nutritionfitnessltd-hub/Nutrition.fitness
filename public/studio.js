@@ -1,3 +1,4 @@
+import './studio-team-work-filters.mjs';
 import './recipe-bulk-review.js';
 import './studio-navigation.js';
 import './studio-video-modal.js';

@@ -25,7 +25,7 @@ export function applyCollectionPlacement(record,f,data){
  for(const key of ['collectionId','themeId']){const id=f[key]||'';if(id){const parent=find(data,id);if(!visible(data,parent)||!collectionKinds.has(parent.kind)||key==='themeId'&&parent.kind!=='theme'||parent.id===record.id)throw new HttpError(400,'Choose an available collection or theme.');const queue=[parent],seen=new Set();while(queue.length){const next=queue.pop();if(next.id===record.id)throw new HttpError(400,'Collections cannot contain themselves.');if(seen.has(next.id))continue;seen.add(next.id);queue.push(...collectionParents(next,data).map(id=>find(data,id)).filter(Boolean));}}record[key]=id;}
  return record;
 }
-const entryLink=r=>url(collectionKinds.has(r.kind)?'collection':'item',{id:r.id});
+const entryLink=r=>url(collectionKinds.has(r.kind)&&r.kind!=='ebook'?'collection':'item',{id:r.id});
 function contentCards(rows){return rows.length?'<div class="studio-content-grid">'+rows.map(r=>'<a class="studio-content-card" href="'+entryLink(r)+'"><div><small>'+esc(labels[r.kind]||r.kind)+'</small><h2>'+esc(r.title)+'</h2>'+badge(r.status)+'</div></a>').join('')+'</div>':'<p class="studio-empty">Nothing filed here yet.</p>';}
 export function supportingLibrary(params,data,kind){
  const rows=data.items.filter(r=>r.kind===kind&&visible(data,r)&&!(kind==='communication'&&isNewsletterContent(r)));

@@ -1,11 +1,19 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {calculateProductCosts,extraUnitCosts} from '../public/product-cost-math.mjs';
+import {calculateProductCosts,basicCostEstimate,extraUnitCosts,sellingPackBasis} from '../public/product-cost-math.mjs';
 import {changeProductCosts,productCostsPage,productFiguresPage,supplierCostLinks} from '../server/studio-product-costs.mjs';
 import {studioData} from '../server/studio-store.mjs';
 import {handleStudio} from '../server/studio.mjs';
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-8,`${a} != ${b}`);
+
+test('a 20kg supplier bag is priced as a bag, while 500g selling packs use 0.5kg each',()=>{
+ const fields={mode:'self',unit:'kg',supplierPackAmount:'20',materialPrice:'100',packSize:'500g',materialPerUnit:'1',packaging:'1',delivery:'0'};
+ const quote=basicCostEstimate(fields),v=calculateProductCosts(quote,{quantity:40,sellingPrice:10,vatRate:0});
+ close(quote.materialPrice,5);close(quote.materialPerUnit,.5);close(v.purchaseQuantity,20);close(v.repeatUnitCost,3.5);close(v.initialCash,140);
+ const halfBag=calculateProductCosts(quote,{quantity:20,sellingPrice:10,vatRate:0});close(halfBag.purchaseQuantity,20);close(halfBag.unusedMaterial,10);close(halfBag.initialCash,120);
+ assert.deepEqual(sellingPackBasis('90 capsules'),{unit:'unit',amount:90});assert.deepEqual(sellingPackBasis('50ml'),{unit:'litre',amount:.05});
+});
 test('self-packing reconciles material waste, supplier MOQ, delivery, setup, VAT and fees',()=>{
  const q={mode:'self',materialPrice:8,materialPerUnit:.5,wastePercent:20,minimumOrder:250,purchaseStep:25,packaging:1,label:.25,labour:.5,delivery:50,setup:100};
  const v=calculateProductCosts(q,{quantity:100,sellingPrice:24,vatRate:20,feePercent:2,feeFixed:.3});
@@ -68,7 +76,7 @@ test('figures screen edits save partial scenarios, preserve quotes and reject st
  const {JSDOM}=await import('jsdom');const doc=new JSDOM(productFiguresPage(new URLSearchParams(),d)).window.document;
  const form=doc.querySelector('[data-figure-form]');assert.equal(form.elements.sellingPrice.value,'31');assert.equal(form.elements.quoteId.value,f.quote.quoteId);assert.equal(form.elements.quantity.value,'');assert.equal(doc.querySelectorAll('[data-product-quote-form]').length,2);
  for(const q of doc.querySelectorAll('[data-product-quote-form]'))assert.equal(q.elements.returnTo.value,'product-figures');
- assert.equal(doc.querySelectorAll('thead th').length,7);assert.equal(doc.querySelector('[data-figure-row]').children.length,7);assert.equal(doc.querySelector('[data-figure-row] input'),null);assert.equal(doc.querySelector('[data-figure-row] form'),null);assert.equal(doc.querySelectorAll('dialog').length,1);
+ assert.equal(doc.querySelectorAll('thead th').length,8);assert.equal(doc.querySelector('[data-figure-row]').children.length,8);assert.equal(doc.querySelector('[data-figure-row] input'),null);assert.equal(doc.querySelector('[data-figure-row] form'),null);assert.equal(doc.querySelectorAll('dialog').length,1);
  const invalid={...values,revision:'2',quantity:'-1'};await assert.rejects(changeProductCosts(invalid,d,f.api),e=>e.status===400);
  const error=productFiguresPage(new URLSearchParams(),d,{...values,sellingPrice:'33'});assert.match(error,/value="33"/);
 });
@@ -76,11 +84,70 @@ test('figures screen edits save partial scenarios, preserve quotes and reject st
 test('editable figures preview calculations and save a row without leaving the screen',async()=>{
  const {JSDOM}=await import('jsdom'),{readFile}=await import('node:fs/promises');const f=fixture();await changeProductCosts(f.quote,await f.data(),f.api);
  const dom=new JSDOM(productFiguresPage(new URLSearchParams(),await f.data()),{url:'https://team.nutrition.fitness/content-library/',runScripts:'outside-only'}),w=dom.window;
- w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.calculateProductCosts=calculateProductCosts;
+ w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.calculateProductCosts=calculateProductCosts;w.basicCostEstimate=basicCostEstimate;w.sellingPackBasis=sellingPackBasis;w.eval((await readFile(new URL('../public/product-cost-form.mjs',import.meta.url),'utf8')).replace(/^import .*$/gm,'').replace('export function','function'));
  w.fetch=async(url,options)=>{assert.equal(typeof url,'string');assert.ok(url.startsWith('/content-library/?'));await changeProductCosts(Object.fromEntries(options.body),await f.data(),f.api);return {ok:true,text:async()=>productFiguresPage(new URLSearchParams(),await f.data())};};
- w.eval((await readFile(new URL('../public/product-figures.js',import.meta.url),'utf8')).replace("import {calculateProductCosts} from './product-cost-math.mjs';",''));
+ w.eval((await readFile(new URL('../public/product-figures.js',import.meta.url),'utf8')).replace(/^import .*$/gm,''));
  const form=w.document.querySelector('[data-figure-form]');for(const [k,v] of Object.entries({quoteId:f.quote.quoteId,quantity:'100',sellingPrice:'30',vatRate:'20',feePercent:'0',feeFixed:'0'})){form.elements[k].value=v;form.elements[k].dispatchEvent(new w.Event('input',{bubbles:true}));}
  assert.equal(w.document.querySelector('[data-preview="initialCash"]').textContent,'£1,070.00');assert.equal(w.document.querySelector('[data-row-save-status]').textContent,'Unsaved changes');
  form.dispatchEvent(new w.Event('submit',{cancelable:true,bubbles:true}));for(let i=0;i<30&&w.document.querySelector('[data-row-save-status]').textContent==='Saving…';i++)await new Promise(r=>setTimeout(r,10));
  assert.equal(w.document.querySelector('[data-row-save-status]').textContent,'Saved');assert.equal(w.document.querySelector('[data-figure-form]').elements.revision.value,'2');assert.equal(w.document.querySelector('dialog').open,false);assert.equal(w.document.querySelector('[data-product-quote-form]').elements.revision.value,'2');dom.window.close();
+});
+
+test('an empty product can be costed immediately, switch packing methods, save and reopen',async()=>{
+ const {JSDOM}=await import('jsdom'),{readFile}=await import('node:fs/promises'),f=fixture();f.p.fields.packSize='250g';
+ const dom=new JSDOM(productFiguresPage(new URLSearchParams(),await f.data()),{url:'https://team.nutrition.fitness/content-library/',runScripts:'outside-only'}),w=dom.window;
+ w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.confirm=()=>true;
+ w.calculateProductCosts=calculateProductCosts;w.basicCostEstimate=basicCostEstimate;w.sellingPackBasis=sellingPackBasis;
+ w.fetch=async(url,options)=>{await changeProductCosts(Object.fromEntries(options.body),await f.data(),f.api);return {ok:true,text:async()=>productFiguresPage(new URLSearchParams(),await f.data())};};
+ w.eval((await readFile(new URL('../public/product-cost-form.mjs',import.meta.url),'utf8')).replace(/^import .*$/gm,'').replace('export function','function'));
+ w.eval((await readFile(new URL('../public/product-figures.js',import.meta.url),'utf8')).replace(/^import .*$/gm,''));
+ w.document.querySelector('[data-edit-figures]').click();let form=w.document.querySelector('[data-figure-form]');
+ assert.equal(form.elements.packSize.value,'250g');assert.equal(form.elements.mode.options.length,2);assert.equal(form.elements.selectedQuoteId,undefined);assert.equal(form.elements.mode.disabled,false);
+ for(const [k,v] of Object.entries({supplierName:'New supplier',materialPrice:'8',quantity:'100',sellingPrice:'24',vatRate:'20',packaging:'1',delivery:'20'})){form.elements[k].value=v;form.elements[k].dispatchEvent(new w.Event('input',{bubbles:true}));}
+ assert.equal(w.document.querySelector('[data-preview="repeatUnitCost"]').textContent,'£9.20');
+ form.elements.mode.value='self';form.elements.mode.dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(form.elements.unit.value,'kg');assert.equal(form.elements.materialPerUnit.value,'0.25');assert.equal(form.querySelector('[data-bulk-fields]').hidden,false);assert.equal(w.document.querySelector('[data-preview="repeatUnitCost"]').textContent,'£3.20');
+ form.dispatchEvent(new w.Event('submit',{cancelable:true,bubbles:true}));for(let i=0;i<50&&w.document.querySelector('[data-row-save-status]').textContent==='Saving…';i++)await new Promise(r=>setTimeout(r,10));
+ assert.equal(w.document.querySelector('[data-row-save-status]').textContent,'Saved');assert.match(w.document.querySelector('[data-figure-row]').textContent,/250g.*New supplier.*£3.20/);
+ let record=(await f.data()).items.find(r=>r.kind==='product-costing');assert.equal(record.fields.quotes.length,1);assert.equal(record.fields.quotes[0].supplierName,'New supplier');assert.equal(record.fields.quotes[0].grade,'Estimate');
+ w.document.querySelector('[data-edit-figures]').click();form=w.document.querySelector('[data-figure-form]');form.elements.mode.value='ready';form.elements.mode.dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(form.elements.unit.value,'unit');assert.equal(form.elements.materialPerUnit.value,'1');assert.equal(w.document.querySelector('[data-preview="repeatUnitCost"]').textContent,'£9.20');
+ w.document.querySelector('[data-dialog-close]').click();w.document.querySelector('[data-edit-figures]').click();form=w.document.querySelector('[data-figure-form]');form.elements.mode.value='ready';form.elements.mode.dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(form.querySelector('[data-bulk-fields]').hidden,true);assert.equal(form.elements.unit.value,'unit');
+ await assert.rejects(changeProductCosts({action:'product-cost-basic',productId:f.p.id,revision:'0',quoteId:record.fields.quotes[0].id,mode:'ready'},await f.data(),f.api),e=>e.status===409);
+ dom.window.close();
+});
+
+
+test('selling variants preserve separate weights, prices and quotes through reload and amendments',async()=>{
+ const f=fixture(),variant=randomUUID(),base={action:'product-cost-basic',productId:f.p.id,revision:'0',quoteId:randomUUID(),variantName:'Main variant',variantSku:'WHEY-1KG',packSize:'1kg',packagingType:'Pouch',mode:'self',unit:'kg',supplierName:'Bulk supplier',supplierPackAmount:'20',materialPrice:'100',materialPerUnit:'99',quantity:'20',sellingPrice:'30',vatRate:'0',packaging:'1',delivery:'0'};
+ await changeProductCosts(base,await f.data(),f.api);
+ const small={...base,revision:'1',variantId:variant,quoteId:randomUUID(),variantName:'500g tub',variantSku:'WHEY-500-TUB',packSize:'500g',packagingType:'Tub',quantity:'40',sellingPrice:'18',packaging:'2'};
+ const next=await changeProductCosts(small,await f.data(),f.api);assert.equal(next.variant,variant);
+ let record=(await f.data()).items.find(r=>r.kind==='product-costing');
+ assert.equal(record.fields.scenario.packSize,'1kg');assert.equal(record.fields.scenario.sellingPrice,30);close(record.fields.quotes[0].materialPerUnit,1);
+ let v=record.fields.variantCosts[variant];assert.equal(v.scenario.packSize,'500g');assert.equal(v.scenario.sellingPrice,18);close(v.quotes[0].materialPerUnit,.5);close(v.quotes[0].materialPrice,5);close(v.quotes[0].supplierPackPrice,100);close(v.quotes[0].purchaseStep,20);
+ close(calculateProductCosts(v.quotes[0],v.scenario).repeatUnitCost,4.5);
+ const data=await f.data(),html=productCostsPage(new URLSearchParams({variant}),data,data.byId.get(f.p.id));assert.match(html,/value="500g"/);assert.match(html,/name="materialPrice"[^>]*value="100"/);assert.match(html,/Add selling variant/);
+ assert.equal((productFiguresPage(new URLSearchParams(),data).match(/data-figure-row /g)||[]).length,2);
+ await changeProductCosts({...small,revision:'2',packSize:'250g',sellingPrice:'12',variantName:'250g tub'},await f.data(),f.api);
+ record=(await f.data()).items.find(r=>r.kind==='product-costing');v=record.fields.variantCosts[variant];close(v.quotes[0].materialPerUnit,.25);assert.equal(v.scenario.sellingPrice,12);assert.equal(record.fields.scenario.sellingPrice,30);assert.equal(record.fields.scenario.packSize,'1kg');
+ await assert.rejects(changeProductCosts({...small,revision:'2'},await f.data(),f.api),e=>e.status===409);
+ await assert.rejects(changeProductCosts({...small,revision:'3',unit:'litre'},await f.data(),f.api),e=>e.status===400);
+ await assert.rejects(changeProductCosts({...small,revision:'3',supplierPackAmount:'0'},await f.data(),f.api),e=>e.status===400);
+});
+
+
+test('figure dialogs save the chosen variant and recalculate edited weights and bulk yields',async()=>{
+ const {JSDOM}=await import('jsdom'),{readFile}=await import('node:fs/promises'),f=fixture(),id=randomUUID();
+ const input={action:'product-cost-basic',productId:f.p.id,revision:'0',variantId:id,quoteId:randomUUID(),variantName:'Small tub',packSize:'500g',packagingType:'Tub',mode:'self',unit:'kg',supplierPackAmount:'20',materialPrice:'100',materialPerUnit:'.5',quantity:'40',sellingPrice:'18',vatRate:'0',packaging:'1',delivery:'0'};
+ await changeProductCosts(input,await f.data(),f.api);
+ const dom=new JSDOM(productFiguresPage(new URLSearchParams(),await f.data()),{url:'https://team.nutrition.fitness/content-library/',runScripts:'outside-only'}),w=dom.window;
+ w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.calculateProductCosts=calculateProductCosts;w.basicCostEstimate=basicCostEstimate;w.sellingPackBasis=sellingPackBasis;
+ w.fetch=async(url,options)=>{await changeProductCosts(Object.fromEntries(options.body),await f.data(),f.api);return {ok:true,text:async()=>productFiguresPage(new URLSearchParams(),await f.data())};};
+ w.eval((await readFile(new URL('../public/product-cost-form.mjs',import.meta.url),'utf8')).replace(/^import .*$/gm,'').replace('export function','function'));
+ w.eval((await readFile(new URL('../public/product-figures.js',import.meta.url),'utf8')).replace(/^import .*$/gm,''));
+ const dialog=[...w.document.querySelectorAll('dialog')].find(d=>d.querySelector('[data-figure-form]').elements.variantId.value===id),form=dialog.querySelector('[data-figure-form]');
+ w.document.querySelector('[data-edit-figures="'+dialog.id+'"]').click();form.elements.packSize.value='250g';form.elements.packSize.dispatchEvent(new w.Event('input',{bubbles:true}));
+ assert.equal(form.elements.materialPerUnit.value,'0.25');assert.match(form.querySelector('[data-bulk-yield]').textContent,/80 selling packs/);assert.equal(dialog.querySelector('[data-preview="repeatUnitCost"]').textContent,'£2.25');
+ form.elements.sellingPrice.value='12';form.dispatchEvent(new w.Event('submit',{cancelable:true,bubbles:true}));for(let i=0;i<50&&dialog.querySelector('[data-row-save-status]').textContent==='Saving…';i++)await new Promise(r=>setTimeout(r,10));
+ assert.equal(dialog.querySelector('[data-row-save-status]').textContent,'Saved');const row=w.document.querySelector('[data-editor="'+dialog.id+'"]');assert.match(row.textContent,/Small tub.*250g.*Tub.*£12.00.*£2.25/);
+ const record=(await f.data()).items.find(r=>r.kind==='product-costing');assert.equal(record.fields.scenario.sellingPrice,30);assert.equal(record.fields.variantCosts[id].scenario.sellingPrice,12);assert.equal(w.document.querySelector('[data-figure-form]').elements.revision.value,'2');dom.window.close();
 });
