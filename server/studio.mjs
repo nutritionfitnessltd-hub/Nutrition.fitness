@@ -244,7 +244,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       }
       if(f.action==='recipe-photo-review'){await saveRecipePhotoReview(params,f,data,api);res.statusCode=303;res.setHeader('Location',url('library',{kind:'recipe',bucket:'staging',...Object.fromEntries([...params].filter(([k])=>['q','book','photo','match','page'].includes(k)))}).replaceAll('&amp;','&'));return res.end();}
       if(f.action==='supplier-save'){const next=await saveSupplier(f,data,api);res.statusCode=303;res.setHeader('Location',url('supplier',{id:next}).replaceAll('&amp;','&'));return res.end();}
-      if(['product-quote-save','product-quote-archive','product-cost-scenario'].includes(f.action)){const next=await changeProductCosts(f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();}
+      if(['product-cost-basic','product-quote-save','product-quote-archive','product-cost-scenario'].includes(f.action)){const next=await changeProductCosts(f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();}
       if(f.action?.startsWith('product-')){
         const next=await changeProducts(params,f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();
       }
@@ -440,7 +440,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     }else if(req.method==='POST'&&f.action==='supplier-save'&&data?.actor.role==='admin'){
       try{body+=supplierPage(params,data,f);}catch{body+=button('Back to suppliers',url('suppliers'));}
     }else if(req.method==='POST'&&f.action?.startsWith('product-')&&data){
-      try{body+=['product-quote-save','product-quote-archive','product-cost-scenario'].includes(f.action)?(f.returnTo==='product-figures'?productFiguresPage(params,data,f):productCostsPage(params,data,readable(data,f.productId),f)):productErrorForm(params,f,data);}catch{body+=button('Back to products',url('products'));}
+      try{body+=['product-cost-basic','product-quote-save','product-quote-archive','product-cost-scenario'].includes(f.action)?(f.returnTo==='product-figures'?productFiguresPage(params,data,f):productCostsPage(params,data,readable(data,f.productId),f)):productErrorForm(params,f,data);}catch{body+=button('Back to products',url('products'));}
     }else if(req.method==='POST'&&f.action?.startsWith('idea-')&&data?.actor.role==='admin'){
       body+=shinyThingsPage(params,data,f,env);
     }else if(req.method==='POST'&&f.action==='workout-days-save'&&data){

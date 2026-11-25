@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
-import {calculateProductCosts,extraUnitCosts} from '../public/product-cost-math.mjs';
+import {calculateProductCosts,basicCostEstimate,extraUnitCosts} from '../public/product-cost-math.mjs';
 import {changeProductCosts,productCostsPage,productFiguresPage,supplierCostLinks} from '../server/studio-product-costs.mjs';
 import {studioData} from '../server/studio-store.mjs';
 import {handleStudio} from '../server/studio.mjs';
@@ -68,7 +68,7 @@ test('figures screen edits save partial scenarios, preserve quotes and reject st
  const {JSDOM}=await import('jsdom');const doc=new JSDOM(productFiguresPage(new URLSearchParams(),d)).window.document;
  const form=doc.querySelector('[data-figure-form]');assert.equal(form.elements.sellingPrice.value,'31');assert.equal(form.elements.quoteId.value,f.quote.quoteId);assert.equal(form.elements.quantity.value,'');assert.equal(doc.querySelectorAll('[data-product-quote-form]').length,2);
  for(const q of doc.querySelectorAll('[data-product-quote-form]'))assert.equal(q.elements.returnTo.value,'product-figures');
- assert.equal(doc.querySelectorAll('thead th').length,7);assert.equal(doc.querySelector('[data-figure-row]').children.length,7);assert.equal(doc.querySelector('[data-figure-row] input'),null);assert.equal(doc.querySelector('[data-figure-row] form'),null);assert.equal(doc.querySelectorAll('dialog').length,1);
+ assert.equal(doc.querySelectorAll('thead th').length,8);assert.equal(doc.querySelector('[data-figure-row]').children.length,8);assert.equal(doc.querySelector('[data-figure-row] input'),null);assert.equal(doc.querySelector('[data-figure-row] form'),null);assert.equal(doc.querySelectorAll('dialog').length,1);
  const invalid={...values,revision:'2',quantity:'-1'};await assert.rejects(changeProductCosts(invalid,d,f.api),e=>e.status===400);
  const error=productFiguresPage(new URLSearchParams(),d,{...values,sellingPrice:'33'});assert.match(error,/value="33"/);
 });
@@ -76,11 +76,33 @@ test('figures screen edits save partial scenarios, preserve quotes and reject st
 test('editable figures preview calculations and save a row without leaving the screen',async()=>{
  const {JSDOM}=await import('jsdom'),{readFile}=await import('node:fs/promises');const f=fixture();await changeProductCosts(f.quote,await f.data(),f.api);
  const dom=new JSDOM(productFiguresPage(new URLSearchParams(),await f.data()),{url:'https://team.nutrition.fitness/content-library/',runScripts:'outside-only'}),w=dom.window;
- w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.calculateProductCosts=calculateProductCosts;
+ w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.calculateProductCosts=calculateProductCosts;w.basicCostEstimate=basicCostEstimate;w.eval((await readFile(new URL('../public/product-cost-form.mjs',import.meta.url),'utf8')).replace('export function','function'));
  w.fetch=async(url,options)=>{assert.equal(typeof url,'string');assert.ok(url.startsWith('/content-library/?'));await changeProductCosts(Object.fromEntries(options.body),await f.data(),f.api);return {ok:true,text:async()=>productFiguresPage(new URLSearchParams(),await f.data())};};
- w.eval((await readFile(new URL('../public/product-figures.js',import.meta.url),'utf8')).replace("import {calculateProductCosts} from './product-cost-math.mjs';",''));
+ w.eval((await readFile(new URL('../public/product-figures.js',import.meta.url),'utf8')).replace(/^import .*$/gm,''));
  const form=w.document.querySelector('[data-figure-form]');for(const [k,v] of Object.entries({quoteId:f.quote.quoteId,quantity:'100',sellingPrice:'30',vatRate:'20',feePercent:'0',feeFixed:'0'})){form.elements[k].value=v;form.elements[k].dispatchEvent(new w.Event('input',{bubbles:true}));}
  assert.equal(w.document.querySelector('[data-preview="initialCash"]').textContent,'£1,070.00');assert.equal(w.document.querySelector('[data-row-save-status]').textContent,'Unsaved changes');
  form.dispatchEvent(new w.Event('submit',{cancelable:true,bubbles:true}));for(let i=0;i<30&&w.document.querySelector('[data-row-save-status]').textContent==='Saving…';i++)await new Promise(r=>setTimeout(r,10));
  assert.equal(w.document.querySelector('[data-row-save-status]').textContent,'Saved');assert.equal(w.document.querySelector('[data-figure-form]').elements.revision.value,'2');assert.equal(w.document.querySelector('dialog').open,false);assert.equal(w.document.querySelector('[data-product-quote-form]').elements.revision.value,'2');dom.window.close();
+});
+
+test('an empty product can be costed immediately, switch packing methods, save and reopen',async()=>{
+ const {JSDOM}=await import('jsdom'),{readFile}=await import('node:fs/promises'),f=fixture();f.p.fields.packSize='250g';
+ const dom=new JSDOM(productFiguresPage(new URLSearchParams(),await f.data()),{url:'https://team.nutrition.fitness/content-library/',runScripts:'outside-only'}),w=dom.window;
+ w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.confirm=()=>true;
+ w.calculateProductCosts=calculateProductCosts;w.basicCostEstimate=basicCostEstimate;
+ w.fetch=async(url,options)=>{await changeProductCosts(Object.fromEntries(options.body),await f.data(),f.api);return {ok:true,text:async()=>productFiguresPage(new URLSearchParams(),await f.data())};};
+ w.eval((await readFile(new URL('../public/product-cost-form.mjs',import.meta.url),'utf8')).replace('export function','function'));
+ w.eval((await readFile(new URL('../public/product-figures.js',import.meta.url),'utf8')).replace(/^import .*$/gm,''));
+ w.document.querySelector('[data-edit-figures]').click();let form=w.document.querySelector('[data-figure-form]');
+ assert.equal(form.elements.packSizeDisplay.value,'250g');assert.equal(form.elements.mode.options.length,2);assert.equal(form.elements.selectedQuoteId,undefined);assert.equal(form.elements.mode.disabled,false);
+ for(const [k,v] of Object.entries({supplierName:'New supplier',materialPrice:'8',quantity:'100',sellingPrice:'24',vatRate:'20',packaging:'1',delivery:'20'})){form.elements[k].value=v;form.elements[k].dispatchEvent(new w.Event('input',{bubbles:true}));}
+ assert.equal(w.document.querySelector('[data-preview="repeatUnitCost"]').textContent,'£9.20');
+ form.elements.mode.value='self';form.elements.mode.dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(form.elements.unit.value,'kg');assert.equal(form.elements.materialPerUnit.value,'0.25');assert.equal(form.querySelector('[data-bulk-fields]').hidden,false);assert.equal(w.document.querySelector('[data-preview="repeatUnitCost"]').textContent,'£3.20');
+ form.dispatchEvent(new w.Event('submit',{cancelable:true,bubbles:true}));for(let i=0;i<50&&w.document.querySelector('[data-row-save-status]').textContent==='Saving…';i++)await new Promise(r=>setTimeout(r,10));
+ assert.equal(w.document.querySelector('[data-row-save-status]').textContent,'Saved');assert.match(w.document.querySelector('[data-figure-row]').textContent,/250g.*New supplier.*£3.20/);
+ let record=(await f.data()).items.find(r=>r.kind==='product-costing');assert.equal(record.fields.quotes.length,1);assert.equal(record.fields.quotes[0].supplierName,'New supplier');assert.equal(record.fields.quotes[0].grade,'Estimate');
+ w.document.querySelector('[data-edit-figures]').click();form=w.document.querySelector('[data-figure-form]');form.elements.mode.value='ready';form.elements.mode.dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(form.elements.unit.value,'unit');assert.equal(form.elements.materialPerUnit.value,'1');assert.equal(w.document.querySelector('[data-preview="repeatUnitCost"]').textContent,'£9.20');
+ w.document.querySelector('[data-dialog-close]').click();w.document.querySelector('[data-edit-figures]').click();form=w.document.querySelector('[data-figure-form]');form.elements.mode.value='ready';form.elements.mode.dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(form.querySelector('[data-bulk-fields]').hidden,true);assert.equal(form.elements.unit.value,'unit');
+ await assert.rejects(changeProductCosts({action:'product-cost-basic',productId:f.p.id,revision:'0',quoteId:record.fields.quotes[0].id,mode:'ready'},await f.data(),f.api),e=>e.status===409);
+ dom.window.close();
 });

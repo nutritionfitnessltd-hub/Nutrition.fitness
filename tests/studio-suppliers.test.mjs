@@ -39,10 +39,12 @@ test('staff can read the directory but cannot edit; restricted accounts cannot e
  await handleStudio({method:'GET'},res,{params:params(id),actor:blocked,api:f.api,load:f.load,env:{}});assert.equal(res.statusCode,403);
 });
 test('unsafe data is rejected, escaped or retained for correction without overwriting contacts',async()=>{
- const f=fixture();for(const extra of [{website:'javascript:alert(1)'},{email:'bad\r\nBcc:secret@example.com'},{stage:'Unknown'},{title:''},{services:''}])await assert.rejects(saveSupplier({...f.form,...extra},await f.data(),f.api),e=>e.status===400);
+ const f=fixture();for(const extra of [{website:'javascript:alert(1)'},{email:'bad\r\nBcc:secret@example.com'},{stage:'Unknown'},{title:''}])await assert.rejects(saveSupplier({...f.form,...extra},await f.data(),f.api),e=>e.status===400);
  const id=await saveSupplier({...f.form,title:'<script>unsafe</script>',services:'<img onerror=alert(1)>'},await f.data(),f.api);
  assert.doesNotMatch(supplierPage(params(id),await f.data()),/<script>unsafe|<img onerror/);
  const res={statusCode:200,setHeader(){},end(body){this.body=body;}};
  await handleStudio({method:'POST',body:{...f.form,id,revision:'1',action:'supplier-save',website:'http://unsafe.example'}},res,{params:params(id,{tab:'edit'}),actor:admin,api:f.api,load:f.load,env:{}});
  assert.equal(res.statusCode,400);assert.match(res.body,/http:\/\/unsafe.example/);assert.equal(f.rows.get(id).revision,1);
 });
+
+test('supplier basics need only a name and preserve saved optional details',async()=>{const f=fixture();const id=await saveSupplier({id:f.form.id,revision:'0',title:'Simple supplier'},await f.data(),f.api);assert.equal(f.rows.get(id).payload.fields.stage,'Active');assert.equal(f.rows.get(id).payload.fields.services,'');await saveSupplier({id,revision:'1',title:'Simple supplier',email:'hello@example.com'},await f.data(),f.api);await saveSupplier({id,revision:'2',title:'Simple supplier updated'},await f.data(),f.api);assert.equal(f.rows.get(id).payload.fields.email,'hello@example.com');});
