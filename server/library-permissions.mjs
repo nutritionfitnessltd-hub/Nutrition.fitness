@@ -74,6 +74,7 @@ const routes = {
 const actions = {
   'message-create':[], 'message-send':[], 'message-edit':[], 'message-delete':[], 'message-restore':[], 'message-members':[], 'message-preferences':[], 'message-read':[], 'message-file-save':[], 'message-file-upload':[],
   'recipe-photo-review':['library','edit'],
+  'recipe-bulk-review':['library','edit'],
   'collection-link':['library','edit'],
   'idea-save': ['library','edit'], 'idea-discussion': ['library','edit'],
   'course-structure-review': ['work','library'],
