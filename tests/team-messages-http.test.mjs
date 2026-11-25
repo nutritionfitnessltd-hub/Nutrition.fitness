@@ -30,6 +30,10 @@ test('real HTTP login, create, send, reload and poll use the existing session; c
   response=await request(entry,{action:'message-create',kind:'direct',members:JSON.stringify([f.staff.id])});assert.equal(response.status,303);const conversation=response.headers.get('location');
   response=await request(conversation,f.send('HTTP fixture message'));assert.equal(response.status,200);assert.equal((await response.json()).saved,true);
   response=await request(conversation);assert.equal(response.status,200);assert.match(await response.text(),/HTTP fixture message/);
+  response=await request(conversation+'&panel=1');assert.equal(response.status,200);assert.match(response.headers.get('content-security-policy'),/frame-ancestors 'self'/);const compact=await response.text();assert.match(compact,/data-messages-embedded/);assert.doesNotMatch(compact,/data-message-panel-toggle|class="shell"/);
+  response=await request(conversation+'&panel=1',f.send('Panel HTTP message'));assert.equal(response.status,200);assert.equal((await response.json()).saved,true);
+  response=await request(entry+'&panel=1',{action:'message-create',kind:'direct',members:JSON.stringify([f.staff.id])});assert.equal(response.status,303);assert.match(response.headers.get('location'),/panel=1/);
+  response=await request(conversation);assert.match(response.headers.get('content-security-policy'),/frame-ancestors 'none'/);
   response=await request(entry+'&poll=1');assert.equal(response.status,200);const poll=await response.json();assert.equal(poll.unread,0);assert.ok(poll.threads.length>=2);assert.doesNotMatch(JSON.stringify(poll),/HTTP fixture message/);
   const count=f.rows.size;response=await request(conversation,{action:'message-send',messageId:randomUUID(),body:'Denied cross-origin'},'https://other.example');assert.equal(response.status,403);assert.equal(f.rows.size,count);assert.ok(![...f.rows.values()].some(r=>r.payload.messages.some(m=>m.body==='Denied cross-origin')));
  }finally{server.close();await once(server,'close');}
