@@ -167,3 +167,16 @@ test('cloud and PC checkpoints render separately without granting approval or hi
  assert.match(html,/PC editor finishing/);assert.match(html,/Cloud worker/);assert.match(html,/Narration mapping/);assert.match(html,/Latest worker progress/);
  assert.doesNotMatch(html,/name="action" value="review-decision"/);
 });
+
+test('hide completed remembers its setting and survives live refresh',async()=>{
+ const {JSDOM}=await import('jsdom'),{readFile}=await import('node:fs/promises');const {p,data,meta,pilot}=fixture();p.studio.productionTracking.pilotIds=[];pilot.status='Approved';
+ const html=productionTrackerPanel(p,data,meta),dom=new JSDOM(html,{url:'https://team.nutrition.fitness/',runScripts:'outside-only'}),w=dom.window,doc=w.document;
+ w.eval(await readFile(new URL('../public/production-tracker-filter.js',import.meta.url),'utf8'));
+ const rows=()=>[...doc.querySelectorAll('[data-tracker-completed]')],toggle=()=>doc.querySelector('[data-hide-completed]');
+ assert.equal(rows().filter(r=>r.dataset.trackerCompleted==='true').length,1);assert.equal(rows().filter(r=>r.hidden).length,0);
+ toggle().checked=true;toggle().dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(rows().filter(r=>r.hidden).length,1);assert.equal(doc.querySelector('[data-tracker-visible]').textContent,'1 shown · 1 completed hidden');
+ assert.equal(w.localStorage.getItem('nufi:hide-completed:admin:p'),'1');
+ doc.querySelector('[data-tracker-project]').outerHTML=html;await new Promise(resolve=>setTimeout(resolve,0));assert.equal(toggle().checked,true);assert.equal(rows().filter(r=>r.hidden).length,1);
+ rows().find(r=>!r.hidden).dataset.trackerCompleted='true';toggle().dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(doc.querySelector('[data-tracker-group-empty]').hidden,false);
+ toggle().checked=false;toggle().dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(rows().filter(r=>r.hidden).length,0);assert.equal(doc.querySelector('[data-tracker-group-empty]').hidden,true);assert.equal(w.localStorage.getItem('nufi:hide-completed:admin:p'),'0');dom.window.close();
+});

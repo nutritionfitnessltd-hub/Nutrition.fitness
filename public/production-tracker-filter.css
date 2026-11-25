@@ -1,0 +1,5 @@
+.tracker-filters{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;margin:18px 0}
+.tracker-filters label{display:flex;align-items:center;gap:9px;font-weight:600;cursor:pointer}
+.tracker-filters input{width:18px;height:18px;margin:0;accent-color:#0b5262}
+.tracker-filters [data-tracker-visible]{font-size:13px;color:#526d7a}
+.production-tracker [data-tracker-completed][hidden],.production-tracker [data-tracker-group-empty][hidden]{display:none}
