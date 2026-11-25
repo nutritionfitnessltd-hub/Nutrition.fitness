@@ -32,7 +32,7 @@ if(panel&&toggle&&!new URL(location.href).searchParams.has('accountPreview')){
   const link=event.target.closest?.('a[href]');if(!link||panel.contains(link)||link===toggle||link.closest('.team-messages')||link.target==='_blank'||!isMessageUrl(link.href))return;
   event.preventDefault();const u=new URL(link.href);show(u.searchParams.has('conversation')||u.searchParams.has('new')?u.href:undefined);
  });
- addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==frame.contentWindow)return;if(event.data?.type==='team-message-panel-close'&&visible())hide();if(event.data?.type==='team-message-panel-focus'&&visible()&&mobile.matches)(event.data.edge==='before'?close:full).focus();});
+ addEventListener('message',event=>{if(event.origin!==location.origin||event.source!==frame.contentWindow)return;if(event.data?.type==='team-message-unread'){const n=Math.max(0,Number(event.data.unread)||0);for(const badge of document.querySelectorAll('[data-message-unread]')){badge.hidden=!n;badge.textContent=String(n);badge.setAttribute('aria-label',n+' unread messages');}}if(event.data?.type==='team-message-panel-close'&&visible())hide();if(event.data?.type==='team-message-panel-focus'&&visible()&&mobile.matches)(event.data.edge==='before'?close:full).focus();});
  document.addEventListener('keydown',event=>{
   if(!visible())return;
   if(event.key==='Escape'){event.preventDefault();hide();return;}
