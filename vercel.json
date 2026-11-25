@@ -8,6 +8,7 @@
     "api/role-task-sync.js": {"maxDuration": 120},
     "api/workspace-assistant.js": {"maxDuration": 120},
     "api/content.js": {
+      "regions": ["lhr1"],
       "maxDuration": 120,
       "includeFiles": "server/{guest-catalogue.enc,brand-assets/**,recipe-staging-images/**}"
     },
