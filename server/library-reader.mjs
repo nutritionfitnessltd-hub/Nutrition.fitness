@@ -22,7 +22,7 @@ const digest = input => createHash('sha256').update(input).digest();
 const equal = (a, b) => a.length === b.length && timingSafeEqual(a, b);
 const escTarget=value=>('/content-library/'+new URL(value,'https://local.invalid').search).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
 const entrySection=params=>params.get('studio')||(['item','shelf','folder','group','q','page','progress','source','tab','week'].some(key=>params.has(key))?'archive':'home');
-let cached;
+let cached,indexLoading;
 export {readIndex as readProductionIndex};
 
 async function bundledCatalogue() {
@@ -35,6 +35,10 @@ async function bundledCatalogue() {
 
 async function readIndex() {
   if (cached && cached.expires > Date.now()) return cached.index;
+  if(!indexLoading)indexLoading=loadIndex().finally(()=>{indexLoading=null;});
+  return indexLoading;
+}
+async function loadIndex(){
   let index;
   try {
     const result = await get(indexPath, { access: 'private', useCache: false });

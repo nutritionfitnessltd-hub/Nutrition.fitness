@@ -237,7 +237,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
     if(!key)throw new HttpError(503,'The work screen is being connected.');
     if(req.method==='POST' && req.headers.origin!=='https://'+req.headers.host)throw new HttpError(403,'Open the work screen to continue.');
     if(req.method==='POST'&&f.action==='work-logout'&&!params.has('accountPreview')&&!copyActor){clearLibraryCookies(res);res.statusCode=303;res.setHeader('Location','/content-library/');return res.end();}
-    const api=apiFactory(env);
+    const api=apiFactory(env);api.workspaceFresh=req.method!=='GET';
     if(params.has('teamPassword')){
       if(params.has('accountPreview')||copyActor)throw new HttpError(403,'Account changes are unavailable in a working copy.');
       // Keep token paths out of referrers without stripping Origin from native form POSTs.
