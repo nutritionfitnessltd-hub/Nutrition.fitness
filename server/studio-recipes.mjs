@@ -14,7 +14,7 @@ export function recipePreview(record){
   const time=(value,label)=>typeof value==='number'?'<span>'+label+': '+esc(value)+' minutes</span>':'';
   const nutrition=f.nutrition||{};
   return '<article class="studio-preview">'+(photo?'<img src="'+esc(photo)+'" alt="'+esc(record.title)+'" style="width:100%;max-width:600px;max-height:400px;object-fit:cover;border-radius:12px">':'')+
-    '<h2>'+esc(record.title)+'</h2>'+(f.recipeStaging?'<p class="recipe-staging-notice">Staged recipe. Picture and source text need review before approval.</p>':'')+text(f.description)+text(f.quote)+
+    '<h2>'+esc(record.title)+'</h2>'+(f.recipeStaging&&f.recipeStaging.reviewStatus!=='accepted'?'<p class="recipe-staging-notice">Staged recipe. Picture and source text need review before approval.</p>':'')+text(f.description)+text(f.quote)+
     '<p>'+esc(f.servingBasis||('Serves '+f.servings))+'</p><div class="studio-actions">'+time(f.prepMinutes,'Preparation')+time(f.cookMinutes,'Cooking')+'</div>'+text(f.timeNote)+
     '<h3>Ingredients</h3><ul>'+(f.ingredients||[]).map(v=>'<li>'+esc(ingredient(v))+'</li>').join('')+'</ul>'+
     '<h3>Method</h3><ol>'+(f.instructions||[]).map(v=>'<li>'+esc(v)+'</li>').join('')+'</ol>'+text(f.notes)+

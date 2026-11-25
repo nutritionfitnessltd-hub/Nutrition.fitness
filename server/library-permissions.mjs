@@ -72,6 +72,7 @@ const routes = {
 };
 const actions = {
   'recipe-photo-review':['library','edit'],
+  'recipe-bulk-review':['library','edit'],
   'collection-link':['library','edit'],
   'idea-save': ['library','edit'], 'idea-discussion': ['library','edit'],
   'course-structure-review': ['work','library'],

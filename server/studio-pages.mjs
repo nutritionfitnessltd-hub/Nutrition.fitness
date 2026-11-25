@@ -1,4 +1,4 @@
-import {isStagedRecipe,recipeStagingPage} from './recipe-staging.mjs';
+import {isPendingStagedRecipe,recipeStagingPage} from './recipe-staging.mjs';
 import {collectionKinds,supportKinds,supportingLibrary,collectionPlacementFields,collectionHeader} from './studio-collections.mjs';
 import {documentText} from './document-reader.mjs';
 import {schedulingInputs,taskScheduleSummary,ganttPanel} from './studio-project-schedule.mjs';
@@ -87,9 +87,9 @@ function typeCards(sections,counts,bucket){
   }).join('')+'</nav>';
 }
 export function library(params,data,meta={}){
-  const recipeSection=params.get('kind')==='recipe'||params.get('category')==='recipes',stagingCount=data.items.filter(isStagedRecipe).length;
+  const recipeSection=params.get('kind')==='recipe'||params.get('category')==='recipes',stagingCount=data.items.filter(r=>isPendingStagedRecipe(r)&&r.status!=='Archived').length;
   if(recipeSection&&params.get('bucket')==='staging')return recipeStagingPage(params,data);
-  if(recipeSection)data={...data,items:data.items.filter(r=>!isStagedRecipe(r))};
+  data={...data,items:data.items.filter(r=>!isPendingStagedRecipe(r))};
   const worker=Object.hasOwn(workerNames,params.get('worker'))?params.get('worker'):'';
   if(worker)data={...data,items:workerContent(data,worker)};
   const mine=params.get('view')==='mine';

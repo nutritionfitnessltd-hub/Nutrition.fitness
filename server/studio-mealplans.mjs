@@ -23,7 +23,7 @@ export function mealPlanOptions(f={}){
   return {brief,days,servings,reuse,recipeMode,images,packs,exclude:cleanText(f.exclude||'',500)};
 }
 export function recipeCandidates(data){
-  return data.items.filter(r=>r.kind==='recipe'&&r.status!=='Archived'&&Number(r.fields?.servings)>0&&
+  return data.items.filter(r=>r.kind==='recipe'&&r.status!=='Archived'&&(!r.fields?.recipeStaging||r.fields.recipeStaging.reviewStatus==='accepted'&&r.status==='Approved')&&Number(r.fields?.servings)>0&&
     r.fields?.ingredients?.length&&r.fields?.instructions?.some(s=>typeof s==='string'&&s.trim())&&
     (data.actor.role==='admin'||data.assigned.has(r.id)||r.status==='Approved'));
 }
