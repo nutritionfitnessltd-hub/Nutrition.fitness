@@ -18,7 +18,7 @@ export async function saveTeamEmail(f,actor,api){
 }
 export async function loadTeamIdentity(api,actor,personId){
  if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
- const id=uuid(personId),role=id===actor.id?'admin':'staff';
+ const id=uuid(personId),role=id===actor.id?(actor.authRole||'admin'):'staff';
  const rows=await api('/rest/v1/nufi_library_nda_acceptances?actor_role=eq.'+role+'&actor_id=eq.'+id+'&select=id,actor_id,actor_role,full_name,postal_address,identity_received,identity_removed_at,accepted_at&order=accepted_at.desc,id.desc&limit=1',{service:true});
  return rows.find(r=>r.actor_id===id&&r.actor_role===role)||null;
 }

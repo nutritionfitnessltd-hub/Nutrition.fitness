@@ -68,7 +68,7 @@ test('figures screen edits save partial scenarios, preserve quotes and reject st
  const {JSDOM}=await import('jsdom');const doc=new JSDOM(productFiguresPage(new URLSearchParams(),d)).window.document;
  const form=doc.querySelector('[data-figure-form]');assert.equal(form.elements.sellingPrice.value,'31');assert.equal(form.elements.quoteId.value,f.quote.quoteId);assert.equal(form.elements.quantity.value,'');assert.equal(doc.querySelectorAll('[data-product-quote-form]').length,2);
  for(const q of doc.querySelectorAll('[data-product-quote-form]'))assert.equal(q.elements.returnTo.value,'product-figures');
- assert.equal(doc.querySelectorAll('thead th').length,doc.querySelector('[data-figure-row]').children.length);
+ assert.equal(doc.querySelectorAll('thead th').length,7);assert.equal(doc.querySelector('[data-figure-row]').children.length,7);assert.equal(doc.querySelector('[data-figure-row] input'),null);assert.equal(doc.querySelector('[data-figure-row] form'),null);assert.equal(doc.querySelectorAll('dialog').length,1);
  const invalid={...values,revision:'2',quantity:'-1'};await assert.rejects(changeProductCosts(invalid,d,f.api),e=>e.status===400);
  const error=productFiguresPage(new URLSearchParams(),d,{...values,sellingPrice:'33'});assert.match(error,/value="33"/);
 });
@@ -76,11 +76,11 @@ test('figures screen edits save partial scenarios, preserve quotes and reject st
 test('editable figures preview calculations and save a row without leaving the screen',async()=>{
  const {JSDOM}=await import('jsdom'),{readFile}=await import('node:fs/promises');const f=fixture();await changeProductCosts(f.quote,await f.data(),f.api);
  const dom=new JSDOM(productFiguresPage(new URLSearchParams(),await f.data()),{url:'https://team.nutrition.fitness/content-library/',runScripts:'outside-only'}),w=dom.window;
- w.calculateProductCosts=calculateProductCosts;
- w.fetch=async(url,options)=>{await changeProductCosts(Object.fromEntries(options.body),await f.data(),f.api);return {ok:true,text:async()=>productFiguresPage(new URLSearchParams(),await f.data())};};
+ w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.calculateProductCosts=calculateProductCosts;
+ w.fetch=async(url,options)=>{assert.equal(typeof url,'string');assert.ok(url.startsWith('/content-library/?'));await changeProductCosts(Object.fromEntries(options.body),await f.data(),f.api);return {ok:true,text:async()=>productFiguresPage(new URLSearchParams(),await f.data())};};
  w.eval((await readFile(new URL('../public/product-figures.js',import.meta.url),'utf8')).replace("import {calculateProductCosts} from './product-cost-math.mjs';",''));
- const form=w.document.querySelector('[data-figure-form]');for(const [k,v] of Object.entries({quoteId:f.quote.quoteId,quantity:'100',sellingPrice:'30',vatRate:'20',feePercent:'0',feeFixed:'0'})){form.elements[k].value=v;form.elements[k].dispatchEvent(new w.Event('input'));}
- assert.equal(w.document.querySelector('[data-figure="initialCash"]').textContent,'£1,070.00');assert.equal(w.document.querySelector('[data-row-save-status]').textContent,'Unsaved changes');
- form.dispatchEvent(new w.Event('submit',{cancelable:true}));for(let i=0;i<30&&w.document.querySelector('[data-row-save-status]').textContent==='Saving…';i++)await new Promise(r=>setTimeout(r,10));
- assert.equal(w.document.querySelector('[data-row-save-status]').textContent,'Saved');assert.equal(form.elements.revision.value,'2');assert.equal(w.document.querySelector('[data-product-quote-form]').elements.revision.value,'2');dom.window.close();
+ const form=w.document.querySelector('[data-figure-form]');for(const [k,v] of Object.entries({quoteId:f.quote.quoteId,quantity:'100',sellingPrice:'30',vatRate:'20',feePercent:'0',feeFixed:'0'})){form.elements[k].value=v;form.elements[k].dispatchEvent(new w.Event('input',{bubbles:true}));}
+ assert.equal(w.document.querySelector('[data-preview="initialCash"]').textContent,'£1,070.00');assert.equal(w.document.querySelector('[data-row-save-status]').textContent,'Unsaved changes');
+ form.dispatchEvent(new w.Event('submit',{cancelable:true,bubbles:true}));for(let i=0;i<30&&w.document.querySelector('[data-row-save-status]').textContent==='Saving…';i++)await new Promise(r=>setTimeout(r,10));
+ assert.equal(w.document.querySelector('[data-row-save-status]').textContent,'Saved');assert.equal(w.document.querySelector('[data-figure-form]').elements.revision.value,'2');assert.equal(w.document.querySelector('dialog').open,false);assert.equal(w.document.querySelector('[data-product-quote-form]').elements.revision.value,'2');dom.window.close();
 });

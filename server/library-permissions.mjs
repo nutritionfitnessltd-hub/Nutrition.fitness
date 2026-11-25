@@ -1,6 +1,7 @@
 import { HttpError } from './platform.mjs';
 
 export const accessOptions = [
+  ['administrator', 'Full workspace administrator', 'Manage all content, product costs, publishing, team settings and permissions.'],
   ['library', 'Content library', 'Browse and read working content.'],
   ['all_library', 'All company content (read only)', 'Read all company library content, including unfinished drafts. Editing still requires an assignment or authorship.'],
   ['shared_library', 'Shared content & brand assets', 'Read approved or explicitly shared content and brand assets. Editing still requires an assignment.'],
@@ -20,7 +21,7 @@ export const reviewOptions = [
   ['review_challenges', 'Challenges', ['challenge']],
   ['review_marketing', 'Messages, marketing & creative assets', ['communication','campaign','workflow','asset']]
 ];
-export const defaultAccess = Object.freeze(Object.fromEntries([...accessOptions.map(([key]) => [key, !['shared_library','all_library'].includes(key)]), ...reviewOptions.map(([key]) => [key, false])]));
+export const defaultAccess = Object.freeze(Object.fromEntries([...accessOptions.map(([key]) => [key, !['administrator','shared_library','all_library'].includes(key)]), ...reviewOptions.map(([key]) => [key, false])]));
 const keys = new Set(Object.keys(defaultAccess));
 export function accessFor(actor) {
   // NULL is the migration-compatible legacy setting. Invalid saved values fail closed.

@@ -23,7 +23,7 @@ export async function myAccountScreen(actor,api,params,env,{copy=false}={}){
  return heading('My account','Your profile, sign-in security and signed agreement.')+
   (saved==='hours'?'<p class="panel" role="status">Your working hours have been saved.</p>':'')+
   (saved==='profile'||saved==='password'?'<p class="panel" role="status">'+(saved==='profile'?'Your display name has been saved.':'Your password has been changed.')+'</p>':'')+
-  '<div class="studio-columns"><section class="panel"><h2>Profile</h2><p><strong>Email</strong><br>'+esc(person.email)+'</p><p><strong>Account type</strong><br>'+esc(actor.role==='admin'?'Administrator':'Team member')+'</p>'+
+  '<div class="studio-columns"><section class="panel"><h2>Profile</h2><p><strong>Email</strong><br>'+esc(person.email)+'</p><p><strong>Account type</strong><br>'+esc(actor.role==='admin'||actor.access?.administrator===true?'Administrator':'Team member')+'</p>'+
   (copy?'<p><strong>Display name</strong><br>'+esc(person.name)+'</p>':form('account-profile',input('name','Display name',person.name,'text','maxlength="100" autocomplete="name" required'),{section:'account'},'Save profile'))+
   '<p class="meta">Contact your administrator if your sign-in email needs to change.</p></section>'+
   '<section class="panel"><h2>Security</h2>'+(copy?'<p>Open your own My account page to change your password.</p>':form('account-password',security+'<p class="meta">Use 12 to 128 characters. A long, unique passphrase works well.</p>'+captcha,{section:'account'},'Change password'))+'</section></div>'+
