@@ -9,3 +9,29 @@
 .team-presence{display:inline-flex;align-items:center;gap:4px;color:#526775;white-space:nowrap}.team-presence i{width:8px;height:8px;border-radius:50%;background:#a4adb3}.team-presence[data-status=online] i{background:#23834b}.team-presence[data-status=away] i{background:#b7811b}.message-sidebar .team-presence small{display:inline;font-size:11px;margin:0}.team-presence[data-status=unknown] small{font-size:10px}
 
 .message-contact-row{display:flex;align-items:center;gap:4px}.message-contact-row>a{flex:1;min-width:0}.message-contact-row>button{flex:none;border:0;background:transparent;color:#526775;min-width:32px;min-height:40px;padding:4px;font-size:22px;cursor:pointer}.message-contact-row>button:hover{background:#e2eef1;border-radius:6px}.working-hours-grid>div{display:grid;grid-template-columns:minmax(120px,1fr) 1fr 1fr;align-items:center;gap:12px;margin:8px 0}.working-hours-grid input[type=checkbox]{width:auto}.working-hours-grid input[type=time]{width:100%}.working-hours-dialog li{padding:6px 0;font-size:14px}.working-hours-dialog [data-hours-content]>p{font-size:14px;line-height:1.5}@media(max-width:500px){.working-hours-grid>div{grid-template-columns:1fr 1fr}.working-hours-grid>div>label:first-child{grid-column:1/-1}}
+
+/* Compact chat: one conversation header and small message actions. */
+.message-tools[hidden]{display:none}
+.message-discussion-heading{align-items:center;position:relative;padding-bottom:12px;margin-bottom:16px}
+.message-discussion-heading>div:first-child{display:flex;align-items:center;gap:10px;min-width:0;flex-wrap:wrap}
+.message-discussion-heading h2{margin:0;line-height:1.35;overflow-wrap:anywhere}
+.chat-heading-actions{display:flex;align-items:center;gap:4px;flex:none;margin-left:auto}
+.chat-icon,.message-main .chat-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;min-width:34px;box-sizing:border-box;padding:6px;border:0;border-radius:7px;background:transparent;color:#526775;text-decoration:none;cursor:pointer;list-style:none}
+.chat-icon svg{flex:none}.chat-icon::-webkit-details-marker{display:none}.chat-icon:hover,.chat-icon:focus-visible{background:#e8eff0;color:#06475e}.chat-icon:focus-visible{outline:2px solid #06475e;outline-offset:2px}
+.message-settings{border:0;padding:0;margin:0;font-size:13px}
+.chat-settings-body{position:absolute;right:0;top:100%;z-index:8;width:min(360px,calc(100vw - 64px));max-height:65vh;overflow:auto;box-sizing:border-box;background:#fff;border:1px solid #d6ddd9;border-radius:12px;padding:18px;box-shadow:0 8px 30px #092a3e20}
+.chat-settings-body .studio-form{display:grid;gap:12px}.chat-settings-body .meta{font-size:12px;line-height:1.5}
+.message-stream{display:flex;flex-direction:column;gap:10px;align-items:flex-start;padding:0 2px 12px;min-height:30vh}
+.team-message,.team-message.mine{position:relative;width:fit-content;max-width:88%;box-sizing:border-box;margin:0;padding:10px 12px 6px;border:0;border-radius:13px;background:#f0f4f4}
+.team-message.mine{align-self:flex-end;background:#e2eef1}
+.team-message header{gap:6px;font-size:11px;line-height:1.3}.team-message header time{font-size:10px;color:#627884}.team-message.mine header{justify-content:flex-end}
+.team-message .message-text{font-size:15px;line-height:1.5;margin:4px 0 2px}
+.chat-message-actions{display:flex;justify-content:flex-end;align-items:center;gap:1px;min-height:28px}
+.chat-message-actions .chat-icon{width:28px;height:28px;min-width:28px;padding:5px;color:#607a85;font-size:11px;gap:3px}
+.chat-message-actions .chat-icon svg{width:15px;height:15px}
+.team-message details.chat-message-options{margin:0;font-size:13px}
+.chat-message-menu{position:absolute;right:0;top:calc(100% - 4px);z-index:7;width:min(280px,calc(100vw - 72px));padding:14px;box-sizing:border-box;background:white;border:1px solid #d6ddd9;border-radius:10px;box-shadow:0 8px 25px #092a3e20}
+.team-message .chat-message-menu form{margin:0 0 10px}.team-message .chat-message-menu form:last-child{margin:0}.chat-message-menu textarea{width:100%;box-sizing:border-box}.chat-message-menu button{font-size:13px;padding:7px 10px}
+.messages-embedded .message-discussion-heading{padding:4px 0 12px;top:0;z-index:9}
+.messages-embedded .message-stream{min-height:30vh}
+@media(max-width:800px){.message-discussion-heading{flex-wrap:nowrap;gap:6px}.message-discussion-heading h2{font-size:17px}.team-message,.team-message.mine{max-width:92%}.chat-icon,.message-main .chat-icon{width:36px;height:36px;min-width:36px}.chat-message-actions .chat-icon{width:30px;height:30px;min-width:30px}}
