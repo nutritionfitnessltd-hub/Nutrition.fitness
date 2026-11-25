@@ -765,3 +765,7 @@ body.team-profile-open{overflow:hidden}.team-profile-modal{width:min(800px,calc(
 .team-work-actions form{margin:0}.team-work-actions [data-work-dismiss] button{background:transparent;color:#526775;border:1px solid #c7d0d5}
 @media(max-width:1050px){.team-work-list .team-work-row{grid-template-columns:130px minmax(0,1fr);gap:12px}.team-work-status{grid-column:2}.team-work-actions{grid-column:2;justify-content:flex-start;max-width:none}}
 @media(max-width:600px){.team-work-list .team-work-row{display:block;padding:16px}.team-work-owner{margin-bottom:10px}.team-work-status,.team-work-actions{margin-top:12px}.team-work-filters label{min-width:0;flex:1 1 140px}}
+
+/* Compact controls for reusable project templates and setup. */
+.studio-form label.project-template-toggle{display:flex;align-items:center;gap:.65rem;flex-direction:row;font-weight:400;margin:.75rem 0}
+.studio-form label.project-template-toggle input[type="checkbox"]{width:1.1rem;height:1.1rem;min-height:0;padding:0;margin:0;flex:0 0 auto}
