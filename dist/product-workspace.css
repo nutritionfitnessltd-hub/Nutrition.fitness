@@ -5,6 +5,11 @@
 .product-space .btn,.product-space button{font-size:13px;padding:9px 13px;min-height:38px}
 .product-space h2{font-size:18px;line-height:1.35}.product-space .panel{padding:22px;margin-bottom:18px}
 .product-space .back-link{display:inline-block;font-size:13px;margin-bottom:14px}
+.product-cost-table{overflow-x:auto;margin:16px 0 24px}.product-cost-table table{border-collapse:collapse;width:100%;font-size:13px;background:white}
+.product-cost-table th,.product-cost-table td{padding:12px;text-align:left;border-bottom:1px solid #d6dfdd;vertical-align:top;white-space:nowrap}.product-cost-table th:first-child{white-space:normal;min-width:180px}
+.product-cost-table th small{display:block;font-weight:400;color:#536572}.product-cost-table form{margin:6px 0}
+.product-cost-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:16px;margin:20px 0}.product-cost-metrics>div{background:#edf2ef;padding:16px;border-radius:8px}.product-cost-metrics dt{font-size:12px;color:#536572}.product-cost-metrics dd{margin:6px 0 0;font-size:20px;font-weight:600}
+.product-cost-warning{display:block;color:#805c19;margin-top:6px}.product-quote-form>summary{font-weight:600;cursor:pointer}.product-quote-form[open]>summary{margin-bottom:20px}
 .product-page-section{margin:30px 0;scroll-margin-top:20px}.product-page-section>h2{margin-bottom:16px}
 .product-introduction{font-size:18px;font-weight:600;line-height:1.5}.product-features{padding-left:20px;line-height:1.8}
 .product-gallery h3{font-size:17px;margin:12px 0}.product-gallery h3 a{color:inherit;text-decoration:none}
