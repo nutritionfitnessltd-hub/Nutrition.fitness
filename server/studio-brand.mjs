@@ -11,7 +11,8 @@ export function brandInstructions(extra=''){
   return [defaultGuidance,'Brand: nutrition.fitness. Tagline: Real food. Real progress. A fitter, happier you.',
     'Use the navy wordmark with its registered symbol and full tagline. Keep its proportions and clear space.',
     'Typography: DM Sans for body (400), secondary text (500), buttons (600), headings (700) and hero headings (800–850). Kalam Regular for short handwritten notes.',
-    'White main canvas, navy #092A3E text, muted slate #536572 secondary text. Cream #FAF6EF is for inset panels.',
+    'White main canvas, navy #092A3E text, muted slate #536572 secondary text. Cream #FAF6EF is for small inset accents, not large background blocks.',
+    "Course video and slide colour rule: use the Fat Loss Course as the visual reference. Keep the main slide canvas predominantly white. Break up large flat areas with restrained navy #092A3E panels or shapes where they improve hierarchy; use navy sparingly, not as the default background. Do not use large cream, beige or peach blocks as the main surface. Keep cream/peach to small accents only. Preserve photographs, diagrams, original wording, layout, animation, timing and narration; make touching objects contrast clearly. Retain DM Sans, short Kalam accents and the current nutrition.fitness logo/tagline. Judge the balance across the whole lesson and on mid/late animation frames, not just the title slide.",
     'Use the subject palette: '+themes.map(([name,panel,pale,accent,hex])=>name+': '+panel+' '+pale+' with '+accent+' '+hex).join('; ')+'.',
     'Keep existing resource content and layouts, making only minor fitting adjustments for fonts and logo. Check every page for overflow, contrast and complete content.',
     extra?'Additional saved guidance: '+extra:''].filter(Boolean).join('\n');
