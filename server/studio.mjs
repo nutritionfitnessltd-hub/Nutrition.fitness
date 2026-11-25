@@ -11,7 +11,7 @@ import {suppliersPage,supplierPage,saveSupplier} from './studio-suppliers.mjs';
 import {loadPlanner} from './studio-planner-context.mjs';
 import {courseEditorRecord} from './studio-courses.mjs';
 import {editorForm,referenceData} from './studio-editor.mjs';
-import {canEditContent} from './library-permissions.mjs';
+import {canEditContent,canReadContent} from './library-permissions.mjs';
 import {loadNewsletterDraftLinks} from './newsletter-draft-links.mjs';
 import {saveNewsletterConnection} from './newsletter-sync.mjs';
 import {productsPage,productPage,creativesPage,productAssetPage,changeProducts,productErrorForm,isProductAsset} from './studio-products.mjs';
@@ -115,7 +115,18 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       try{const scoped=await taskTransportData(params,actor,api);const result=f.action==='task-file-upload'?await uploadSmallTaskFile(params,f,scoped,api,env,taskFileStore?.put):await taskUploadToken({...req,body:f},params,scoped,api,env);res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify(result));}
       catch(e){res.statusCode=e instanceof HttpError?e.status:503;res.setHeader('Content-Type','application/json; charset=utf-8');return res.end(JSON.stringify({error:e instanceof HttpError?e.message:'The upload service did not respond. Please retry.'}));}
     }
+    if(section==='recipe-staging-image'&&req.method==='GET'){
+      const id=params.get('id')||'';if(!id||id.length>240)throw new HttpError(404,'This staged picture is unavailable.');
+      const rows=await api('/rest/v1/nufi_studio_items?id=eq.'+encodeURIComponent(id)+'&select=id,payload,revision&limit=1',{service:true});
+      const row=rows[0],r=row&&{...row.payload,id:row.id,revision:row.revision};
+      const scoped={actor,assigned:new Set(),byId:new Map(r?[[r.id,r]]:[])};
+      // Broad read grants can authorize this single record. Assigned-only access
+      // retains the existing assignment/dependency checks below.
+      if(actor.role==='admin'||r&&canReadContent(scoped,r))return await sendRecipeStagingImage(req,res,params,scoped);
+    }
+    const dataStarted=performance.now();
     [data,meta]=await Promise.all([studioData(api,actor,load),displayEntry(env,'shelves').catch(()=>({}))]);
+    res.setHeader('Server-Timing','workspace;dur='+(performance.now()-dataStarted).toFixed(1));
     if(req.method==='POST'&&['people-task-create','people-task-edit','role-task-save','role-task-toggle'].includes(f.action)){
       const next=await peopleTaskAction(f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();
     }
@@ -376,6 +387,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(req.method==='POST'&&(section==='product-upload'||f.action==='product-file-save')){
       res.statusCode=error instanceof HttpError?error.status:503;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify({error:error instanceof HttpError?error.message:'Could not save this upload. Please retry.'}));
     }
+    if(section==='messages')return await handleTeamMessages(req,res,{params,actor,api,env,fetcher,fileStore:taskFileStore});
     if(req.method==='POST'&&f.action==='idea-generate-summary'){
       res.statusCode=error instanceof HttpError?error.status:503;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify({error:error instanceof HttpError?error.message:'AI could not generate this explanation. Your notes have not changed.'}));
     }

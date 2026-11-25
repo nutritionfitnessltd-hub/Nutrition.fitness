@@ -34,5 +34,5 @@ export async function sendRecipeStagingImage(req,res,params,data){
  const r=readable(data,params.get('id')),key=r.fields?.recipeStaging?.imageKey;
  if(!isStagedRecipe(r)||!/^[a-f0-9]{16}$/.test(key||''))throw new HttpError(404,'This staged picture is unavailable.');
  let bytes;try{bytes=await readFile(new URL('./recipe-staging-images/'+key+'.webp',import.meta.url));}catch{throw new HttpError(404,'This staged picture is unavailable.');}
- res.statusCode=200;res.setHeader('Content-Type','image/webp');res.setHeader('Cache-Control','private, no-store');res.setHeader('X-Content-Type-Options','nosniff');res.end(bytes);
+ res.statusCode=200;res.setHeader('Content-Type','image/webp');res.setHeader('Cache-Control','private, max-age=300');res.setHeader('Vary','Cookie');res.setHeader('X-Content-Type-Options','nosniff');res.end(bytes);
 }
