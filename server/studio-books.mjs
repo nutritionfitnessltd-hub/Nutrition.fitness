@@ -38,6 +38,7 @@ export function bookPage(r,data){
  '<div class="studio-book-banner-title"><p class="studio-book-eyebrow">'+esc(f.bookType||'Book')+'</p><h1>'+esc(r.title)+'</h1><p>'+badge(r.status)+(f.pageCount?' · '+esc(f.pageCount)+' pages':'')+'</p></div>'+
  (reading?'<a class="btn primary" href="'+pdf+'" target="_blank" rel="noopener">Open full screen</a>':'')+'</header>'+
  (reading?'<iframe class="studio-book-reader" src="'+pdf+'" title="'+esc('Read '+r.title)+'"></iframe>':'<p>'+(r.bookAssets?.digital?'Available to administrators and the team assigned to this book.':'The reading PDF has not been added yet.')+'</p>')+
+ '<div class="studio-actions">'+button('Supporting content',url('collection',{id:r.id}))+'</div>'+
  '<details class="panel studio-book-details"><summary>Book details &amp; files</summary>'+
  (f.editionNote?'<p class="prose">'+esc(f.editionNote)+'</p>':'')+
  '<div class="studio-columns">'+asset('front','Front cover')+asset('back','Back cover')+'</div>'+
