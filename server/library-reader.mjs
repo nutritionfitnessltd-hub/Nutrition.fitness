@@ -21,6 +21,7 @@ const indexPath = 'nutrition-library/v1/index.json.gz';
 const digest = input => createHash('sha256').update(input).digest();
 const equal = (a, b) => a.length === b.length && timingSafeEqual(a, b);
 const escTarget=value=>('/content-library/'+new URL(value,'https://local.invalid').search).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+const entrySection=params=>params.get('studio')||(['item','shelf','folder','group','q','page','progress','source','tab','week'].some(key=>params.has(key))?'archive':'home');
 let cached;
 export {readIndex as readProductionIndex};
 
@@ -91,7 +92,7 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     if(req.method==='POST'&&fields.email&&['sign-in','admin-login','staff-login'].includes(fields.action)){
       const target=new URLSearchParams(params);
       if(params.has('file')||params.has('preview'))target.set('reader','1');
-      else target.set('studio',[...params].length?'archive':'home');
+      else target.set('studio',entrySection(params));
       return handleLibraryWork(req,res,{env,load,params:target,apiFactory});
     }
     const config = env.NUFI_LIBRARY_PASSWORD_SHA256;
@@ -144,7 +145,7 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     if(actor&&params.has('file')&&(!canAccess(actor,'originals')||!canAccess(actor,'sources')))return html(res,403,renderLibrary({error:'Your account cannot open original files. Ask your administrator to update your access.'}));
     if(actor&&params.has('preview')&&params.get('preview')!=='brand-font'&&!canAccess(actor,'library')&&!canAccess(actor,'originals'))return html(res,403,renderLibrary({error:'Preview access is not enabled for your account.'}));
     if(actor&&!params.has('file')&&!params.has('preview')){
-      const destination=new URLSearchParams(params);destination.set('work','1');destination.set('studio',[...params].length?'archive':'home');
+      const destination=new URLSearchParams(params);destination.set('work','1');destination.set('studio',entrySection(params));
       res.statusCode=303;res.setHeader('Location',path+'?'+destination);return res.end();
     }
     try {
