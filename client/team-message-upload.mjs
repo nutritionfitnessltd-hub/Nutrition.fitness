@@ -4,7 +4,7 @@ const base64=file=>new Promise((resolve,reject)=>{const reader=new FileReader();
 for(const panel of document.querySelectorAll('[data-message-upload]')){
  const form=panel.closest('form'),button=panel.querySelector('[data-message-upload-button]'),picker=panel.querySelector('input[type=file]'),status=panel.querySelector('[role=status]'),progress=panel.querySelector('progress');
  let current;const completed=new WeakSet();
- const json=async body=>{const response=await fetch(form.action,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)}),result=await response.json().catch(()=>null);if(!response.ok)throw Error(result?.error||'The upload could not be confirmed.');return result;};
+ const json=async body=>{const response=await fetch(form.getAttribute('action'),{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(body),signal:AbortSignal.timeout(45000)}),result=await response.json().catch(()=>null);if(!response.ok)throw Error(result?.error||'The upload could not be confirmed.');return result;};
  picker.addEventListener('change',()=>{if(form.dataset.uploading!=='1')button.click();});
  const sync=()=>{form.elements.files.value=JSON.stringify([...form.querySelectorAll('[data-staged-file]:checked')].map(x=>x.value));form.dispatchEvent(new Event('change',{bubbles:true}));};
  button.addEventListener('click',async()=>{
@@ -20,7 +20,7 @@ for(const panel of document.querySelectorAll('[data-message-upload]')){
     if(!current.uploaded){
      const type=types[file.name.split('.').pop().toLowerCase()];
      if(file.size<=2*1024*1024)await json({action:'message-file-upload',pathname:current.path,data:await base64(file),bytes:file.size});
-     else await upload(current.path,file,{access:'private',handleUploadUrl:form.action,contentType:type,onUploadProgress:({percentage})=>{progress.value=percentage;}});
+     else await upload(current.path,file,{access:'private',handleUploadUrl:form.getAttribute('action'),contentType:type,onUploadProgress:({percentage})=>{progress.value=percentage;}});
      current.uploaded=true;
     }
     const {file:saved}=await json({action:'message-file-save',pathname:current.path,name:file.name});

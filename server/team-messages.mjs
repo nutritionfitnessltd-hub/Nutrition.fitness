@@ -1,3 +1,4 @@
+import {touchPresence,teamPresence} from './team-presence.mjs';
 import {randomUUID} from 'node:crypto';
 import {HttpError,uuid} from './platform.mjs';
 import {canAccess} from './library-permissions.mjs';
@@ -61,7 +62,7 @@ export async function messagesPage(params,actor,api,env,retained={},error=''){
  const direct=person&&rows.find(r=>r.payload.kind==='direct'&&r.payload.members.length===2&&r.payload.members.some(m=>m.id===person.id));
  if(direct){const next=new URLSearchParams(params);next.delete('person');next.set('conversation',direct.id);return messagesPage(next,actor,api,env,retained.person?{...retained,action:'message-send',person:undefined}:retained,error);}
  const q=String(params.get('q')||'').trim().slice(0,100),context=await conversationContext(params,actor,people,api);
- const contact=(p)=>{const r=rows.find(r=>r.payload.kind==='direct'&&r.payload.members.length===2&&r.payload.members.some(m=>m.id===p.id)),n=r?unreadCount(r,actor,people):0;return '<a class="message-contact" href="'+address(r?.id,r?{}:{person:p.id})+'"><span class="message-avatar" aria-hidden="true">'+esc(p.name.slice(0,1))+'</span><strong>'+esc(p.name)+'</strong>'+(n?'<span class="message-count">'+n+'</span>':'')+'</a>';};
+ const contact=(p)=>{const r=rows.find(r=>r.payload.kind==='direct'&&r.payload.members.length===2&&r.payload.members.some(m=>m.id===p.id)),n=r?unreadCount(r,actor,people):0;return '<a class="message-contact" href="'+address(r?.id,r?{}:{person:p.id})+'"><span class="message-avatar" aria-hidden="true">'+esc(p.name.slice(0,1))+'</span><strong>'+esc(p.name)+'</strong><span class="team-presence" data-team-presence="'+esc(p.id)+'" data-status="unknown" aria-label="Status unavailable" title="Status unavailable"><i aria-hidden="true"></i><small>…</small></span>'+(n?'<span class="message-count">'+n+'</span>':'')+'</a>';};
  const sidebar='<aside class="message-sidebar"><h2>People</h2><nav aria-label="People">'+people.filter(p=>p.id!==actor.id).map(contact).join('')+'</nav><h3>Team chats</h3><nav aria-label="Conversations">'+rows.filter(r=>r.payload.kind!=='direct').map(r=>{const n=unreadCount(r,actor,people);return '<a href="'+address(r.id)+'"><strong>'+esc(titleFor(r,actor,people))+'</strong>'+(n?'<span class="message-count">'+n+'</span>':'')+'</a>';}).join('')+'</nav></aside>';
  let main='';
  if(person){
@@ -83,20 +84,21 @@ export async function messagesPage(params,actor,api,env,retained={},error=''){
   form('message-read',hidden('messageIds',JSON.stringify(visible.map(m=>m.id))),{section:'messages',conversation:row.id},'Mark displayed messages read','data-message-read')+
   compose(row,actor,people,params,retained.action==='message-send'?retained:{},error,!!env.BLOB_READ_WRITE_TOKEN)+'</section>';
  }else main='<section class="message-welcome"><h2>Choose someone to chat with</h2><p>Click a name in People and type your message.</p>'+button('Read Team announcements',address(announcementsId))+'<p class="meta">Messages are human-only. AI team members cannot receive or read these conversations.</p></section>';
- return heading('Messages','')+'<div class="message-tools">'+button('New group',address(null,{new:'1'}))+'<details><summary>Search</summary><form class="message-search" action="/content-library/">'+hidden('work','1')+hidden('studio','messages')+input('q','Search your messages',q,'search','maxlength="100" placeholder="Find a message or attachment…"')+'<button>Search</button></form></details></div>'+
+ return heading('Messages','')+'<div class="message-tools">'+button('New group',address(null,{new:'1'}))+'<details><summary>Search</summary><form class="message-search" action="/content-library/">'+hidden('work','1')+hidden('studio','messages')+(params.get('panel')==='1'?hidden('panel','1'):'')+input('q','Search your messages',q,'search','maxlength="100" placeholder="Find a message or attachment…"')+'<button>Search</button></form></details></div>'+
  '<div class="team-messages'+(selected||person||q||params.get('new')?' chat-active':'')+'">'+sidebar+'<div class="message-main">'+main+'</div></div><script type="module" src="/team-messages.js"></script>';
 }
 const json=(res,status,payload)=>{res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.end(JSON.stringify(payload));};
 export async function handleTeamMessages(req,res,{params,actor,api,env,fetcher=fetch,fileStore}){
  human(actor);res.setHeader('Cache-Control','private, no-store');
- const embedded=params.get('panel')==='1',frame=(body)=>studioFrame(body,'messages',actor,{messagesEmbedded:embedded});
+ const embedded=params.get('panel')==='1',frame=(body)=>studioFrame(embedded?body.replace(/(<form\b[^>]*\baction=")([^"]+)"/g,(_,start,value)=>{const u=new URL(value.replaceAll('&amp;','&'),'https://team.nutrition.fitness');u.searchParams.set('panel','1');return start+esc(u.pathname+u.search)+'"';}):body,'messages',actor,{messagesEmbedded:embedded});
  const redirect=(value)=>{if(!embedded)return value;const u=new URL(value.replaceAll('&amp;','&'),'https://team.nutrition.fitness');u.searchParams.set('panel','1');return u.pathname+u.search;};
  const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{},id=params.get('conversation');
  const wantsJson=(req.headers?.accept||'').includes('application/json')||f.type==='blob.generate-client-token';
  try{
+  if(req.method==='POST'&&f.action==='message-presence'){await touchPresence(api,actor,f.active===true||f.active==='1');return json(res,200,{saved:true});}
   if(req.method==='GET'&&params.get('poll')==='1'){
    const people=await messagePeople(api,actor),rows=await listConversations(api,actor);
-   return json(res,200,{unread:rows.reduce((n,r)=>n+unreadCount(r,actor,people),0),mentions:rows.reduce((n,r)=>n+(r.payload.prefs[actor.id]?.muted?0:visibleMessages(r,actor,people).filter(m=>!m.deletedAt&&!(r.payload.prefs[actor.id]?.readIds||[]).includes(m.id)&&m.authorId!==actor.id&&m.mentions?.includes(actor.id)).length),0),threads:rows.map(r=>({id:r.id,revision:r.revision,unread:unreadCount(r,actor,people)}))});
+   return json(res,200,{presence:await teamPresence(api,people),unread:rows.reduce((n,r)=>n+unreadCount(r,actor,people),0),mentions:rows.reduce((n,r)=>n+(r.payload.prefs[actor.id]?.muted?0:visibleMessages(r,actor,people).filter(m=>!m.deletedAt&&!(r.payload.prefs[actor.id]?.readIds||[]).includes(m.id)&&m.authorId!==actor.id&&m.mentions?.includes(actor.id)).length),0),threads:rows.map(r=>({id:r.id,revision:r.revision,unread:unreadCount(r,actor,people)}))});
   }
   if(req.method==='GET'&&params.get('file'))return await sendTeamFile(req,res,uuid(id),actor,await messagePeople(api,actor),api,env,params.get('file'),fileStore?.get);
   if(req.method==='POST'){

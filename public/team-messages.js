@@ -1,13 +1,17 @@
 const pollUrl='/content-library/?work=1&studio=messages&poll=1';
 const thread=document.querySelector('[data-message-thread]');
 const embedded=document.body.hasAttribute('data-messages-embedded'),readDisplayed=[];
-let stopped=false,busy=false,suspended=embedded;
+let stopped=false,busy=false,suspended=embedded,lastActivity=Date.now();
+for(const type of ['pointerdown','keydown','focus'])addEventListener(type,()=>{lastActivity=Date.now();if(embedded)parent.postMessage({type:'team-message-activity'},location.origin);});
+if(!embedded)addEventListener('message',event=>{if(event.origin===location.origin&&event.source===document.querySelector('[data-message-panel-frame]')?.contentWindow&&event.data?.type==='team-message-activity')lastActivity=Date.now();});
 async function updateUnread(){
  if(stopped||busy||document.hidden||suspended)return;busy=true;
  try{
+  if(!embedded)try{await fetch(pollUrl,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({action:'message-presence',active:document.hasFocus()&&Date.now()-lastActivity<120000}),signal:AbortSignal.timeout(8000)});}catch{}
   const response=await fetch(pollUrl,{headers:{Accept:'application/json'},signal:AbortSignal.timeout(12000)});
   if([401,403].includes(response.status)){stopped=true;return;}
   if(!response.ok)return;const data=await response.json();
+  for(const item of document.querySelectorAll('[data-team-presence]')){const status=data.presence?.find(p=>p.id===item.dataset.teamPresence)?.status||'unknown',label={online:'Online',away:'Away',offline:'Offline',unknown:'Status unavailable'}[status]||'Status unavailable';item.dataset.status=status;item.setAttribute('aria-label',label);item.title=label;item.querySelector('small').textContent=label;}
   for(const badge of document.querySelectorAll('[data-message-unread]')){badge.hidden=!data.unread;badge.textContent=String(data.unread);badge.setAttribute('aria-label',data.unread+' unread messages'+(data.mentions?', '+data.mentions+' mentions':''));}
   if(embedded)parent.postMessage({type:'team-message-unread',unread:data.unread,mentions:data.mentions},location.origin);
   if(thread){
@@ -73,7 +77,7 @@ for(const form of document.querySelectorAll('[data-message-compose],[data-messag
 for(const form of document.querySelectorAll('[data-message-read]')){
  const mark=async event=>{
   event?.preventDefault();try{
-   const response=await fetch(form.action,{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(Object.fromEntries(new FormData(form))),signal:AbortSignal.timeout(12000)});
+   const response=await fetch(form.getAttribute('action'),{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify(Object.fromEntries(new FormData(form))),signal:AbortSignal.timeout(12000)});
    if(!response.ok)return;const result=await response.json();if(thread&&result.revision)thread.dataset.threadRevision=String(result.revision);form.hidden=true;updateUnread();
   }catch{}
  };form.addEventListener('submit',mark);readDisplayed.push(mark);if(!document.hidden&&!suspended)mark();
@@ -84,7 +88,7 @@ if(embedded){
   if(u.origin===location.origin&&u.pathname==='/content-library/'&&u.searchParams.get('studio')==='messages'&&!u.searchParams.has('file')){u.searchParams.set('panel','1');link.href=u.href;}
   else if(!u.searchParams.has('file')){link.target='_blank';link.rel='noopener';}
  }
- for(const form of document.forms){const u=new URL(form.action,location.href);if(u.origin!==location.origin||u.searchParams.get('studio')!=='messages')continue;u.searchParams.set('panel','1');form.action=u.href;if(form.method==='get'){const input=document.createElement('input');input.type='hidden';input.name='panel';input.value='1';form.append(input);}}
+ for(const form of document.forms){const u=new URL(form.getAttribute('action'),location.href);if(u.origin!==location.origin||u.searchParams.get('studio')!=='messages')continue;u.searchParams.set('panel','1');form.setAttribute('action',u.href);if(form.method==='get'){const input=document.createElement('input');input.type='hidden';input.name='panel';input.value='1';form.append(input);}}
  const focusable=()=>[...document.querySelectorAll('a[href],button,input:not([type=hidden]),select,textarea,summary')].filter(x=>!x.disabled&&!x.closest('[hidden]')&&(!x.closest('details:not([open])')||x.tagName==='SUMMARY'));
  addEventListener('message',event=>{
   if(event.origin!==location.origin||event.source!==parent)return;
