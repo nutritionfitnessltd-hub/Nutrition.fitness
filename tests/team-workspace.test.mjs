@@ -10,7 +10,7 @@ const load=async()=>({records:[],files:{}});
 function response(){return {statusCode:0,headers:{},setHeader(k,v){this.headers[k]=v;},end(body=''){this.body=body;}};}
 test('simple navigation includes Products alongside existing sections and only three Asset links',()=>{
   const html=studioNavigation('library',admin).html;
-  assert.equal((html.match(/studio-nav-section/g)||[]).length,8);
+  assert.equal((html.match(/studio-nav-section/g)||[]).length,9);
   assert.equal((html.match(/studio-subnav/g)||[]).length,2);assert.match(html,/studio=team-work/);
   for(const label of ['Home','Projects','Products','Assets','Software Releases','Team','Archive','Content Studio','Content Library','Brand & Media'])assert.ok(html.includes('>'+label+'<'));
 });

@@ -47,6 +47,7 @@ jobs:
           psql -v ON_ERROR_STOP=1 -f supabase/seeds/high-protein-kitchen.sql
           psql -v ON_ERROR_STOP=1 -f supabase/seeds/high-protein-kitchen.sql
           psql -v ON_ERROR_STOP=1 -f supabase/tests/catalogue.sql
+          psql -v ON_ERROR_STOP=1 -f supabase/tests/team_messages.sql
           psql -v ON_ERROR_STOP=1 -f supabase/tests/private_recipe_content.sql
           psql -v ON_ERROR_STOP=1 -f supabase/tests/account-management.sql
           psql -v ON_ERROR_STOP=1 -f supabase/tests/website-management.sql

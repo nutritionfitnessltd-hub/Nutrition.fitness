@@ -30,9 +30,9 @@ const recordUrl=id=>itemTable+'?id=eq.'+encodeURIComponent(id)+'&select=id,paylo
 const recordFrom=row=>row?{...row.payload,revision:row.revision}:null;
 async function saveNotification(api,actor,record,expected){
   if(actor.role!=='system')return saveRecord(api,actor,record,expected);
-  // Server task events may record only task notification delivery, never content.
-  if(actor.id==='task-workflow'&&record.kind==='notification'&&record.fields?.type==='task-workflow'&&record.id.startsWith(notificationPrefix)){
-    const rows=await api('/rest/v1/rpc/nufi_studio_save',{service:true,method:'POST',payload:{item:record.id,expected,document:record,editor_name:'system:task-workflow'}});
+  // Server task and human-message events may record delivery only, never content.
+  if(((actor.id==='task-workflow'&&record.fields?.type==='task-workflow')||(actor.id==='team-message'&&record.fields?.type==='team-message'))&&record.kind==='notification'&&record.id.startsWith(notificationPrefix)){
+    const rows=await api('/rest/v1/rpc/nufi_studio_save',{service:true,method:'POST',payload:{item:record.id,expected,document:record,editor_name:'system:'+actor.id}});
     if(!rows.length)throw new HttpError(409,'The email delivery state changed.');return rows[0];
   }
   // Only the server's password recovery flow may record its own email delivery.
