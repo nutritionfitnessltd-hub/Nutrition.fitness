@@ -180,3 +180,12 @@ test('hide completed remembers its setting and survives live refresh',async()=>{
  rows().find(r=>!r.hidden).dataset.trackerCompleted='true';toggle().dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(doc.querySelector('[data-tracker-group-empty]').hidden,false);
  toggle().checked=false;toggle().dispatchEvent(new w.Event('change',{bubbles:true}));assert.equal(rows().filter(r=>r.hidden).length,0);assert.equal(doc.querySelector('[data-tracker-group-empty]').hidden,true);assert.equal(w.localStorage.getItem('nufi:hide-completed:admin:p'),'0');dom.window.close();
 });
+
+
+test('hide completed keeps checked exports awaiting review visible',async()=>{
+ const {JSDOM}=await import('jsdom'),{readFile}=await import('node:fs/promises');const {p,data,meta,pilot}=fixture();p.studio.productionTracking.pilotIds=[];pilot.status='In review';
+ assert.equal(productionTracking(p,data,meta).rows[0].work.label,'Completed');
+ const dom=new JSDOM(productionTrackerPanel(p,data,meta),{url:'https://team.nutrition.fitness/',runScripts:'outside-only'}),w=dom.window,doc=w.document;
+ w.localStorage.setItem('nufi:hide-completed:admin:p','1');w.eval(await readFile(new URL('../public/production-tracker-filter.js',import.meta.url),'utf8'));
+ assert.equal(doc.querySelector('[data-tracker-completed]').dataset.trackerCompleted,'false');assert.equal(doc.querySelector('[data-tracker-completed]').hidden,false);assert.equal(doc.querySelector('[data-tracker-visible]').textContent,'2 shown · 0 completed hidden');dom.window.close();
+});
