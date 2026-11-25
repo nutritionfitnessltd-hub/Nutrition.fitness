@@ -232,7 +232,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
   const welcomeJson=req.method==='POST'&&['send-welcome','send-password-reset'].includes(f.action)&&req.headers.accept?.includes('application/json');
   const json=(status,value)=>{res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify(value));};
   try {
-    if(!['GET','POST'].includes(req.method))throw new HttpError(405,'Use the work screen to continue.');
+    if(!['GET','POST'].includes(req.method)&&!(req.method==='HEAD'&&params.get('studio')==='video-source'))throw new HttpError(405,'Use the work screen to continue.');
     const key=env.NUFI_LIBRARY_CATALOGUE_KEY;
     if(!key)throw new HttpError(503,'The work screen is being connected.');
     if(req.method==='POST' && req.headers.origin!=='https://'+req.headers.host)throw new HttpError(403,'Open the work screen to continue.');

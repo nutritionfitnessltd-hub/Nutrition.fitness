@@ -1,3 +1,4 @@
+import {videoUploadAction,requireVideoCopy} from './video-review-upload.mjs';
 import {launchPackParts} from './launch-packs.mjs';
 import {allRows} from './studio-store.mjs';
 import {contentWorker} from './studio-worker-content.mjs';
@@ -13,6 +14,7 @@ function link(raw,host,prefix){let u;try{u=new URL(raw);}catch{throw new HttpErr
 export async function productionAction(req,input,{env,api,index}){
  requireSecret(req,env.NUFI_COURSE_PRODUCTION_TOKEN);
  if(!input||typeof input!=='object'||Array.isArray(input))throw new HttpError(400,'Supply a production action.');
+ if(['video-upload-token','video-upload-confirm'].includes(input.action))return videoUploadAction(input,env,index);
  if(input.action==='status')return {connected:true,store:'Nutrition.Fitness Studio',publishing:false};
  if(input.action==='queue'){
   if(!['courses','other'].includes(input.scope)||!Number.isInteger(input.offset??0)||(input.offset??0)<0||!Number.isInteger(input.limit??10)||(input.limit??10)<1||(input.limit??10)>10)throw new HttpError(400,'Choose courses or other and a page of at most ten items.');
@@ -33,7 +35,7 @@ export async function productionAction(req,input,{env,api,index}){
   const parent=course.id?(await api('/rest/v1/nufi_studio_items?id=eq.'+encodeURIComponent(course.id)+'&select=id,payload,revision&limit=1',{service:true}))[0]:null;
   const plan=parent?coursePlan(parent.payload,{byId:new Map(),trackingMeta:{courses:{[course.name]:course}}}):null;
   const structureReview={status:plan?.approved?'approved':plan?.review?.decision==='changes'&&plan.review.fingerprint===plan.fingerprint?'changes_requested':'awaiting_review',note:plan?.review?.note||'',reviewedBy:plan?.review?.by||'',reviewedAt:plan?.review?.at||'',structureChangedSinceReview:Boolean(plan?.review&&plan.review.fingerprint!==plan.fingerprint)};
-  return {source,draft:current,draftId:id,course,structureReview,courseBrief:courseProductionBrief,launchPack:{courseId:course.id||null,kind:'marketing',deliverables:launchPackParts.map(([part,label,kind])=>({part,label,kind,fields:{launchPackId:'Exact parent Studio ID',launchPackPart:part,courseId:course.id||null,workerId:'imogen'}})),fields:{coursePack:true,courseId:course.id||null,workerId:'imogen',...Object.fromEntries(Object.keys(coursePackFields).map(k=>[k,'']))},saveWith:'Content Manager save_content_draft, using a stable ID per course. Read existing revision first. Maintain one parent index and separate linked child drafts, not separate jobs. Generate new branded images instead of selecting existing photographs; upload each to its image child with alt text and AI provenance. Studio displays the private uploaded image automatically; heroImageUrl is only for a real hosted image. All outputs remain Draft.'}};
+  return {source,draft:current,draftId:id,course,structureReview,videoPlayback:{required:true,prepare:'Upload the exact checked MP4 to private in-app storage before save-draft. Request video-upload-token with sourceId, sha256 and bytes; upload to the returned pathname with the scoped client token and private access; call video-upload-confirm with the same identity. SharePoint remains the archive copy. scripts/cache-review-video.mjs performs this sequence.'},courseBrief:courseProductionBrief,launchPack:{courseId:course.id||null,kind:'marketing',deliverables:launchPackParts.map(([part,label,kind])=>({part,label,kind,fields:{launchPackId:'Exact parent Studio ID',launchPackPart:part,courseId:course.id||null,workerId:'imogen'}})),fields:{coursePack:true,courseId:course.id||null,workerId:'imogen',...Object.fromEntries(Object.keys(coursePackFields).map(k=>[k,'']))},saveWith:'Content Manager save_content_draft, using a stable ID per course. Read existing revision first. Maintain one parent index and separate linked child drafts, not separate jobs. Generate new branded images instead of selecting existing photographs; upload each to its image child with alt text and AI provenance. Studio displays the private uploaded image automatically; heroImageUrl is only for a real hosted image. All outputs remain Draft.'}};
  }
  if(input.action==='read-draft')return {draft:current};
  const allowed=['action','sourceId','expectedRevision','title','body','introduction','script','takeaway','activity','canvaUrl','files','durationSeconds'];
@@ -46,6 +48,7 @@ export async function productionAction(req,input,{env,api,index}){
  if(!Array.isArray(input.files)||!input.files.length||input.files.length>20)throw new HttpError(400,'Attach checked exports.');
  const files=input.files.map(f=>{if(!f||!Number.isSafeInteger(f.bytes)||f.bytes<=0||!/^[a-f0-9]{64}$/.test(f.sha256||''))throw new HttpError(400,'Files need checked size and SHA-256.');return {name:cleanText(f.name,240),url:link(f.url,'nutritionfitness.sharepoint.com','/sites/Nutrition.fitness/Shared Documents/Content Library/Courses/'),bytes:f.bytes,sha256:f.sha256};});
  const previous=current?.payload.fields||{},video=files.find(f=>/\.mp4$/i.test(f.name));
+ if(video&&env.BLOB_READ_WRITE_TOKEN)await requireVideoCopy(video,env);
  const measured=input.durationSeconds??previous.production?.durationSeconds??previous.durationSeconds;
  if(video&&(typeof measured!=='number'||!Number.isFinite(measured)||measured<=0||measured>86400))throw new HttpError(400,'Video exports require a measured duration in seconds.');
  if(input.durationSeconds!==undefined&&(typeof input.durationSeconds!=='number'||!Number.isFinite(input.durationSeconds)||input.durationSeconds<0||input.durationSeconds>86400))throw new HttpError(400,'Use a valid measured duration in seconds.');

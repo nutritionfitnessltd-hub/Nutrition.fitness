@@ -161,7 +161,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         readable(data,r.id);res.statusCode=303;res.setHeader('Location',url(r.kind==='product'?'product':'product-asset',{id:r.id,...(params.get('tab')==='edit'?{tab:'edit'}:{})}).replaceAll('&amp;','&'));return res.end();
       }
     }
-    if(section==='video-source')return await productionVideoSource(req,res,params,data);
+    if(section==='video-source')return await productionVideoSource(req,res,params,data,env);
     if(section==='recipe-staging-image')return await sendRecipeStagingImage(req,res,params,data);
     if(section==='product-file')return await sendProductFile(req,res,params,data,env);
     if(section==='product-image'){

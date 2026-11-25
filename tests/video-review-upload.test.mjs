@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {createHash} from 'node:crypto';
+import {videoUploadAction,requireVideoCopy} from '../server/video-review-upload.mjs';
+const body=Buffer.from('saved video'),sha256=createHash('sha256').update(body).digest('hex'),env={BLOB_READ_WRITE_TOKEN:'fixture'},index={records:[{id:'source',group:'Courses'}]},input={sourceId:'source',bytes:body.length,sha256};
+test('producer upload tokens are immutable, size/type/path scoped and limited to existing course sources',async()=>{let options;const result=await videoUploadAction({...input,action:'video-upload-token'},env,index,{issue:async o=>{options=o;return 'limited-token';}});assert.equal(result.access,'private');assert.equal(options.allowOverwrite,false);assert.equal(options.maximumSizeInBytes,body.length);assert.deepEqual(options.allowedContentTypes,['video/mp4']);assert.match(options.pathname,new RegExp(sha256));await assert.rejects(()=>videoUploadAction({...input,sourceId:'missing',action:'video-upload-token'},env,index),e=>e.status===404);});
+test('producer confirmation hashes the actual private bytes, and publishing requires a prepared video',async()=>{const stat=async()=>({size:body.length}),read=async()=>({stream:new Response(body).body});assert.equal((await videoUploadAction({...input,action:'video-upload-confirm'},env,index,{stat,read})).verified,true);await assert.rejects(()=>videoUploadAction({...input,action:'video-upload-confirm'},env,index,{stat,read:async()=>({stream:new Response('wrong bytes').body})}),e=>e.status===409);await requireVideoCopy({sha256,bytes:body.length},env,stat);await assert.rejects(()=>requireVideoCopy({sha256,bytes:body.length+1},env,stat),e=>e.status===409);});
+
