@@ -58,3 +58,17 @@ test('product forms save through the handler and the central figures page reload
  const list=response();await handleStudio({method:'GET'},list,{...options,params:new URLSearchParams({studio:'product-figures'})});assert.equal(list.statusCode,200);assert.match(list.body,/Bulk powder|Pack ourselves/);assert.match(list.body,/£1,070.00/);assert.match(list.body,/product-cost-table/);
  const page=response();await handleStudio({method:'GET'},page,options);assert.equal(page.statusCode,200);assert.match(page.body,/data-product-cost-scenario/);assert.match(page.body,/data-product-quote-form/);assert.match(page.body,/src="\/product-costs.js"/);
 });
+
+test('figures screen edits save partial scenarios, preserve quotes and reject stale writes',async()=>{
+ const f=fixture();await changeProductCosts(f.quote,await f.data(),f.api);
+ const values={action:'product-cost-scenario',returnTo:'product-figures',productId:f.p.id,revision:'1',quoteId:f.quote.quoteId,quantity:'',sellingPrice:'31',vatRate:'',feePercent:'0',feeFixed:'0'};
+ const next=await changeProductCosts(values,await f.data(),f.api);assert.equal(next.section,'product-figures');
+ const d=await f.data(),record=d.items.find(r=>r.kind==='product-costing');assert.equal(record.fields.scenario.quantity,null);assert.equal(record.fields.scenario.vatRate,null);assert.equal(record.fields.scenario.sellingPrice,31);assert.equal(record.fields.quotes[0].materialPrice,10);
+ await assert.rejects(changeProductCosts(values,d,f.api),e=>e.status===409);
+ const {JSDOM}=await import('jsdom');const doc=new JSDOM(productFiguresPage(new URLSearchParams(),d)).window.document;
+ const form=doc.querySelector('[data-figure-form]');assert.equal(form.elements.sellingPrice.value,'31');assert.equal(form.elements.quoteId.value,f.quote.quoteId);assert.equal(form.elements.quantity.value,'');assert.equal(doc.querySelectorAll('[data-product-quote-form]').length,2);
+ for(const q of doc.querySelectorAll('[data-product-quote-form]'))assert.equal(q.elements.returnTo.value,'product-figures');
+ assert.equal(doc.querySelectorAll('thead th').length,doc.querySelector('[data-figure-row]').children.length);
+ const invalid={...values,revision:'2',quantity:'-1'};await assert.rejects(changeProductCosts(invalid,d,f.api),e=>e.status===400);
+ const error=productFiguresPage(new URLSearchParams(),d,{...values,sellingPrice:'33'});assert.match(error,/value="33"/);
+});
