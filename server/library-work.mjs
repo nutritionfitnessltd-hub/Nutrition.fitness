@@ -226,7 +226,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
   const projects=params.get('projects')==='1';
   const asset=params.get('assets');
   const studio=params.get('studio');
-  const destination=params.get('reader')==='1'?Object.fromEntries([...params].filter(([k])=>['reader','file','image','preview'].includes(k))):studio?Object.fromEntries([...params].filter(([k])=>['studio','id','project','entry','task','week','source','template','kind','tab','category','schedule','view','contentKind','shelf','folder','item','from','progress','q','page','reader','file','image','preview','collection','bucket','bookType','build','worker','person','assign','role','ai','newTask','editTask','roleTask'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
+  const destination=params.get('reader')==='1'?Object.fromEntries([...params].filter(([k])=>['reader','file','image','preview'].includes(k))):studio?Object.fromEntries([...params].filter(([k])=>['studio','conversation','reply','messagePage','new','id','project','entry','task','week','source','template','kind','tab','category','schedule','view','contentKind','shelf','folder','item','from','progress','q','page','reader','file','image','preview','collection','bucket','bookType','build','worker','person','assign','role','ai','newTask','editTask','roleTask'].includes(k))):asset?{assets:asset}:projects?{projects:'1',...(params.get('project')?{project:params.get('project')}:{}),...(params.get('week')?{week:params.get('week')}:{})}:{};
   let actor;
   const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
   const welcomeJson=req.method==='POST'&&['send-welcome','send-password-reset'].includes(f.action)&&req.headers.accept?.includes('application/json');
@@ -334,6 +334,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
       }
       return writePage(res,200,(params.get('saved')==='worker-settings'?'<p role="status" class="team-profile-saved">James HQ settings saved.</p>':params.get('saved')==='reporting'?'<p role="status" class="team-profile-saved">Reporting details saved.</p>':params.get('saved')==='profile'?'<p role="status" class="team-profile-saved">Profile saved.</p>':params.get('saved')==='assignment'?'<p role="status" class="panel">Work assigned.</p>':params.get('saved')==='access'?'<p role="status" class="panel">Access saved. The new settings apply on this person’s next request.</p>':'')+await teamScreen(api,actor,origin,env,params,fetcher)+'<script type="module" src="/team-account-preview.js"></script>',actor,'team');
     }
+    if(studio==='messages'&&copyActor)throw new HttpError(403,'Private Messages are unavailable in account previews.');
     if(studio)return handleStudio(req,res,{params,actor,api,load,env,fetcher});
     if(asset){
       requireAccess(actor,'originals','sources');

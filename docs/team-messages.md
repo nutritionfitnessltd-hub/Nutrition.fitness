@@ -1,0 +1,23 @@
+# Human Team Messages
+
+Messages is available to signed-in human administrators and staff, independently of content-edit permissions. Worker, system, guest and member roles cannot enter it. Account-preview sessions cannot open or write private messages.
+
+Direct pairs reuse one conversation. Groups have a name and an owner; the owner or an administrator who is already a member can add/remove people. Project and task links can start a work-linked group; the same work and participant set reuse that group. Existing task progress notes and task messages remain intact.
+
+Team announcements is shared with the human directory. Only administrators post top-level announcements; everyone can reply. New accounts see announcements from their directory creation date. New group members see messages from their join sequence/time. Removing someone revokes reads, posting and file downloads. Rejoining starts a new visibility boundary. Administrators cannot inspect private groups or direct conversations unless they belong to them.
+
+Replies are one-level threads. Unread tracking records the displayed message IDs, so unopened replies do not silently become read. Navigation counts refresh while the page is visible, every 20 seconds. New activity produces a refresh prompt without discarding a draft. Mentions highlight human names and are included in the unread badge's accessible label. A muted conversation silences unread alerts and email.
+
+Search covers the user's visible message bodies, conversation names and posted attachment names, excluding deleted messages and pre-join history. Results are limited to the latest 100 matches. Message authors can edit, soft-delete and restore their messages, with revision conflict checks. Prior edit text is retained server-side; deleted text and file links are hidden from other members.
+
+Files use the existing private Vercel Blob store under an isolated human-messages prefix. Both token generation and attachment registration verify membership; paths also bind the uploader. File downloads re-check membership and message visibility, serve as attachment with no-store/nosniff/sandbox headers, and never expose Blob URLs. Supported types match task uploads. Limits: five files per message, 250 MB per file, 200 files and 2,000 messages per conversation, 4,000 characters per message, 30 members per group. Start a follow-up conversation when a limit is reached; existing history remains readable. Up to 50 edits are retained per message. Sends are rate-limited to 30 per person/conversation/minute.
+
+Optional email alerts are off by default and configured per person/conversation. On a new message, opted-in members who have not opened the conversation in five minutes receive a generic sign-in link through the existing Microsoft 365 notification sender. Message text, attachments and conversation titles never enter email or the notification log. Existing claim-before-send deduplication prevents duplicate sends; uncertain outcomes are not retried automatically. Sending failure never rolls back the saved message. No worker, supervisor, recurring production job or new scheduling service is created.
+
+## Data and release
+
+`nufi_team_threads` is separate from `nufi_studio_items`, catalogue exports and AI worker prompts. RLS is enabled; anonymous and authenticated Data API roles have no privileges. Only the existing server service role can select/insert/update; no hard-delete privilege is granted. Every route authenticates the existing Team session, uses existing same-origin POST enforcement and performs membership checks, including in compare-and-swap retries. Lightweight summaries drive navigation; message bodies and edit history are fetched only for an authorised conversation/search.
+
+Apply `supabase/migrations/20261125083403_team_human_messages.sql` before deploying the application. This adds a table/indexes only and does not migrate or alter existing conversations. Run `supabase/tests/team_messages.sql` against the test database. Production migration/deployment is a separate owner-authorised release step.
+
+Unit/integration tests: `node --test tests/team-messages.test.mjs tests/task-messages.test.mjs tests/team-workspace.test.mjs tests/library-login.test.mjs tests/library-permissions.test.mjs tests/studio-notifications.test.mjs` (run the existing newsletter-renderer build first). The loopback-only `tests/team-messages-preview.mjs` provides fictional data and in-memory file/email services for browser review; it never connects to production.

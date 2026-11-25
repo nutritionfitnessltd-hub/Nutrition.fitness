@@ -18,3 +18,4 @@ __pycache__/
 /server/generated/
 
 /public/product-upload.js
+/public/team-message-upload.js

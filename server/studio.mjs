@@ -1,3 +1,4 @@
+import {handleTeamMessages} from './team-messages.mjs';
 import {saveRecipePhotoReview,sendRecipeStagingImage} from './recipe-staging.mjs';
 import {collectionPage,linkCollection,applyCollectionPlacement} from './studio-collections.mjs';
 import {productionVideoSource} from './production-video.mjs';
@@ -95,7 +96,8 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
   const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
   try{
     authorizeStudioRequest(actor,section,req.method,f,params);
-    if(Buffer.byteLength(JSON.stringify(f))>(section==='task'&&f.action==='task-file-upload'?2900000:1200000))throw new HttpError(413,'Import a smaller section of this document.');
+    if(Buffer.byteLength(JSON.stringify(f))>((section==='task'&&f.action==='task-file-upload'||section==='messages'&&f.action==='message-file-upload')?2900000:1200000))throw new HttpError(413,'Import a smaller section of this document.');
+    if(section==='messages')return await handleTeamMessages(req,res,{params,actor,api,env,fetcher,fileStore:taskFileStore});
     if(req.method==='POST'&&f.action==='idea-generate-summary'){
       if(section!=='shiny-things')throw new HttpError(403,'Open Shiny Things to generate an idea explanation.');
       const summary=await generateIdeaSummary({actor,title:f.title,summary:f.summary,env,fetcher});
@@ -366,6 +368,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       }
       default:throw new HttpError(404,'This studio page is unavailable.');
     }
+    if(section==='project')body=button('Team conversation',url('messages',{new:'1',project:params.get('project')}))+body;
     if(params.get('notification')==='pending')body='<p role="status">Your changes were saved, but an email needs attention. '+(actor.role==='admin'?button('Check email activity',url('connections')):'Please ask your administrator to check Connections.')+'</p>'+body;
     if(['suppliers','supplier','products','product','product-creatives','product-asset'].includes(section))body='<div class="product-space">'+body+'</div>';
     return write(res,200,body,section,actor,meta);

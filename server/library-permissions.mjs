@@ -59,6 +59,7 @@ export function accessFromForm(fields) {
 }
 
 const routes = {
+  messages: [],
   'video-source':['library'],
   'recipe-staging-image':['library'],
   'brand-file': ['shared_library'],
@@ -71,6 +72,7 @@ const routes = {
   release: ['work', 'library'], export: ['work', 'library']
 };
 const actions = {
+  'message-create':[], 'message-send':[], 'message-edit':[], 'message-delete':[], 'message-restore':[], 'message-members':[], 'message-preferences':[], 'message-read':[], 'message-file-save':[], 'message-file-upload':[],
   'recipe-photo-review':['library','edit'],
   'collection-link':['library','edit'],
   'idea-save': ['library','edit'], 'idea-discussion': ['library','edit'],
@@ -97,6 +99,7 @@ export function authorizeStudioRequest(actor, section, method, fields = {}, para
   if (!Object.hasOwn(routes, section)) throw new HttpError(403, 'Administrator access is required.');
   requireAccess(actor, ...routes[section]);
   if (method === 'POST') {
+    if(section==='messages'&&fields.type==='blob.generate-client-token')return;
     if(section==='task'&&fields.type==='blob.generate-client-token'){requireAccess(actor,'work','edit');return;}
     if (section === 'product-upload' && fields.type === 'blob.generate-client-token') { requireAccess(actor,'library','edit'); return; }
     if (!Object.hasOwn(actions, fields.action)) throw new HttpError(403, 'This action is not available to your account.');
