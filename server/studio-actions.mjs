@@ -1,3 +1,4 @@
+import {offeringDetails} from './studio-offering-template.mjs';
 import {applyCollectionPlacement} from './studio-collections.mjs';
 import {articleMediaIssues} from './worker-drafts.mjs';
 import {workStates} from './production-work-state.mjs';
@@ -94,7 +95,8 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
     adminOnly(data);
     const name=cleanText(f.name||'',160);if(!name)throw new HttpError(400,'Give the project a name.');
     if(!data.people.some(person=>person.id===f.creator))throw new HttpError(400,'Choose a project owner.');
-    const project={id:uuid(f.id),name,creator_id:f.creator,created_by:data.actor.id,weeks:1,brief:cleanText(f.brief||'',4000),entries:projectTasks(f.tasks||'[]',data.people),studio:{type:'blank',allowedIds:[],launchDate:date(f.launch||'')}};
+    if(f.projectTemplate&&!['blank','offering'].includes(f.projectTemplate))throw new HttpError(400,'Choose a project template.');
+    const project={id:uuid(f.id),name,creator_id:f.creator,created_by:data.actor.id,weeks:1,brief:cleanText(f.brief||'',4000),entries:projectTasks(f.tasks||'[]',data.people),studio:{type:'blank',...(f.projectTemplate==='offering'?{template:'offering',offering:offeringDetails(f)}:{}),allowedIds:[],launchDate:date(f.launch||'')}};
     await api('/rest/v1/rpc/nufi_studio_create_project',{service:true,method:'POST',payload:{project,records:[],editor_name:'admin:'+data.actor.id}});
     return {section:'project',project:project.id};
   }
@@ -184,7 +186,7 @@ export async function changeStudio(params,f,data,api,{returnRecord=false}={}){
       if(data.actor.role!=='admin'&&p.creator_id!==data.actor.id)throw new HttpError(403,'Only the project owner can change project details.');
       const allowed=data.actor.role==='admin'?['Planning','In progress','Ready for review','Complete']:['Planning','In progress','Ready for review'];
       if(!allowed.includes(f.status))throw new HttpError(403,'Choose a permitted project status.');
-      update={brief:cleanText(f.brief||'',4000),status:f.status,studio:{...p.studio,launchDate:date(f.launch||'')}};
+      update={brief:cleanText(f.brief||'',4000),status:f.status,studio:{...p.studio,...(p.studio.template==='offering'?{offering:offeringDetails(f)}:{}),launchDate:date(f.launch||'')}};
       if(data.actor.role==='admin'){
         if(!data.people.some(s=>s.id===f.creator))throw new HttpError(400,'Choose a creator.');
         update.name=cleanText(f.name,160);update.creator_id=f.creator;
