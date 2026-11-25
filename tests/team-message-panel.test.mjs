@@ -1,0 +1,59 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import {JSDOM} from 'jsdom';
+import {studioFrame} from '../server/studio-ui.mjs';
+import {messagesPage} from '../server/team-messages.mjs';
+import {messageFixture} from './team-messages-fixture.mjs';
+import {createConversation} from '../server/team-message-store.mjs';
+const hostCode=await fs.readFile(new URL('../public/team-message-panel.js',import.meta.url),'utf8');
+const messageCode=await fs.readFile(new URL('../public/team-messages.js',import.meta.url),'utf8');
+const actor={id:'11111111-1111-4111-8111-111111111111',role:'staff',name:'Sam',access:{}};
+const click=(w,node)=>node.dispatchEvent(new w.MouseEvent('click',{bubbles:true,cancelable:true,button:0}));
+function host({mobile=false,url='https://team.example/content-library/?work=1&studio=home'}={}){
+ const dom=new JSDOM(studioFrame('<h1>My work</h1><textarea id="work-draft">Work in progress</textarea>','home',actor),{url,runScripts:'outside-only',pretendToBeVisual:true});
+ const w=dom.window;w.matchMedia=()=>({matches:mobile,addEventListener(){}});Object.defineProperty(w,'innerWidth',{value:mobile?390:1500,writable:true});w.eval(hostCode);
+ return {dom,w,panel:w.document.querySelector('[data-message-panel]'),toggle:w.document.querySelector('[data-message-panel-toggle]'),frame:w.document.querySelector('[data-message-panel-frame]'),close:w.document.querySelector('[data-message-panel-close]')};
+}
+test('drawer starts collapsed and unloaded; collapse/reopen keeps the iframe, composer and main work untouched',()=>{
+ const h=host();try{
+  assert.ok(h.panel.hidden);assert.equal(h.frame.getAttribute('src'),null);assert.equal(h.toggle.getAttribute('aria-expanded'),'false');
+  click(h.w,h.toggle);assert.ok(!h.panel.hidden);assert.equal(new URL(h.frame.src).searchParams.get('panel'),'1');
+  const source=h.frame.src,frame=h.frame,doc=h.frame.contentDocument;doc.append(doc.createElement('html'));doc.documentElement.append(doc.createElement('body'));const textarea=doc.createElement('textarea');textarea.value='Unsent message';doc.body.append(textarea);
+  click(h.w,h.close);assert.ok(h.panel.hidden);assert.equal(h.toggle.getAttribute('aria-expanded'),'false');
+  click(h.w,h.toggle);assert.equal(h.frame,frame);assert.equal(h.frame.src,source);assert.equal(h.frame.contentDocument,doc);assert.equal(textarea.value,'Unsent message');assert.equal(h.w.document.getElementById('work-draft').value,'Work in progress');
+ }finally{h.dom.window.close();}
+});
+test('navigation opens the drawer, keyboard resizing stays bounded, and unread activity never opens it',()=>{
+ const h=host();try{
+  const nav=h.w.document.querySelector('a[href*="studio=messages"]');click(h.w,nav);assert.ok(!h.panel.hidden);
+  const resize=h.w.document.querySelector('[data-message-panel-resize]');resize.dispatchEvent(new h.w.KeyboardEvent('keydown',{key:'ArrowLeft',bubbles:true,cancelable:true}));assert.equal(resize.getAttribute('aria-valuenow'),'500');
+  resize.dispatchEvent(new h.w.KeyboardEvent('keydown',{key:'Home',bubbles:true}));assert.equal(resize.getAttribute('aria-valuenow'),'360');resize.dispatchEvent(new h.w.KeyboardEvent('keydown',{key:'End',bubbles:true}));assert.equal(resize.getAttribute('aria-valuenow'),'644');
+  click(h.w,h.close);h.w.dispatchEvent(new h.w.MessageEvent('message',{data:{type:'unread',unread:4},origin:'https://team.example',source:h.frame.contentWindow}));assert.ok(h.panel.hidden);
+ }finally{h.dom.window.close();}
+});
+test('mobile drawer is modal and restores focus; Escape and trusted child collapse work but foreign messages do not',()=>{
+ const h=host({mobile:true});try{
+  h.toggle.focus();click(h.w,h.toggle);assert.equal(h.panel.getAttribute('role'),'dialog');assert.equal(h.panel.getAttribute('aria-modal'),'true');assert.equal(h.w.document.querySelector('.shell').inert,true);
+  h.w.dispatchEvent(new h.w.MessageEvent('message',{data:{type:'team-message-panel-close'},origin:'https://other.example',source:h.frame.contentWindow}));assert.ok(!h.panel.hidden);
+  h.w.document.dispatchEvent(new h.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true}));assert.ok(h.panel.hidden);assert.equal(h.w.document.querySelector('.shell').inert,false);assert.equal(h.w.document.activeElement,h.toggle);
+ }finally{h.dom.window.close();}
+});
+test('account previews cannot activate the actual account drawer; non-human frames have no launcher',()=>{
+ const h=host({url:'https://team.example/content-library/?work=1&studio=home&accountPreview=fixture'});try{assert.ok(h.toggle.hidden);click(h.w,h.toggle);assert.ok(h.panel.hidden);assert.equal(h.frame.getAttribute('src'),null);}finally{h.dom.window.close();}
+ assert.doesNotMatch(studioFrame('','home',{role:'worker',id:'imogen'}),/data-message-panel-toggle/);
+});
+test('compact messages suspend reads while collapsed, preserve actor-scoped drafts and keep in-panel navigation compact',async()=>{
+ const f=messageFixture(),id=await createConversation(f.api,f.admin,f.people,{kind:'direct',members:JSON.stringify([f.staff.id])});
+ const body=await messagesPage(new URLSearchParams({conversation:id,panel:'1'}),f.staff,f.api,{}),html=studioFrame(body,'messages',f.staff,{messagesEmbedded:true});
+ const make=()=>{const dom=new JSDOM(html,{url:'https://team.example/content-library/?work=1&studio=messages&conversation='+id+'&panel=1',runScripts:'outside-only',pretendToBeVisual:true}),w=dom.window;const calls=[];w.fetch=async(url,options)=>{calls.push({url,options});return {ok:true,status:200,json:async()=>options?{revision:2}:{unread:0,mentions:0,threads:[{id,revision:2}]}};};w.matchMedia=()=>({matches:false});return {dom,w,calls};};
+ const first=make();let saved,key;
+ try{
+  first.w.eval(messageCode);assert.equal(first.calls.length,0);assert.ok(!first.w.document.querySelector('[data-message-panel]'));assert.ok(!first.w.document.querySelector('.shell'));
+  const form=first.w.document.querySelector('[data-message-compose]');form.elements.body.value='Draft that survives collapsing';form.elements.body.dispatchEvent(new first.w.Event('input',{bubbles:true}));key=first.w.sessionStorage.key(0);saved=first.w.sessionStorage.getItem(key);assert.ok(key.includes(f.staff.id));
+  first.w.dispatchEvent(new first.w.MessageEvent('message',{origin:'https://team.example',source:first.w,data:{type:'team-message-panel-visibility',visible:true}}));await new Promise(r=>setTimeout(r,0));assert.ok(first.calls.some(c=>c.options?.method==='POST'));
+  first.w.dispatchEvent(new first.w.MessageEvent('message',{origin:'https://team.example',source:first.w,data:{type:'team-message-panel-visibility',visible:false}}));assert.equal(form.elements.body.value,'Draft that survives collapsing');
+  assert.ok([...first.w.document.querySelectorAll('a[href*="studio=messages"]')].every(a=>new URL(a.href).searchParams.get('panel')==='1'));
+ }finally{first.dom.window.close();}
+ const second=make();try{second.w.sessionStorage.setItem(key,saved);second.w.eval(messageCode);assert.equal(second.w.document.querySelector('[data-message-compose]').elements.body.value,'Draft that survives collapsing');}finally{second.dom.window.close();}
+});

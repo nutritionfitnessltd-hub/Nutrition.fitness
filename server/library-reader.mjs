@@ -89,7 +89,8 @@ export function createLibraryReader({ env = process.env, load = readIndex,
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
     res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; worker-src 'self' blob:; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' blob:; frame-src 'self'; "+(params.get('work')==='1'?"media-src 'self' https://nutritionfitness.sharepoint.com; ":'')+"form-action 'self'; base-uri 'none'; frame-ancestors 'none'");
+    const messagePanel=params.get('work')==='1'&&params.get('studio')==='messages'&&params.get('panel')==='1';
+    res.setHeader('Content-Security-Policy', "default-src 'none'; script-src 'self'; worker-src 'self' blob:; connect-src 'self'; style-src 'self'; img-src 'self' data: blob:; font-src 'self' blob:; frame-src 'self'; "+(params.get('work')==='1'?"media-src 'self' https://nutritionfitness.sharepoint.com; ":'')+"form-action 'self'; base-uri 'none'; frame-ancestors "+(messagePanel?"'self'":"'none'"));
     if (params.get('work')==='1') return handleLibraryWork(req,res,{env,load,params,apiFactory});
     const fields=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{};
     const loginScreen=error=>libraryLogin({target:escTarget(req.url),shared:true,error});

@@ -82,6 +82,8 @@ export async function messagesPage(params,actor,api,env,retained={},error=''){
 const json=(res,status,payload)=>{res.statusCode=status;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');res.end(JSON.stringify(payload));};
 export async function handleTeamMessages(req,res,{params,actor,api,env,fetcher=fetch,fileStore}){
  human(actor);res.setHeader('Cache-Control','private, no-store');
+ const embedded=params.get('panel')==='1',frame=(body)=>studioFrame(body,'messages',actor,{messagesEmbedded:embedded});
+ const redirect=(value)=>{if(!embedded)return value;const u=new URL(value.replaceAll('&amp;','&'),'https://team.nutrition.fitness');u.searchParams.set('panel','1');return u.pathname+u.search;};
  const f=typeof req.body==='string'?Object.fromEntries(new URLSearchParams(req.body)):req.body||{},id=params.get('conversation');
  const wantsJson=(req.headers?.accept||'').includes('application/json')||f.type==='blob.generate-client-token';
  try{
@@ -94,7 +96,7 @@ export async function handleTeamMessages(req,res,{params,actor,api,env,fetcher=f
    const people=await messagePeople(api,actor);
    if(f.action==='message-create'){
     const context=await conversationContext(params,actor,people,api),created=await createConversation(api,actor,people,f,context);
-    res.statusCode=303;res.setHeader('Location',address(created).replaceAll('&amp;','&'));return res.end();
+    res.statusCode=303;res.setHeader('Location',redirect(address(created)).replaceAll('&amp;','&'));return res.end();
    }
    uuid(id);
    if(f.type==='blob.generate-client-token')return json(res,200,await uploadTeamFile({...req,body:f},id,actor,people,api,env,fileStore?.generate));
@@ -103,16 +105,16 @@ export async function handleTeamMessages(req,res,{params,actor,api,env,fetcher=f
    const result=await changeConversation(api,id,actor,people,f);
    let pending=false;if(f.action==='message-send'&&!result.duplicate)pending=await notifyTeamMessage({api,actor,people,thread:result.thread,message:result.message,env,fetcher});
    if(wantsJson)return json(res,200,{saved:true,pending,revision:result.thread.revision});
-   res.statusCode=303;res.setHeader('Location',address(id,{...(f.parentId?{reply:f.parentId}:{}),...(pending?{email:'pending'}:{})}).replaceAll('&amp;','&'));return res.end();
+   res.statusCode=303;res.setHeader('Location',redirect(address(id,{...(f.parentId?{reply:f.parentId}:{}),...(pending?{email:'pending'}:{})})).replaceAll('&amp;','&'));return res.end();
   }
   if(req.method!=='GET')throw new HttpError(405,'Use GET or POST for Messages.');
   const body=await messagesPage(params,actor,api,env);
-  res.statusCode=200;res.setHeader('Content-Type','text/html; charset=utf-8');return res.end(studioFrame((params.get('email')==='pending'?'<p role="status">Your message is saved. An email alert could not be confirmed.</p>':'')+body,'messages',actor));
+  res.statusCode=200;res.setHeader('Content-Type','text/html; charset=utf-8');return res.end(frame((params.get('email')==='pending'?'<p role="status">Your message is saved. An email alert could not be confirmed.</p>':'')+body));
  }catch(e){
   const status=e instanceof HttpError?e.status:503,error=e instanceof HttpError?e.message:'Messages could not connect. Please try again; your unsent message is below.';
   if(wantsJson)return json(res,status,{error});
   let body='<p role="alert">'+esc(error)+'</p>';
   if(req.method==='POST')try{body=await messagesPage(params,actor,api,env,f,error);if(f.action==='message-edit'&&f.body)body+='<h2>Your unsaved edit</h2><pre class="source-text">'+esc(f.body)+'</pre>';}catch{if(f.body)body+='<h2>Your unsent message</h2><pre class="source-text">'+esc(f.body)+'</pre>';}
-  res.statusCode=status;res.setHeader('Content-Type','text/html; charset=utf-8');return res.end(studioFrame(body,'messages',actor));
+  res.statusCode=status;res.setHeader('Content-Type','text/html; charset=utf-8');return res.end(frame(body));
  }
 }

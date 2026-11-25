@@ -1,5 +1,9 @@
 # Human Team Messages
 
+The Messages button opens a collapsible right-hand panel. It starts closed and loads its authenticated, same-origin compact view only when requested. Closing keeps the same frame/composer alive. Draft text and selected attachment IDs also survive conversation navigation within the browser session, keyed by actor/conversation/reply; confirmed posted messages clear the saved draft. New unread activity never opens the panel. Closed panels suspend message polling and read acknowledgements.
+
+On wide desktops the drawer can be resized by dragging its left edge or using the focused separator's arrow/Home/End keys, while leaving at least 600 pixels for the work area. Smaller desktop/tablet windows use an overlay; mobile uses a full-screen dialog with background focus disabled, Escape/Collapse support and focus restoration. Open full page opens the current conversation separately. Full Messages-page conversation links still navigate normally. Account previews cannot activate the actual account's drawer. Only compact `studio=messages&panel=1` responses permit same-origin framing; other pages retain their existing no-framing policy.
+
 Messages is available to signed-in human administrators and staff, independently of content-edit permissions. Worker, system, guest and member roles cannot enter it. Account-preview sessions cannot open or write private messages.
 
 Direct pairs reuse one conversation. Groups have a name and an owner; the owner or an administrator who is already a member can add/remove people. Project and task links can start a work-linked group; the same work and participant set reuse that group. Existing task progress notes and task messages remain intact.

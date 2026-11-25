@@ -1,0 +1,5 @@
+export function messagePanel(actor){
+ if(!['admin','staff'].includes(actor?.role))return '';
+ return '<a class="messages-launcher" href="/content-library/?work=1&amp;studio=messages" data-message-panel-toggle role="button" aria-controls="team-message-panel" aria-expanded="false">Messages <span class="message-nav-count" data-message-unread hidden></span></a>'+
+ '<aside class="messages-drawer" id="team-message-panel" aria-label="Messages" data-message-panel hidden><div class="messages-resizer" role="separator" aria-label="Resize Messages panel" aria-orientation="vertical" aria-valuemin="360" aria-valuemax="720" aria-valuenow="480" tabindex="0" data-message-panel-resize></div><header class="messages-drawer-header"><h2>Messages</h2><a href="/content-library/?work=1&amp;studio=messages" target="_blank" rel="noopener" data-message-panel-full>Open full page ↗</a><button type="button" data-message-panel-close aria-label="Collapse Messages">Collapse</button></header><iframe title="Team messages" data-message-panel-frame referrerpolicy="same-origin"></iframe></aside>';
+}
