@@ -77,7 +77,7 @@ test('editable figures preview calculations and save a row without leaving the s
  const {JSDOM}=await import('jsdom'),{readFile}=await import('node:fs/promises');const f=fixture();await changeProductCosts(f.quote,await f.data(),f.api);
  const dom=new JSDOM(productFiguresPage(new URLSearchParams(),await f.data()),{url:'https://team.nutrition.fitness/content-library/',runScripts:'outside-only'}),w=dom.window;
  w.HTMLDialogElement.prototype.showModal=function(){this.open=true;};w.HTMLDialogElement.prototype.close=function(){this.open=false;};w.calculateProductCosts=calculateProductCosts;
- w.fetch=async(url,options)=>{await changeProductCosts(Object.fromEntries(options.body),await f.data(),f.api);return {ok:true,text:async()=>productFiguresPage(new URLSearchParams(),await f.data())};};
+ w.fetch=async(url,options)=>{assert.equal(typeof url,'string');assert.ok(url.startsWith('/content-library/?'));await changeProductCosts(Object.fromEntries(options.body),await f.data(),f.api);return {ok:true,text:async()=>productFiguresPage(new URLSearchParams(),await f.data())};};
  w.eval((await readFile(new URL('../public/product-figures.js',import.meta.url),'utf8')).replace("import {calculateProductCosts} from './product-cost-math.mjs';",''));
  const form=w.document.querySelector('[data-figure-form]');for(const [k,v] of Object.entries({quoteId:f.quote.quoteId,quantity:'100',sellingPrice:'30',vatRate:'20',feePercent:'0',feeFixed:'0'})){form.elements[k].value=v;form.elements[k].dispatchEvent(new w.Event('input',{bubbles:true}));}
  assert.equal(w.document.querySelector('[data-preview="initialCash"]').textContent,'£1,070.00');assert.equal(w.document.querySelector('[data-row-save-status]').textContent,'Unsaved changes');
