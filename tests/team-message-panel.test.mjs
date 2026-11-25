@@ -88,3 +88,9 @@ test('clean composer uses a paperclip modal, uploads selected files and inserts 
  const picker=dialog.querySelector('input[type=file]');Object.defineProperty(picker,'files',{value:[new w.File(['fixture'],'fixture.pdf',{type:'application/pdf'})]});picker.dispatchEvent(new w.Event('change',{bubbles:true}));await new Promise(r=>setTimeout(r,60));assert.deepEqual(calls,['message-file-upload','message-file-save']);assert.match(form.elements.files.value,/10000000/);assert.equal(open.querySelector('[data-attachment-count]').textContent,'1');assert.ok(!open.querySelector('[data-attachment-count]').hidden);
  }finally{dom.window.close();}
 });
+
+test('People shows presence from authenticated polling, including active heartbeat',async()=>{
+ const f=messageFixture(),html=studioFrame(await messagesPage(new URLSearchParams(),f.staff,f.api,{}),'messages',f.staff),dom=new JSDOM(html,{url:'https://team.example/content-library/?work=1&studio=messages',runScripts:'outside-only',pretendToBeVisual:true}),w=dom.window,calls=[];
+ try{w.document.hasFocus=()=>true;w.fetch=async(url,options)=>{calls.push({url,options});return {ok:true,status:200,json:async()=>({unread:0,threads:[],presence:[{id:f.other.id,status:'online'}]})};};w.eval(messageCode);await new Promise(r=>setTimeout(r,10));const status=w.document.querySelector('[data-team-presence="'+f.other.id+'"]');assert.equal(status.dataset.status,'online');assert.equal(status.textContent,'Online');const heartbeat=calls.find(c=>c.options?.method==='POST');assert.deepEqual(JSON.parse(heartbeat.options.body),{action:'message-presence',active:true});
+ }finally{dom.window.close();}
+});
