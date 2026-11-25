@@ -769,3 +769,7 @@ body.team-profile-open{overflow:hidden}.team-profile-modal{width:min(800px,calc(
 /* Compact controls for reusable project templates and setup. */
 .studio-form label.project-template-toggle{display:flex;align-items:center;gap:.65rem;flex-direction:row;font-weight:400;margin:.75rem 0}
 .studio-form label.project-template-toggle input[type="checkbox"]{width:1.1rem;height:1.1rem;min-height:0;padding:0;margin:0;flex:0 0 auto}
+
+.video-external-review{margin:12px 0 18px;padding:12px;border:1px solid #d6ddd9;border-radius:9px;background:#faf6ef}.video-external-review p{font-size:14px;line-height:1.5;margin:0 0 10px}.video-external-review label{display:flex;align-items:flex-start;gap:8px;margin-top:14px;font-size:15px;line-height:1.5}.video-external-review label[hidden]{display:none}.video-external-review input[type=checkbox]{width:20px;height:20px;flex:none;margin-top:2px}.production-video-modal footer form button{min-height:44px}
+
+.production-video-modal .video-source-check{display:flex;align-items:flex-start;gap:8px;margin:14px 0;font-size:15px;line-height:1.5}.production-video-modal [data-video-source-check]{width:20px;height:20px;flex:none;margin:2px 0 0}
