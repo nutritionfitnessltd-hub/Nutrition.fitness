@@ -75,3 +75,16 @@ test('incoming chat refresh keeps the composer draft and Enter sends while Shift
  release();await new Promise(r=>setTimeout(r,30));assert.ok(w.document.getElementById('incoming'));assert.equal(form.elements.body,body);assert.equal(body.value,'Keep my draft');
  }finally{dom.window.close();}
 });
+
+test('clean composer uses a paperclip modal, uploads selected files and inserts @ mentions',async()=>{
+ const f=messageFixture(),id=await createConversation(f.api,f.admin,f.people,{kind:'direct',members:JSON.stringify([f.staff.id])});
+ const html=studioFrame(await messagesPage(new URLSearchParams({conversation:id}),f.staff,f.api,{BLOB_READ_WRITE_TOKEN:'fixture'}),'messages',f.staff);
+ const dom=new JSDOM(html,{url:'https://team.example/content-library/?work=1&studio=messages&conversation='+id,runScripts:'outside-only',pretendToBeVisual:true}),w=dom.window;
+ try{w.fetch=async()=>({ok:false,status:503});w.matchMedia=()=>({matches:false});w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};w.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');this.dispatchEvent(new w.Event('close'));};w.eval(messageCode.replace("import('/team-message-upload.js')","Promise.resolve()"));
+ const form=w.document.querySelector('[data-message-compose]'),body=form.elements.body;assert.equal(form.querySelector('select[data-message-mention]'),null);assert.equal(form.querySelector('.chat-extras'),null);
+ const open=form.querySelector('[data-attachment-open]'),dialog=form.querySelector('dialog');assert.ok(open);assert.ok(!dialog.open);click(w,open);assert.ok(dialog.open);dialog.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));assert.ok(!dialog.open);assert.equal(w.document.activeElement,open);
+ body.value='Hi @Al';body.setSelectionRange(body.value.length,body.value.length);body.dispatchEvent(new w.Event('input',{bubbles:true}));const list=form.querySelector('[role=listbox]');assert.ok(!list.hidden);assert.equal(list.children[0].textContent,f.admin.name);let submitted=0;form.requestSubmit=()=>submitted++;body.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));assert.equal(body.value,'Hi @'+f.admin.name+' ');assert.equal(submitted,0);assert.ok(list.hidden);
+ const source=await fs.readFile(new URL('../client/team-message-upload.mjs',import.meta.url),'utf8');w.CSS={escape:s=>s};const calls=[];w.fetch=async(url,options)=>{const payload=JSON.parse(options.body);calls.push(payload.action);return {ok:true,json:async()=>payload.action==='message-file-save'?{file:{id:'10000000-0000-4000-8000-000000000001',name:'fixture.txt'}}:{saved:true}};};w.eval(source.replace("import {upload} from '@vercel/blob/client';",''));
+ const picker=dialog.querySelector('input[type=file]');Object.defineProperty(picker,'files',{value:[new w.File(['fixture'],'fixture.pdf',{type:'application/pdf'})]});picker.dispatchEvent(new w.Event('change',{bubbles:true}));await new Promise(r=>setTimeout(r,60));assert.deepEqual(calls,['message-file-upload','message-file-save']);assert.match(form.elements.files.value,/10000000/);assert.equal(open.querySelector('[data-attachment-count]').textContent,'1');assert.ok(!open.querySelector('[data-attachment-count]').hidden);
+ }finally{dom.window.close();}
+});
