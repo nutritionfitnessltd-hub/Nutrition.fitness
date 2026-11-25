@@ -1,3 +1,4 @@
+import {projectTemplatesPage,saveProjectTemplate} from './studio-project-templates.mjs';
 import {handleTeamMessages} from './team-messages.mjs';
 import {recipeStagingPage,bulkRecipeReview,saveRecipePhotoReview,sendRecipeStagingImage} from './recipe-staging.mjs';
 import {collectionPage,linkCollection,applyCollectionPlacement} from './studio-collections.mjs';
@@ -257,6 +258,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
         const next=await changeProducts(params,f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();
       }
       if(f.action?.startsWith('ghl-sync-')){await saveNewsletterConnection(f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url('connections').replaceAll('&amp;','&'));return res.end();}
+      if(f.action==='project-template-save'){const next=await saveProjectTemplate(f,data,api);res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();}
       if(f.action==='project-setup')return write(res,200,projectCreatePage(params,data,f),'project-create',actor,meta);
       if(f.action?.startsWith('idea-')){const next=await changeShinyThing(params,f,data,api,env,fetcher);if(next.project&&await notifyProjectTasks(params,{action:'project-create'},data,next,{api,actor,env,fetcher}))next.notification='pending';res.statusCode=303;res.setHeader('Location',url(next.section,next).replaceAll('&amp;','&'));return res.end();}
       if(['hq-message','hq-idea','hq-approve-plan'].includes(f.action)){const result=await changeHq(params,f,data,api,env,fetcher);res.statusCode=303;res.setHeader('Location',url(result.section,result).replaceAll('&amp;','&'));return res.end();}
@@ -390,6 +392,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       case 'release':body=releasePage(params,data);break;
       case 'export':return exportPackage(params,data,res);
       case 'history':body=await history(params,data,api);break;
+      case 'project-templates':body=projectTemplatesPage(params,data);break;
       case 'project-create':body=projectCreatePage(params,data);break;
       case 'archive':body=archivePage(params,data,meta||{});break;
       case 'import':body=importPage(params,data);break;
@@ -433,7 +436,9 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       return res.end(JSON.stringify({error:error instanceof HttpError?error.message:'Could not save the workout. Your edits are still here.'}));
     }
     let body='<p role="alert">'+esc(error instanceof HttpError?error.message:'The studio could not complete this request. Please try again.')+'</p>';
-    if(req.method==='POST'&&f.action==='recipe-bulk-review'&&data){
+    if(req.method==='POST'&&f.action==='project-template-save'&&data?.actor.role==='admin'){
+      body+=projectTemplatesPage(params,data,f);
+    }else if(req.method==='POST'&&f.action==='recipe-bulk-review'&&data){
       data.bulkSelection=f;body+=recipeStagingPage(params,data);
     }else if(req.method==='POST'&&f.action==='content-save'&&data?.byId.has(params.get('id'))){
       try{
