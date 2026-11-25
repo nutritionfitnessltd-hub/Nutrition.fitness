@@ -1,4 +1,6 @@
 import {randomUUID,createHash} from 'node:crypto';
+import {unifiedProductPage} from './studio-product-page.mjs';
+import {workerImagePath} from './worker-images.mjs';
 import {HttpError,uuid} from './platform.mjs';
 import {cleanText} from './studio-model.mjs';
 import {readable,editable,saveRecord,projectFor} from './studio-store.mjs';
@@ -26,7 +28,11 @@ export function productLink(value){
 function checkedLink(value){const text=cleanText(value||'',2000);if(text&&!productLink(text))throw new HttpError(400,'Use a complete HTTPS link.');return text;}
 const recordId=value=>'studio:product:'+uuid(String(value||'').replace(/^studio:product:/,''));
 const imageFile=r=>(r.productFiles||[]).find(f=>f.slot==='Thumbnail'&&f.type?.startsWith('image/'))||(r.productFiles||[]).find(f=>f.type?.startsWith('image/'));
-export function productAssetImage(r){const f=imageFile(r);return f?url('product-file',{id:r.id,file:f.id,inline:'1'}).replaceAll('&amp;','&'):productLink(r.fields.thumbnailUrl);}
+export function productAssetImage(r){
+ const f=imageFile(r);if(f)return url('product-file',{id:r.id,file:f.id,inline:'1'}).replaceAll('&amp;','&');
+ if(r.workerImage?.bucket==='worker-content'&&workerImagePath(r.workerImage.path)&&['image/jpeg','image/png','image/webp'].includes(r.workerImage.type))return url('product-image',{id:r.id,v:r.workerImage.sha256||r.revision||''}).replaceAll('&amp;','&');
+ return productLink(r.fields.thumbnailUrl);
+}
 export function productAssetPreview(r){
  const src=productAssetImage(r);
  return src?'<img src="'+esc(src)+'" alt="'+esc(r.fields.altText||r.title)+'" loading="lazy">':'<div class="product-placeholder" aria-hidden="true"><span>'+(r.fields.type==='Video'?'▶':r.fields.type==='Ad copy'?'Aa':'▧')+'</span><small>'+esc(r.fields.type||'Asset')+'</small></div>';
@@ -74,16 +80,9 @@ export function productPage(params,data,values){
  if(params.get('id')==='new'){if(data.actor.role!=='admin')throw new HttpError(403,'An administrator can add products.');return productForm(params,data,values);}
  const r=readable(data,params.get('id'));if(r.kind!=='product')throw new HttpError(404,'Product unavailable.');
  if(params.get('tab')==='edit'||values)return productForm(params,data,values);
- const tab=params.get('tab')||'overview',canEdit=canEditContent(data,r.id),tabs={overview:'Overview',assets:'Product assets',creatives:'Ads & creatives',work:'Work'};
- let body='';
- if(tab==='overview')body='<div class="product-detail-overview"><div class="product-hero-image">'+productPhoto(r,data)+'</div><section class="panel"><div class="product-card-meta"><span>'+esc(r.fields.category)+'</span><span class="product-state">'+esc(r.fields.stage)+'</span></div><p class="product-copy">'+esc(r.fields.description||'Add a description to explain this product.')+'</p><dl class="product-facts">'+[['SKU',r.fields.sku],['Supplier',r.fields.supplier],['Variants',r.fields.variants],['Target launch',r.fields.launchDate]].filter(([,v])=>v).map(([k,v])=>'<div><dt>'+k+'</dt><dd>'+esc(v)+'</dd></div>').join('')+'</dl>'+(productLink(r.fields.folderUrl)?'<a class="btn" href="'+esc(productLink(r.fields.folderUrl))+'" target="_blank" rel="noopener noreferrer">Open team folder ↗</a>':'')+'</section></div>'+(r.fields.category==='Supplements'?'<div class="product-info-grid">'+[['Ingredients',r.fields.ingredients],['Nutrition information',r.fields.nutrition],['Suggested usage',r.fields.usage]].filter(([,v])=>v).map(([k,v])=>'<section class="panel"><h2>'+k+'</h2><p class="product-copy">'+esc(v)+'</p></section>').join('')+'</div>':'');
- else if(tab==='work'){if(!canAccess(data.actor,'work'))throw new HttpError(403,'Work access is required.');body=productWork(r,data);}
- else if(['assets','creatives'].includes(tab)){
-  const rows=linked(data,r.id).filter(a=>(a.fields.assetRole==='advert')===(tab==='creatives'));
-  body=(canEdit?'<div class="product-toolbar">'+button(tab==='creatives'?'Add creative':'Add asset',url('product-asset',{id:'new',product:r.id,role:tab==='creatives'?'advert':'product'}),true)+'<details><summary>Link an existing asset</summary>'+form('product-asset-link',hidden('productId',r.id)+hidden('assetRole',tab==='creatives'?'advert':'product')+select('assetId','Existing asset',{'':'Choose an asset',...Object.fromEntries(data.items.filter(a=>a.kind==='asset'&&canEditContent(data,a.id)&&!a.fields.productIds?.includes(r.id)).map(a=>[a.id,a.title]))}),{section:'product',id:r.id},'Link asset')+'</details></div>':'')+filters('product',params,assetFilters(rows,params,data),{id:r.id,tab})+assetGallery(filterAssets(rows,params),params,data);
- }else throw new HttpError(404,'Product tab unavailable.');
- if(tab==='overview'&&r.fields.notes)body+='<section class="panel"><h2>Notes</h2><p class="product-copy">'+esc(r.fields.notes)+'</p></section>';
- return '<a class="back-link" href="'+url('products')+'">← Products</a>'+heading(r.title,r.fields.category,canEdit?button('Edit product',url('product',{id:r.id,tab:'edit'})):'')+'<nav class="tabs" aria-label="Product tabs">'+Object.entries(tabs).filter(([id])=>id!=='work'||canAccess(data.actor,'work')).map(([id,label])=>'<a href="'+url('product',{id:r.id,tab:id})+'"'+(id===tab?' aria-current="page"':'')+'>'+label+'</a>').join('')+'</nav>'+(canEdit&&tab!=='work'?productUploader(r):'')+body;
+ const tab=params.get('tab')||'overview';
+ if(!['overview','assets','creatives','work'].includes(tab))throw new HttpError(404,'Product tab unavailable.');
+ return unifiedProductPage(r,data,{linked,productPhoto,productAssetPreview,productAssetImage,productWork,productUploader});
 }
 function assetForm(params,data,values){
  const existing=params.get('id')!=='new'?editable(data,params.get('id')):null;

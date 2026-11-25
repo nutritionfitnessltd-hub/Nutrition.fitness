@@ -47,6 +47,34 @@ function fixture(){
 }
 function response(){const chunks=[],headers={};return {headers,statusCode:200,setHeader(k,v){headers[k]=v;},end(x=''){chunks.push(String(x));this.body=chunks.join('');}};}
 
+test('every legacy product tab shows one complete page with uploads collapsed after the content',async()=>{
+ const f=fixture(),p=await f.product('Omega-3'),photo=await f.asset(p,'Omega-3 product photo'),life=await f.asset(p,'Omega-3 lifestyle');
+ const product=f.rows.get(p).payload;Object.assign(product.fields,{shortDescription:'A simple softgel routine.',fullDescription:'Fish oil in a convenient softgel format.',allergenInformation:'Contains fish.',storage:'Keep sealed.',warnings:'Follow the label.'});
+ for(const [id,type] of [[photo,'Product photo'],[life,'Lifestyle image']])Object.assign(f.rows.get(id).payload.fields,{assetRole:'product',type,thumbnailUrl:'https://example.com/'+id.split(':').pop()+'.png'});
+ for(const tab of ['overview','assets','creatives','work']){
+  const html=productPage(params('product',p,{tab}),await f.data());
+  for(const text of ['Fish oil in a convenient softgel format.','Ingredients','Allergen information','Omega-3 lifestyle','Ads & creatives','Work & projects'])assert.ok(html.includes(text),text);
+  assert.doesNotMatch(html,/aria-label="Product tabs"/);
+  assert.match(html,/<details class="panel product-manage-files" id="product-files"><summary>/);
+  assert.ok(html.indexOf('data-product-upload')>html.indexOf('id="product-work"'));
+ }
+ const reader={role:'staff',id:randomUUID(),access:{library:true,all_library:true}};
+ assert.doesNotMatch(productPage(params('product',p),await f.data(reader)),/data-product-upload|Add files, images or creatives/);
+});
+
+test('stored product images stream from one authorised row without loading the whole workspace',async()=>{
+ const image={id:'studio:product:'+randomUUID(),kind:'asset',title:'Lifestyle image',status:'In review',fields:{productAsset:true,productIds:[],type:'Lifestyle image'},workerImage:{bucket:'worker-content',path:'content-manager/'+randomUUID()+'.png',type:'image/png'}};
+ for(const section of ['product-image','article-image']){
+  const calls=[],chunks=[],res=new Writable({write(chunk,enc,cb){chunks.push(chunk);cb();}});res.headers={};res.setHeader=(k,v)=>res.headers[k]=v;
+  const api=async path=>{calls.push(path);return [{id:image.id,payload:image,revision:1}];};
+  await handleStudio({method:'GET'},res,{params:params(section,image.id),actor:admin,api,load:async()=>{throw Error('Full workspace must not load for an image');},env:{SUPABASE_URL:'https://example.supabase.co',SUPABASE_SERVICE_ROLE_KEY:'test-only'},fetcher:async address=>{assert.ok(address.endsWith('/'+image.workerImage.path));return new Response(new Uint8Array([137,80,78,71]),{headers:{'Content-Type':'image/png'}});}});
+  assert.equal(calls.length,1);assert.match(calls[0],/id=eq\..*&limit=1/);assert.equal(res.statusCode,200);assert.equal(res.headers['Content-Type'],'image/png');assert.deepEqual([...Buffer.concat(chunks)],[137,80,78,71]);
+ }
+ const reader={role:'staff',id:randomUUID(),access:{library:true}};
+ assert.doesNotThrow(()=>authorizeStudioRequest(reader,'product-image','GET'));
+ assert.throws(()=>authorizeStudioRequest({...reader,access:{}},'product-image','GET'),e=>e.status===403);
+});
+
 test('product and creative save, reload, filter, review and link as one record',async()=>{
  const f=fixture(),p=await f.product(),a=await f.asset(p),p2=await f.product('Training kit');let d=await f.data();
  assert.match(productsPage(params('products',''),d),/Daily nutrition/);

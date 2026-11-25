@@ -104,6 +104,19 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify({summary}));
     }
     if(section==='brand-file')return await sendBrandFile(req,res,params,actor);
+    if(section==='product-image'&&req.method!=='GET')throw new HttpError(405,'Use GET to open a product image.');
+    // Image grids must not rebuild the full workspace for every picture.
+    // Broad read/review grants can be checked against one saved record;
+    // assigned-only readers continue through the existing assignment loader.
+    if(req.method==='GET'&&['product-image','article-image'].includes(section)){
+      const id=params.get('id')||'';
+      if(!id||id.length>240)throw new HttpError(404,'Product image unavailable.');
+      const rows=await api('/rest/v1/nufi_studio_items?id=eq.'+encodeURIComponent(id)+'&select=id,payload,revision&limit=1',{service:true});
+      const row=rows[0],r=row&&{...row.payload,id:row.id,revision:row.revision};
+      const scoped={actor,assigned:new Set(),byId:new Map(r?[[r.id,r]]:[])};
+      if(isProductAsset(r)&&r.workerImage&&canReadContent(scoped,r))return await sendWorkerImage(res,r,env,fetcher);
+      if(section==='product-image'&&(!isProductAsset(r)||!r.workerImage))throw new HttpError(404,'Product image unavailable.');
+    }
     if(section==='media'){
       if(req.method!=='GET')throw new HttpError(405,'Use GET to open a preview.');
       const id=params.get('preview')||'';
@@ -140,6 +153,11 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='video-source')return await productionVideoSource(req,res,params,data);
     if(section==='recipe-staging-image')return await sendRecipeStagingImage(req,res,params,data);
     if(section==='product-file')return await sendProductFile(req,res,params,data,env);
+    if(section==='product-image'){
+      const r=readable(data,params.get('id'));
+      if(!isProductAsset(r)||!r.workerImage)throw new HttpError(404,'Product image unavailable.');
+      return await sendWorkerImage(res,r,env,fetcher);
+    }
     if(req.method==='POST'&&(section==='product-upload'||f.action==='product-file-save')){
       const result=section==='product-upload'?await productUploadToken(req,params,data,env):await attachProductFile(params,f,data,api,env);
       res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Cache-Control','private, no-store');return res.end(JSON.stringify(result||{saved:true}));

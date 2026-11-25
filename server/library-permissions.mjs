@@ -61,6 +61,7 @@ export function accessFromForm(fields) {
 const routes = {
   messages: [],
   'video-source':['library'],
+  'product-image':['library'],
   'recipe-staging-image':['library'],
   'brand-file': ['shared_library'],
   collection: ['library'], task: ['work'], 'task-asset-file': ['library'], suppliers: ['library'], supplier: ['library'], products: ['library'], product: ['library'], 'product-creatives': ['library'], 'product-asset': ['library'], 'product-file': ['library'], 'product-upload': ['library'],
