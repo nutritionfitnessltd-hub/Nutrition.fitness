@@ -93,6 +93,6 @@ test('message email is opt-in, muted and recently-opened conversations suppress 
  requests=[];thread.payload.prefs[f.staff.id].muted=true;await notifyTeamMessage({api:f.api,actor:f.admin,people:f.people,thread,message:sent.message,env,fetcher});assert.equal(requests.length,0);
 });
 test('Messages bypasses AI/content loading; plain staff without content-edit permissions can use it',async()=>{
- const f=messageFixture(),res=response();await handleStudio({method:'GET',headers:{}},res,{params:new URLSearchParams({studio:'messages'}),actor:f.staff,api:f.api,load:()=>{throw Error('Must not load the AI catalogue');},env:{}});assert.equal(res.statusCode,200);assert.match(res.body,/A place for your team/);
+ const f=messageFixture(),res=response();await handleStudio({method:'GET',headers:{}},res,{params:new URLSearchParams({studio:'messages'}),actor:f.staff,api:f.api,load:()=>{throw Error('Must not load the AI catalogue');},env:{}});assert.equal(res.statusCode,200);assert.match(res.body,/Choose someone to chat/);
  const id=await group(f),out=response();await handleTeamMessages({method:'POST',headers:{accept:'application/json'},body:f.send('Posted')},out,{params:new URLSearchParams({conversation:id}),actor:f.staff,api:f.api,env:{}});assert.equal(out.statusCode,200);assert.equal(JSON.parse(out.body).saved,true);
 });

@@ -26,7 +26,12 @@ test('real HTTP login, create, send, reload and poll use the existing session; c
  try{
   assert.equal((await request(entry)).status,401);
   const login=await request(entry,{action:'sign-in',email:'admin@example.test',password:'fixture-admin'});assert.equal(login.status,303,await login.text());cookie=login.headers.getSetCookie().map(c=>c.split(';')[0]).join('; ');
-  let response=await request(entry);assert.equal(response.status,200);assert.match(await response.text(),/A place for your team/);
+  let response=await request(entry);assert.equal(response.status,200);assert.match(await response.text(),/Choose someone to chat/);
+  response=await request(entry+'&person='+f.other.id+'&panel=1');const first=await response.text();assert.match(first,/data-message-first/);assert.doesNotMatch(first,/Conversation type/);
+  response=await request(entry+'&person='+f.other.id+'&panel=1',{action:'message-create',kind:'direct',person:f.other.id,messageId:randomUUID(),body:'Hello from one-click chat'});assert.equal(response.status,303);const direct=response.headers.get('location');assert.match(direct,/panel=1/);
+  response=await request(direct);assert.match(await response.text(),/Hello from one-click chat/);
+  const before=f.rows.size;response=await request(entry+'&person='+f.other.id);assert.match(await response.text(),/Hello from one-click chat/);assert.equal(f.rows.size,before);
+  response=await request(entry+'&person='+f.staff.id,{action:'message-create',kind:'direct',person:f.staff.id,messageId:randomUUID(),body:'   '});assert.equal(response.status,400);assert.equal(f.rows.size,before);
   response=await request(entry,{action:'message-create',kind:'direct',members:JSON.stringify([f.staff.id])});assert.equal(response.status,303);const conversation=response.headers.get('location');
   response=await request(conversation,f.send('HTTP fixture message'));assert.equal(response.status,200);assert.equal((await response.json()).saved,true);
   response=await request(conversation);assert.equal(response.status,200);assert.match(await response.text(),/HTTP fixture message/);

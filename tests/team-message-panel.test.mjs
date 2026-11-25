@@ -57,3 +57,21 @@ test('compact messages suspend reads while collapsed, preserve actor-scoped draf
  }finally{first.dom.window.close();}
  const second=make();try{second.w.sessionStorage.setItem(key,saved);second.w.eval(messageCode);assert.equal(second.w.document.querySelector('[data-message-compose]').elements.body.value,'Draft that survives collapsing');}finally{second.dom.window.close();}
 });
+
+test('Messages pill shows trusted unread count and clears it without opening the drawer',()=>{
+ const h=host();try{const badge=h.toggle.querySelector('[data-message-unread]');
+ for(const n of [3,0]){h.w.dispatchEvent(new h.w.MessageEvent('message',{data:{type:'team-message-unread',unread:n},origin:'https://team.example',source:h.frame.contentWindow}));assert.equal(badge.hidden,n===0);assert.equal(badge.textContent,String(n));assert.ok(h.panel.hidden);}
+ h.w.dispatchEvent(new h.w.MessageEvent('message',{data:{type:'team-message-unread',unread:99},origin:'https://other.example',source:h.frame.contentWindow}));assert.ok(badge.hidden);
+ }finally{h.dom.window.close();}
+});
+
+test('incoming chat refresh keeps the composer draft and Enter sends while Shift Enter does not',async()=>{
+ const f=messageFixture(),id=await createConversation(f.api,f.admin,f.people,{kind:'direct',members:JSON.stringify([f.staff.id])});
+ const html=studioFrame(await messagesPage(new URLSearchParams({conversation:id}),f.staff,f.api,{}),'messages',f.staff);
+ const dom=new JSDOM(html,{url:'https://team.example/content-library/?work=1&studio=messages&conversation='+id,runScripts:'outside-only',pretendToBeVisual:true}),w=dom.window;
+ try{let release;const gate=new Promise(r=>release=r);w.fetch=async(url,options)=>options?.method==='POST'?{ok:true,json:async()=>({revision:2})}:String(url).includes('poll=1')?(await gate,{ok:true,json:async()=>({unread:1,threads:[{id,revision:3}]})}):{ok:true,text:async()=>html.replace('<div class="message-stream">','<div class="message-stream"><p id="incoming">Hello there</p>')};w.matchMedia=()=>({matches:false});w.eval(messageCode);
+ const form=w.document.querySelector('[data-message-compose]'),body=form.elements.body;assert.ok(form.querySelector(':scope > button'));assert.equal(form.querySelector(':scope > button').closest('details'),null);body.value='Keep my draft';body.dispatchEvent(new w.Event('input',{bubbles:true}));let submits=0;form.requestSubmit=()=>submits++;
+ body.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Enter',shiftKey:true,bubbles:true,cancelable:true}));assert.equal(submits,0);body.dispatchEvent(new w.KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));assert.equal(submits,1);
+ release();await new Promise(r=>setTimeout(r,30));assert.ok(w.document.getElementById('incoming'));assert.equal(form.elements.body,body);assert.equal(body.value,'Keep my draft');
+ }finally{dom.window.close();}
+});
