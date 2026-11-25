@@ -2,7 +2,7 @@ import {hqRequest} from './studio-hq.mjs';
 import {documentText,documentSection,proposalText} from './document-reader.mjs';
 import {esc,url,hidden,form,textarea,list} from './studio-ui.mjs';
 export async function workerIdeaSummaries(env,fetcher){
- const entries=await Promise.all(['alex','andy','martina'].map(async worker=>{try{const state=await hqRequest(env,{action:'ideas',worker},fetcher);return [worker,state.ideas?.[0]||null];}catch{return [worker,null];}}));return Object.fromEntries(entries);
+ const entries=await Promise.all(['alex','andy','martina'].map(async worker=>{try{const state=await hqRequest(env,{action:'ideas',worker},fetcher);return [worker,state.ideas?.[0]?{...state.ideas[0],version:state.version}:null];}catch{return [worker,null];}}));return Object.fromEntries(entries);
 }
 export async function workerIdeasPanel(worker,env,fetcher){
  if(!['alex','andy','martina'].includes(worker))return '';

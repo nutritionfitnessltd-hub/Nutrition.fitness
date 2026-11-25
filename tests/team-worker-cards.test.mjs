@@ -11,12 +11,12 @@ function fixture(){
 test('ongoing work appears once per worker while complete item history remains available',()=>{
  const data=fixture(),html=teamWorkDashboard(data),cards=teamWorkCards(data);
  assert.equal(cards.length,2);
- assert.equal((html.match(/data-worker-card="worker:imogen"/g)||[]).length,1);
+ assert.equal((html.match(/data-work-owner="worker:imogen"/g)||[]).length,1);
  assert.match(html,/Understanding your metabolism/);assert.doesNotMatch(html,/Lesson update 0|Old backend index title|Queued for production/);
  assert.match(html,/view=history/);
  const history=teamWorkPage(new URLSearchParams({owner:'worker:imogen',view:'history'}),data);
  assert.match(history,/Lesson update 0/);assert.doesNotMatch(history,/Latest article/);
- assert.equal((teamWorkPage(new URLSearchParams(),data).match(/data-worker-card="worker:imogen"/g)||[]).length,1);
+ assert.equal((teamWorkPage(new URLSearchParams(),data).match(/data-work-owner="worker:imogen"/g)||[]).length,1);
 });
 test('native production checkpoint supersedes older HQ state without inventing a running claim',()=>{
  const data=fixture();let rows=teamWorkRows(data).filter(r=>r.id.startsWith('production:'));
