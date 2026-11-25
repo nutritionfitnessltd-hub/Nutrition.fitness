@@ -14,6 +14,9 @@ test('draft books show front/back covers, existing PDF and missing print edition
  assert.doesNotMatch(html,/<details[^>]* open|<form|<summary>Contents|Linked recipes/);
  const cards=library(new URLSearchParams({bucket:'drafts',kind:'ebook'}),d);
  assert.match(cards,/studio=book-file&amp;id=book%3Afixture&amp;asset=front/);assert.doesNotMatch(cards,/amp;amp/);
+ assert.match(cards,/class="studio-content-card"[^>]*href="[^"]*studio=item&amp;id=book%3Afixture"/);
+ assert.doesNotMatch(cards,/studio=collection/);
+ assert.match(html,/studio=collection&amp;id=book%3Afixture">Supporting content/);
  const published=library(new URLSearchParams({bucket:'published',kind:'ebook'}),d);assert.doesNotMatch(published,/Fixture book/);
 });
 test('private book PDFs require admin or assignment, and only stored hash paths are allowed',()=>{
