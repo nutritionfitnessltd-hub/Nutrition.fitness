@@ -173,3 +173,16 @@ test('team role details save through the authenticated profile route without cha
  const profile=await f.request({studio:'team',person:f.person.id},admin);assert.match(profile.body,/Content reviewer/);assert.match(profile.body,/Review assigned work/);
  assert.deepEqual(f.person.access,original);assert.equal((await f.request({studio:'team'},admin,fields)).statusCode,409);
 });
+
+test('saved administrator access elevates an existing staff login and revokes immediately',async()=>{
+ const {libraryActor}=await import('../server/library-work.mjs');const f=fixture({library:true,administrator:true}),existing=cookie(f.person,f.person.code_hash);
+ const api=async path=>path.includes('nufi_library_staff')?[f.person]:[];
+ const read=()=>libraryActor({headers:{cookie:existing}},{setHeader(){}},env,()=>api);
+ let actor=await read();assert.equal(actor.role,'admin');assert.equal(actor.authRole,'staff');assert.equal(actor.id,f.person.id);
+ authorizeStudioRequest(actor,new URLSearchParams({studio:'product-figures'}));
+ const account=await f.request({studio:'account'},f.person,null,existing);assert.equal(account.statusCode,200);assert.match(account.body,/Administrator/);assert.ok(!f.calls.some(([path])=>path.startsWith('/auth/v1/admin/users/')));
+ f.person.access.administrator=false;actor=await read();assert.equal(actor.role,'staff');assert.throws(()=>authorizeStudioRequest(actor,new URLSearchParams({studio:'team'})),forbidden);
+ f.person.access.administrator='true';assert.equal((await read()).role,'staff');
+ f.person.access.administrator=true;f.person.code_hash=null;assert.equal(await read(),null);
+ assert.equal(accessFor({role:'staff',access:null}).administrator,false);
+});

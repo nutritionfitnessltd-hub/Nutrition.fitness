@@ -88,7 +88,7 @@ async function readActor(req,res,api,env,key) {
           if(rows.length)return {role:'admin',id:claims.id};
         }else if(claims.role==='staff'){
           const rows=await api(staffTable+'?id=eq.'+uuid(claims.id)+'&select=id,name,code_hash,access',service);
-          if(rows[0]?.code_hash && same(sign(key,rows[0].code_hash),claims.generation))return {role:'staff',id:claims.id,name:rows[0].name,access:rows[0].access};
+          if(rows[0]?.code_hash && same(sign(key,rows[0].code_hash),claims.generation))return {role:rows[0].access?.administrator===true?'admin':'staff',...(rows[0].access?.administrator===true?{authRole:'staff'}:{}),id:claims.id,name:rows[0].name,access:rows[0].access};
         }
       }
     }
@@ -120,7 +120,7 @@ async function login(fields,res,api,env,key) {
 }
 function accessFields(access){
   const current=accessFor({role:'staff',access});
-  return field('accessVersion','1')+'<fieldset class="team-access"><legend>Access</legend><p class="meta">Tick what this person can use. Dashboard and their own signed agreement are always available. Review responsibilities are set separately below. Publishing and Settings remain administrator-only.</p><div class="team-access-grid">'+accessOptions.map(([key,title,description])=>'<label class="team-access-option"><input type="checkbox" name="access_'+key+'" value="1"'+(current[key]?' checked':'')+'><span><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span></label>').join('')+'</div></fieldset><fieldset class="team-access"><legend>Review responsibilities</legend><p class="meta">Allow this person to approve or request changes when these content types are submitted. Requires Content library and Work access. Other people’s drafts stay private.</p><div class="team-access-grid">'+reviewOptions.map(([key,title])=>'<label class="team-access-option"><input type="checkbox" name="access_'+key+'" value="1"'+(current[key]?' checked':'')+'><span><strong>'+esc(title)+'</strong><small>Review submitted work and retain your review history.</small></span></label>').join('')+'</div></fieldset>';
+  return field('accessVersion','1')+'<fieldset class="team-access"><legend>Access</legend><p class="meta">Tick what this person can use. Dashboard and their own signed agreement are always available. Review responsibilities are set separately below. Full workspace administrator includes publishing, supplier costs and team permissions.</p><div class="team-access-grid">'+accessOptions.map(([key,title,description])=>'<label class="team-access-option"><input type="checkbox" name="access_'+key+'" value="1"'+(current[key]?' checked':'')+'><span><strong>'+esc(title)+'</strong><small>'+esc(description)+'</small></span></label>').join('')+'</div></fieldset><fieldset class="team-access"><legend>Review responsibilities</legend><p class="meta">Allow this person to approve or request changes when these content types are submitted. Requires Content library and Work access. Other people’s drafts stay private.</p><div class="team-access-grid">'+reviewOptions.map(([key,title])=>'<label class="team-access-option"><input type="checkbox" name="access_'+key+'" value="1"'+(current[key]?' checked':'')+'><span><strong>'+esc(title)+'</strong><small>Review submitted work and retain your review history.</small></span></label>').join('')+'</div></fieldset>';
 }
 async function teamScreen(api,actor,origin,env,params=new URLSearchParams(),fetcher=fetch){
   if(actor.role!=='admin')throw new HttpError(403,'Administrator access is required.');
@@ -275,7 +275,7 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
     if(!actor&&welcomeJson)return json(401,{error:'Sign in again before sending. Your welcome message is still here.'});
     if(!actor)return signInPage(res,401,item,destination);
     const ndaParams=params.has('accountPreview')?new URLSearchParams([...params].filter(([key])=>!['nda','receipt','identity','download'].includes(key))):params;
-    if((!copyActor||req.method==='GET'&&params.has('nda'))&&await requireLibraryNda(req,res,{actor,api,params:copyActor?params:ndaParams}))return;
+    if((!copyActor||req.method==='GET'&&params.has('nda'))&&await requireLibraryNda(req,res,{actor:actor.authRole==='staff'?{...actor,role:'staff'}:actor,api,params:copyActor?params:ndaParams}))return;
     if(params.has('accountPreview')){
       const id=params.get('accountPreview'),copy=await workingCopy(api,actor,id);
       if(req.method==='GET'&&params.get('copyStatus')==='1')return json(200,{access:copy.actor.access});
@@ -289,11 +289,12 @@ export async function handleLibraryWork(req,res,{env,load,params,apiFactory=plat
     if(studio==='account'){
       if(req.method==='POST'){
         if(copyActor)throw new HttpError(403,'Account changes are unavailable in the working copy.');
-        const result=await changeMyAccount(f,{actor,api,env,res});
-        if(result.saved==='password')issue(res,key,{role:actor.role,id:actor.id,...(result.codeHash?{generation:sign(key,result.codeHash)}:{})});
+        const accountActor=actor.authRole==='staff'?{...actor,role:'staff'}:actor;
+        const result=await changeMyAccount(f,{actor:accountActor,api,env,res});
+        if(result.saved==='password')issue(res,key,{role:actor.authRole||actor.role,id:actor.id,...(result.codeHash?{generation:sign(key,result.codeHash)}:{})});
         res.statusCode=303;res.setHeader('Location',route+'&studio=account&saved='+result.saved);return res.end();
       }
-      return writePage(res,200,await myAccountScreen(actor,api,params,env,{copy:!!copyActor}),actor,'account');
+      return writePage(res,200,await myAccountScreen(actor.authRole==='staff'?{...actor,role:'staff'}:actor,api,params,env,{copy:!!copyActor}),actor,'account');
     }
     if(studio==='nda'){
       const page=await ndaAdminScreen(req,res,{actor,api,params});
