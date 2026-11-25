@@ -1,4 +1,4 @@
-import {saveRecipePhotoReview,sendRecipeStagingImage} from './recipe-staging.mjs';
+import {recipeStagingPage,bulkRecipeReview,saveRecipePhotoReview,sendRecipeStagingImage} from './recipe-staging.mjs';
 import {collectionPage,linkCollection,applyCollectionPlacement} from './studio-collections.mjs';
 import {productionVideoSource} from './production-video.mjs';
 import {requestBackgroundRestart} from './background-jobs.mjs';
@@ -216,6 +216,10 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
     if(section==='mealplan-image')return await sendMealPhoto(req,res,params,data);
     if(req.method==='POST'){
       if(f.action==='background-restart'){await requestBackgroundRestart(params,f,data,api);res.statusCode=303;res.setHeader('Location',url('project',{project:params.get('project')}).replaceAll('&amp;','&'));return res.end();}
+      if(f.action==='recipe-bulk-review'){
+        const result=await bulkRecipeReview(f,data,api);res.statusCode=303;
+        res.setHeader('Location',url('library',{kind:'recipe',bucket:'staging',...Object.fromEntries([...params].filter(([k])=>['q','book','photo','match','page','view'].includes(k))),bulkSaved:result.saved,bulkFailed:result.failed,bulkOperation:f.operation}).replaceAll('&amp;','&')+(params.has('match')&&params.get('match')===''?'&match=':''));return res.end();
+      }
       if(f.action==='recipe-photo-review'){await saveRecipePhotoReview(params,f,data,api);res.statusCode=303;res.setHeader('Location',url('library',{kind:'recipe',bucket:'staging',...Object.fromEntries([...params].filter(([k])=>['q','book','photo','match','page'].includes(k)))}).replaceAll('&amp;','&'));return res.end();}
       if(f.action==='supplier-save'){const next=await saveSupplier(f,data,api);res.statusCode=303;res.setHeader('Location',url('supplier',{id:next}).replaceAll('&amp;','&'));return res.end();}
       if(f.action?.startsWith('product-')){
@@ -395,7 +399,9 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       return res.end(JSON.stringify({error:error instanceof HttpError?error.message:'Could not save the workout. Your edits are still here.'}));
     }
     let body='<p role="alert">'+esc(error instanceof HttpError?error.message:'The studio could not complete this request. Please try again.')+'</p>';
-    if(req.method==='POST'&&f.action==='content-save'&&data?.byId.has(params.get('id'))){
+    if(req.method==='POST'&&f.action==='recipe-bulk-review'&&data){
+      data.bulkSelection=f;body+=recipeStagingPage(params,data);
+    }else if(req.method==='POST'&&f.action==='content-save'&&data?.byId.has(params.get('id'))){
       try{
         const original=data.byId.get(params.get('id'));
         data.byId.set(original.id,{...original,title:f.title,fields:JSON.parse(f.fields),revision:Number(f.revision),...(original.source&&f.sourceChecked==='yes'?{source:{...original.source,needsChecking:false}}:{})});
