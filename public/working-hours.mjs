@@ -14,7 +14,7 @@ export function upcomingHours(schedule,viewerZone,now=Date.now()){
   const start=localInstant(iso(date),day.start,schedule.timeZone),end=localInstant(iso(date+(day.end<day.start?86400000:0)),day.end,schedule.timeZone,true);
   if(start===null||end===null){skipped=true;continue;}if(end<=now||start>=now+7*86400000)continue;
   const fmt=(t)=>new Intl.DateTimeFormat('en-GB',{timeZone:viewerZone,weekday:'short',day:'numeric',month:'short',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).format(t);
-  rows.push({start,end,label:fmt(start)+' – '+fmt(end)});
+  rows.push({start,end,label:fmt(start)+' â€“ '+fmt(end)});
  }
  return {rows:rows.sort((a,b)=>a.start-b.start),skipped};
 }
