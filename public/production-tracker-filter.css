@@ -22,3 +22,5 @@
 .tracker-group>summary.project-section-heading{flex-wrap:wrap}.tracker-group>summary>.tracker-progress{flex:0 0 100%;width:100%;margin:4px 0 0}
 
 @media(max-width:600px){.tracker-group>summary>.tracker-progress{flex:none;align-self:stretch}}
+
+.tracker-group-work{display:flex;flex-wrap:wrap;gap:6px 14px;flex:0 0 100%;width:100%;font-size:12px;font-weight:400;color:#526d7a}.tracker-group-work>span{white-space:nowrap}.tracker-inventory-note{flex:0 0 100%;width:100%;font-size:12px;line-height:1.5;font-weight:400;color:#805c19}@media(max-width:600px){.tracker-group-work,.tracker-inventory-note{flex:none;align-self:stretch}.tracker-group-work>span{white-space:normal}}
