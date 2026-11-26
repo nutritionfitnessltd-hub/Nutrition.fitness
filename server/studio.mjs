@@ -1,3 +1,4 @@
+import {offeringReviewPage,offeringReviewAction,approvedOffering,offeringPanel} from './offering-review.mjs';
 import {projectTemplatesPage,saveProjectTemplate} from './studio-project-templates.mjs';
 import {handleTeamMessages} from './team-messages.mjs';
 import {recipeStagingPage,bulkRecipeReview,saveRecipePhotoReview,sendRecipeStagingImage} from './recipe-staging.mjs';
@@ -160,6 +161,11 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       if(r?.kind==='product'||isProductAsset(r)){
         readable(data,r.id);res.statusCode=303;res.setHeader('Location',url(r.kind==='product'?'product':'product-asset',{id:r.id,...(params.get('tab')==='edit'?{tab:'edit'}:{})}).replaceAll('&amp;','&'));return res.end();
       }
+    }
+    if(section==='offering-review'){
+      if(req.method==='POST'){const key=await offeringReviewAction(f,data,api);res.statusCode=303;res.setHeader('Location',url('offering-review',{offering:key}).replaceAll('&amp;','&'));return res.end();}
+      if(params.get('download')==='1'){if(actor.role!=='admin')throw new HttpError(403,'Only the administrator can export a website offering.');const approved=approvedOffering(data,params.get('offering'));if(!approved)throw new HttpError(409,'Approve the current whole offering before exporting it.');res.statusCode=200;res.setHeader('Content-Type','application/json; charset=utf-8');res.setHeader('Content-Disposition','attachment; filename="nutrition-fitness-approved-offering.json"');return res.end(JSON.stringify({format:'nutrition.fitness.offering-release',version:1,offering:{key:approved.manifest.key,title:approved.manifest.title,approval:approved.document.fields},content:approved.manifest.records.map(r=>({id:r.id,kind:r.kind,title:r.title,revision:r.revision||0,fields:r.fields,approvedForWebsite:true}))},null,2));}
+      return write(res,200,offeringReviewPage(params,data),section,actor,meta);
     }
     if(section==='video-source')return await productionVideoSource(req,res,params,data,env);
     if(section==='recipe-staging-image')return await sendRecipeStagingImage(req,res,params,data);
@@ -416,7 +422,7 @@ export async function handleStudio(req,res,{params,actor,api,load,env,fetcher=fe
       }
       default:throw new HttpError(404,'This studio page is unavailable.');
     }
-    if(section==='project')body=button('Team conversation',url('messages',{new:'1',project:params.get('project')}))+body;
+    if(section==='project')body=button('Website offering review',url('offering-review',data.projects.find(p=>p.id===params.get('project'))?.studio?.productionTracking?{}:{offering:'project:'+params.get('project')}))+button('Team conversation',url('messages',{new:'1',project:params.get('project')}))+body;
     if(params.get('notification')==='pending')body='<p role="status">Your changes were saved, but an email needs attention. '+(actor.role==='admin'?button('Check email activity',url('connections')):'Please ask your administrator to check Connections.')+'</p>'+body;
     if(['suppliers','supplier','products','product','product-figures','product-creatives','product-asset'].includes(section))body='<div class="product-space">'+body+'</div>';
     return write(res,200,body,section,actor,meta);

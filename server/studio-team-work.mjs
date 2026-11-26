@@ -1,3 +1,4 @@
+import {hasReadyVideo} from './review-policy.mjs';
 import {launchPackParent,launchPackChildren} from './launch-packs.mjs';
 import {releasePath,publicationDestination} from './studio-publishing.mjs';
 import {newsletterDraftButton} from './newsletter-draft-links.mjs';
@@ -32,9 +33,9 @@ export function teamWorkRows(data){
     const owner=task?person(task.staff_id):w?worker(w):project?person(project.creator_id):{owner:'unassigned',ownerName:admin?'Unassigned':'Team submission',type:'people'};
     const destination=data.publicationDestination||publicationDestination({});
     const published=(data.releases||[]).some(release=>release.item_id===r.id&&release.environment===destination.environment&&release.source_revision===r.revision);
-    const review=!published&&(r.kind==='article'||isNewsletterContent(r)||['lesson','course','marketing','programme','challenge','book'].includes(r.kind)||canReviewContent(data,r)&&r.status==='In review');
+    const review=!published&&(hasReadyVideo(r)||isNewsletterContent(r));
     recordRows.set(r.id,{id:'content:'+r.id,recordId:r.id,title:r.title,...owner,project:project?.id||'',projectName:project?.name||'',
-      published,state:published?'completed':stateFor(r.status),status:published?'Published':r.status,updated:date(r.updatedAt||r.workerSource?.receivedAt),due:task?.due_date||'',
+      published,state:published?'completed':!hasReadyVideo(r)&&!isNewsletterContent(r)&&r.status==='In review'?'progress':stateFor(r.status),status:published?'Published':!hasReadyVideo(r)&&!isNewsletterContent(r)&&r.status==='In review'?'Draft':r.status,updated:date(r.updatedAt||r.workerSource?.receivedAt),due:task?.due_date||'',
       ghlAction:newsletterDraftButton(data,r),note:r.reviewFeedback?.at(-1)?.changes||'Saved content',review,href:published?destination.origin+releasePath(r.id):url(review?'review-preview':'item',{id:r.id}),action:published?'View published article':review?'Review':'Open'});
   }
   for(const t of tasks){

@@ -1,3 +1,4 @@
+import {websiteApprovedRecord,offeringPanel} from './offering-review.mjs';
 import {HttpError} from './platform.mjs';
 import {editable} from './studio-store.mjs';
 import {issues} from './studio-model.mjs';
@@ -19,17 +20,15 @@ export function releaseEnvironment(req){
 }
 export function publicationPanel(r,data){
  if(data.actor.role!=='admin'||isNewsletterContent(r))return '';
- const approved=r.status==='Approved'&&r.approval?.revision===r.revision;
- const label=approved?'Open approved content options':'Review & approve';
- return '<section class="panel studio-publishing"><h2>'+(approved?'Approved content':'Review this content')+'</h2><p>'+(approved?'Choose the next step for this approved version.':'Open the preview to approve this saved version or request changes.')+'</p>'+button(label,url('review-preview',{id:r.id}),true).replace('<a ','<a data-review-preview target="_blank" rel="noopener" ')+(!['article'].includes(r.kind)?'<p class="meta">Approved content stays in the library. Assign the next step to staff when needed.</p>':'')+'</section>';
-
+ return offeringPanel(r,data);
 }
 export async function publishStudio(params,f,data,api){
  if(data.actor.role!=='admin')throw new HttpError(403,'Only the administrator can publish content.');
- const r=editable(data,params.get('id')),target=f.action==='publish-test'?'test':f.action==='publish-live'?'live':null;
+ let r=editable(data,params.get('id'));const target=f.action==='publish-test'?'test':f.action==='publish-live'?'live':null;
  if(isNewsletterContent(r))throw new HttpError(400,'Newsletters are approved for GHL, not published to the website.');
  if(!target)throw new HttpError(400,'Choose a publication action.');
  if(Number(f.revision)!==r.revision)throw new HttpError(409,'Content changed. Reopen the latest copy.');
+ r=await websiteApprovedRecord(r,data,api);
  if(r.status!=='Approved'||r.approval?.revision!==r.revision)throw new HttpError(400,'Approve this saved version before publishing.');
  const missing=issues(r,data.items);if(missing.length)throw new HttpError(400,missing.join(' '));
  if(target==='live'&&f.finalApproval!=='yes')throw new HttpError(400,'Confirm your final approval after checking the test website.');

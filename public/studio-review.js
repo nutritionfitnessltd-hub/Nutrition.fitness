@@ -1,3 +1,4 @@
+import './studio-video-modal.js';
 import './studio-newsletters.js';
 import './studio-launch-pack.js';
 document.addEventListener('click',event=>{

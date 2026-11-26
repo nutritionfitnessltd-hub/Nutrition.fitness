@@ -1,3 +1,6 @@
+import {hasReadyVideo} from './review-policy.mjs';
+import {offeringPanel} from './offering-review.mjs';
+import {productionRowLinks} from './studio-production-tracker.mjs';
 import {checkedVideo} from './production-video.mjs';
 import {articleMediaIssues} from './worker-drafts.mjs';
 import {newsletterDraftButton} from './newsletter-draft-links.mjs';
@@ -29,12 +32,12 @@ function newsletterApprovalHistory(r,data){
 
 export function reviewPreview(params,data,retained={}){
  const r=readable(data,params.get('id')),worker=contentWorker(r,data.byId),name=workerNames[worker]||'the assigned person';
- const preview=new URLSearchParams({id:r.id,tab:'preview'}),admin=data.actor.role==='admin',reviewer=canReviewContent(data,r),newsletter=isNewsletterContent(r);
+ const preview=new URLSearchParams({id:r.id,tab:'preview'}),admin=data.actor.role==='admin',reviewer=canReviewContent(data,r)&&isNewsletterContent(r),newsletter=isNewsletterContent(r);
  const feedback=r.reviewFeedback||[],latest=feedback.at(-1),pending=latest?.decision==='changes'&&latest.delivery==='pending';
  const missing=r.status==='Approved'?[]:issues(r.kind==='course'?courseApprovalRecord(r,data):r,data.items);
  const readiness=missing.length?'Before approval: '+missing.join(' ').replace('Add brief.','Add a short brief. Choose Edit to add it.'):'';
  return '<section data-review-content><header class="review-popup-header"><div><p class="kicker">Review saved version '+esc(r.revision)+'</p><h2 id="review-popup-title">'+esc(r.title)+'</h2><p>'+esc(workerNames[worker]||'No worker assigned')+' · '+esc(r.status)+'</p></div><button type="button" data-review-close aria-label="Close preview">×</button></header>'+
- '<div class="review-popup-body">'+reviewBody(preview,data)+(newsletter?newsletterApprovalHistory(r,data):'')+
+ '<div class="review-popup-body">'+reviewBody(preview,data)+(hasReadyVideo(r)?'<p role="'+(retained.message?'alert':'status')+'" data-review-status>'+esc(retained.message|| (params.get('reviewed')==='approve'?'Approved.':'Open the finished video to watch and approve.'))+'</p>'+productionRowLinks({record:r,status:'Awaiting review'},data):offeringPanel(r,data))+(newsletter?newsletterApprovalHistory(r,data):'')+
  (!newsletter&&feedback.length?'<details class="panel"><summary>Review feedback ('+feedback.length+')</summary>'+feedback.map(f=>'<article><h3>'+esc(f.decision==='approve'?'Approved':f.decision==='submit'?'Submitted for review':'Changes requested')+'</h3><p class="prose">'+esc(f.changes||'')+'</p>'+(f.guidance?'<p><strong>Remember for future work:</strong> '+esc(f.guidance)+'</p>':'')+'<small>'+esc(f.author)+' · '+esc(f.at)+'</small></article>').join('')+'</details>':'')+'</div>'+
  (reviewer?'<footer class="review-popup-footer"><p role="status" tabindex="-1" data-review-status>'+(retained.message?esc(retained.message):params.get('reviewed')==='submit'?'Submitted for review.':pending?'Feedback saved for '+esc(name)+'’s next worker check.':params.get('reviewed')==='approve'?'Approved.':params.get('reviewed')==='changes'?'Change request saved for '+esc(name)+'.':esc(readiness))+'</p><div class="studio-actions">'+
  (r.status!=='Approved'?form('review-decision',hidden('revision',r.revision)+hidden('decision','approve')+hidden('reviewId',randomUUID()),{section:'review-preview',id:r.id},newsletter?'Approve for GHL':'Approve','data-review-form'):'<span class="studio-status">'+(newsletter?'Approved for GHL':'Approved')+'</span>')+

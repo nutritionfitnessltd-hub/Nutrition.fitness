@@ -1,3 +1,4 @@
+import {websiteApprovedRecord} from './offering-review.mjs';
 import {publicationDestination} from './studio-publishing.mjs';
 import {HttpError} from './platform.mjs';
 import {saveRecord,allRows} from './studio-store.mjs';
@@ -33,7 +34,9 @@ export async function releaseApprovedArticle(r,api,by,environment='live'){
 }
 export async function publishFromReview(f,r,data,api){
  if(data.actor.role!=='admin')throw new HttpError(403,'Only the administrator can publish or schedule.');
- approved(r,f.revision);
+ if(Number(f.revision)!==r.revision)throw new HttpError(409,'Content changed. Reopen the latest preview.');
+ r=await websiteApprovedRecord(r,data,api);
+ approved(r,r.revision);
  if(f.action==='review-keep-draft'){
   if(!r.publicationPlan)return {section:'review-preview',id:r.id,reviewed:'kept',record:r};
   const next=structuredClone(r);delete next.revision;delete next.updatedAt;delete next.publicationPlan;next.approval.revision=r.revision+1;

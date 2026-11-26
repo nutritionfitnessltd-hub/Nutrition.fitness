@@ -79,6 +79,7 @@ export async function studioData(api,actor,load){
     }
   }
   const data={index,items,backgroundControls,byId:records,projects,tasks,people,releases,assigned,actor,ideaTeams:teams,ideaPeople};
+  data.offeringReviews=items.filter(r=>r.kind==='settings'&&r.fields?.websiteOfferingReview===true);
   data.collectionLinks=items.filter(r=>r.kind==='settings'&&r.fields?.libraryCollectionLink===true&&r.fields.active===true).map(r=>({collectionId:r.fields.collectionId,contentId:r.fields.contentId}));
   // Project owners can track their worker's progress without gaining draft-body access.
   data.trackingByProject=projectTrackingSummaries(data);

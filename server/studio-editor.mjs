@@ -1,3 +1,4 @@
+import {hasReadyVideo} from './review-policy.mjs';
 import {collectionPlacementFields} from './studio-collections.mjs';
 import {documentText} from './document-reader.mjs';
 import {isNewsletter,isNewsletterContent,newsletterPreview} from './studio-newsletters.mjs';
@@ -28,7 +29,7 @@ export function editorForm(r,data,{create=false,project='',entry='',feedback='',
       '<details class="editor-details"><summary>Add a review note (optional)</summary>'+textarea('feedback','Review note',feedback,3)+'</details>')+
     '<div class="studio-save-bar"><span data-editor-status'+(unsaved?' data-unsaved="true"':'')+' role="status">'+(unsaved?'Unsaved changes':create?'New draft':'All changes saved')+'</span><div class="studio-actions">'+
       '<button type="submit" name="intent" value="draft">Save draft</button><button type="submit" name="intent" value="preview">Save &amp; preview</button>'+
-      (!create&&data.actor.role!=='admin'?'<button class="primary" type="submit" name="intent" value="review">Submit for review</button>':'')+'</div></div></form>';
+      (!create&&data.actor.role!=='admin'&&hasReadyVideo(r)?'<button class="primary" type="submit" name="intent" value="review">Submit for review</button>':'')+'</div></div></form>';
 }
 function messageEditorForm(r,data,{create,project,entry,unsaved}){
   return '<form method="post" action="'+url(create?'new':'item',create?{kind:r.kind}:{id:r.id,tab:'edit'})+'" class="studio-form content-editor message-editor" id="studio-editor-form">'+

@@ -1,3 +1,6 @@
+import {productionRowLinks} from './studio-production-tracker.mjs';
+import {reviewQueue,reviewRowsHtml,offeringPanel} from './offering-review.mjs';
+import {hasReadyVideo} from './review-policy.mjs';
 import {offeringFields} from './studio-offering-template.mjs';
 import {isPendingStagedRecipe,recipeStagingPage} from './recipe-staging.mjs';
 import {collectionKinds,supportKinds,supportingLibrary,collectionPlacementFields,collectionHeader} from './studio-collections.mjs';
@@ -255,7 +258,7 @@ function programmePage(params,data,r){
   return out;
 }
 export function itemPage(params,data){
- const record=data.byId.get(params.get('id'));return (record&&canReadContent(data,record)&&params.get('document')!=='1'?collectionHeader(record,data):'')+itemPageBody(params,data);
+ const record=data.byId.get(params.get('id'));return (record&&canReadContent(data,record)&&params.get('document')!=='1'?collectionHeader(record,data)+offeringPanel(record,data):'')+itemPageBody(params,data);
 }
 function itemPageBody(params,data){
   const r=data.byId.get(params.get('id'));if(!canReadContent(data,r))return heading('Content unavailable');
@@ -278,7 +281,7 @@ function itemPageBody(params,data){
   let out='<a class="back" href="'+(r.kind==='programme'?url('item',{id:r.id}):url('library',{kind:r.kind}))+'">← '+esc(r.kind==='programme'?'Programme overview':collections[r.kind]?.[0]||'Content library')+'</a>'+
     heading(r.title,isNewsletter(r)?'Newsletter':kinds[r.kind]||r.kind,preview||schedule?(canEdit&&!document?button(isNewsletter(r)?'Edit HTML & text':'Edit content',url('item',{id:r.id,tab:'edit'}),true):''):'')+
     '<p>'+badge(isNewsletterContent(r)&&r.status==='Approved'?'Approved for GHL':r.publication?.status==='published'?'Published':r.status)+' <span class="meta">'+(r.updatedAt?'Saved '+esc(new Date(r.updatedAt).toLocaleDateString('en-GB')):'')+'</span></p>';
-  if(!document&&canReviewContent(data,r)&&r.status!=='Approved')out+='<div class="studio-actions asset-approval-top">'+form('review-decision',hidden('revision',r.revision)+hidden('decision','approve')+hidden('reviewId',randomUUID()),{section:'review-preview',id:r.id},'Approve')+'<a class="btn" data-review-preview target="_blank" rel="noopener" href="'+url('review-preview',{id:r.id})+'">Review / request changes</a></div>';
+  if(!document&&hasReadyVideo(r))out+=productionRowLinks({record:r,status:'Awaiting review'},data);
   if(schedule){
     const frequencies=data.items.filter(x=>x.kind==='structure'&&x.parent===r.parent&&x.status!=='Archived');
     const selected=new URLSearchParams(params);selected.set('schedule',r.id);
@@ -320,10 +323,8 @@ export function newItem(params,data,values={}){
     editorForm(r,data,{create:true,project:values.project||params.get('project')||'',entry:values.entry||params.get('entry')||'',unsaved:data.unsaved===true})+referenceData(data);
 }
 export function reviewPage(params,data){
-  const rows=data.items.filter(r=>['In review','Changes requested'].includes(r.status)&&(canReviewContent(data,r)||data.assigned.has(r.id)));
-  return heading('Needs checking','Preview the saved work, approve it or request changes.')+
-    pages(params,rows,rs=>list(rs,r=>'<div><a data-review-preview target="_blank" rel="noopener" href="'+url('review-preview',{id:r.id})+'">'+esc(r.title)+'</a><small>'+esc(kinds[r.kind]||r.kind)+'</small></div>'+badge(r.status),'There is no content waiting for review.'))+
-    '<script type="module" src="/studio-review.js"></script>';
+ const rows=reviewQueue(data);
+ return heading('Videos & website approvals','Approve finished videos during production. Give one final website sign-off for the whole offering.',button('Prepare website offering',url('offering-review')))+pages(params,rows,rs=>reviewRowsHtml(rs,data))+'<script type="module" src="/studio-review.js"></script>';
 }
 export function calendar(data){
   const events=data.projects.flatMap(p=>[

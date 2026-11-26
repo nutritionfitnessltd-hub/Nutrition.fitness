@@ -1,3 +1,4 @@
+import {hasReadyVideo} from './review-policy.mjs';
 import { HttpError } from './platform.mjs';
 
 export const accessOptions = [
@@ -45,7 +46,7 @@ export const canEditContent = (data, id) => !data.byId?.get(id)?.sourceOnly && (
 export const reviewsKind = (actor, kind) => actor?.role === 'admin' ||
   (canAccess(actor,'library') && canAccess(actor,'work') && reviewOptions.some(([key,,kinds])=>kinds.includes(kind)&&canAccess(actor,key)));
 export const canReviewContent = (data, record) => Boolean(record) && !record.sourceOnly && (data.actor.role === 'admin' ||
-  (record.status === 'In review' && reviewsKind(data.actor,record.kind)));
+  ((record.status === 'In review'||hasReadyVideo(record)&&record.status==='Draft') && reviewsKind(data.actor,record.kind)));
 const sharedKinds = new Set(['theme','article','recipe','mealplan','programme','programme-family','stage','structure','session','exercise','activity','rule','review','course','lesson','learning','ebook','leadmagnet','challenge','communication','campaign','workflow','asset','product']);
 export const canReadSharedContent = (actor, record) => Boolean(record) && sharedKinds.has(record.kind) &&
   (canAccess(actor,'all_library') || canAccess(actor,'shared_library') && record.status !== 'Archived' &&
@@ -71,7 +72,7 @@ const routes = {
   'book-file': ['library'], 'article-image': ['library'], 'article-preview': ['library'], 'newsletter-preview': ['library'], 'newsletter-html': ['library'], 'mealplan-image': ['library'],
   archive: ['originals'], create: ['studio'], new: ['studio'], import: ['studio', 'originals'],
   builder: ['studio'], 'worker-requests': ['studio'], projects: ['work'], project: ['work'],
-  review: ['work', 'library'], 'review-preview': ['work', 'library'], calendar: ['work'], journey: ['work', 'library'],
+  'offering-review': ['work','library'], review: ['work', 'library'], 'review-preview': ['work', 'library'], calendar: ['work'], journey: ['work', 'library'],
   release: ['work', 'library'], export: ['work', 'library']
 };
 const actions = {
@@ -82,7 +83,7 @@ const actions = {
   'idea-save': ['library','edit'], 'idea-discussion': ['library','edit'],
   'course-structure-review': ['work','library'],
   'product-save': ['library','edit'], 'product-asset-save': ['library','edit'], 'product-asset-link': ['library','edit'], 'product-asset-status': ['library','edit'], 'product-file-save': ['library','edit'],
-  'review-decision': ['work', 'library'], 'review-retry': ['work', 'library'],
+  'offering-open':['work','library'],'offering-request':['work','library','edit'],'offering-approve':['work','library'], 'review-decision': ['work', 'library'], 'review-retry': ['work', 'library'],
   'content-save': ['library', 'edit'], 'content-comment': ['library', 'edit'],
   'content-review': ['library', 'edit'], 'workout-inline-save': ['library', 'edit'],
   'workout-days-save': ['library', 'edit'], 'content-create': ['studio', 'edit'],
