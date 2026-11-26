@@ -20,3 +20,5 @@
 @media(max-width:600px){.tracker-group-result{justify-content:flex-start;text-align:left}.tracker-group>summary.project-section-heading{align-items:flex-start;gap:10px;flex-direction:column}.tracker-group-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.tracker-group-stats>div{min-width:0}.tracker-group-stats dd{font-size:15px}.tracker-overall-progress{padding:14px}.tracker-overall-progress>div:first-child{display:grid}.production-tracker .tracker-counts{grid-template-columns:repeat(2,minmax(0,1fr))}}
 
 .tracker-group>summary.project-section-heading{flex-wrap:wrap}.tracker-group>summary>.tracker-progress{flex:0 0 100%;width:100%;margin:4px 0 0}
+
+@media(max-width:600px){.tracker-group>summary>.tracker-progress{flex:none;align-self:stretch}}
